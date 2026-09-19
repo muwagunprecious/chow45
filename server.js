@@ -92,7 +92,9 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.xml': 'application/xml; charset=UTF-8',
+  '.txt': 'text/plain; charset=UTF-8'
 };
 
 // Pre-load all static assets directly into memory
@@ -122,7 +124,9 @@ const STATIC_ASSETS = {
   '/admin.html': loadAsset('admin.html', 'text/html; charset=UTF-8'),
   '/admin.css': loadAsset('admin.css', 'text/css; charset=UTF-8'),
   '/admin.js': loadAsset('admin.js', 'application/javascript; charset=UTF-8'),
-  '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml')
+  '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml'),
+  '/sitemap.xml': loadAsset('sitemap.xml', 'application/xml; charset=UTF-8'),
+  '/robots.txt': loadAsset('robots.txt', 'text/plain; charset=UTF-8')
 };
 
 // Helper to read request body in both standard Node and serverless environments
