@@ -2,8 +2,10 @@
   "name": "chow45",
   "version": "1.0.0",
   "description": "Chow45 waitlist landing page",
+  "main": "server.js",
   "scripts": {
-    "dev": "node server.dev.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "keywords": [],
   "author": "",

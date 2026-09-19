@@ -1,6 +1,8 @@
 require('dotenv').config();
 const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
 
 const http = require('http');
 const fs = require('fs');
@@ -21,10 +23,10 @@ if (DATABASE_URL) {
   });
 
   pool.on('error', (err) => {
-    console.error('Unexpected error on idle PostgreSQL client:', err.message);
+    console.error('PostgreSQL client error:', err.message);
   });
 
-  // Initialize table
+  // Initialize waitlist table
   (async () => {
     try {
       const client = await pool.connect();
@@ -48,10 +50,10 @@ if (DATABASE_URL) {
     }
   })();
 } else {
-  console.warn('⚠ No DATABASE_URL found in environment. Running in local fallback mode.');
+  console.warn('⚠ No DATABASE_URL found in environment.');
 }
 
-// Local JSON backup path
+// Local JSON backup path (used if DB connection temporarily fails)
 const BACKUP_FILE = path.join(__dirname, 'waitlist_backup.json');
 function readLocalWaitlist() {
   try {
@@ -72,7 +74,7 @@ function saveLocalWaitlist(entries) {
   }
 }
 
-// Content-type helper
+// MIME types
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.css': 'text/css; charset=UTF-8',
@@ -84,15 +86,46 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
+// Pre-load all static assets directly into memory
+// This guarantees Vercel's NFT bundler bundles them and prevents any 404/ENOENT errors
+function loadAsset(fileName, mimeType) {
+  try {
+    const fullPath = path.join(__dirname, fileName);
+    if (fs.existsSync(fullPath)) {
+      return { content: fs.readFileSync(fullPath), mimeType };
+    }
+    const publicPath = path.join(__dirname, 'public', fileName);
+    if (fs.existsSync(publicPath)) {
+      return { content: fs.readFileSync(publicPath), mimeType };
+    }
+  } catch (err) {
+    console.error('Error loading static asset:', fileName, err.message);
+  }
+  return null;
+}
+
+const STATIC_ASSETS = {
+  '/': loadAsset('index.html', 'text/html; charset=UTF-8'),
+  '/index.html': loadAsset('index.html', 'text/html; charset=UTF-8'),
+  '/style.css': loadAsset('style.css', 'text/css; charset=UTF-8'),
+  '/script.js': loadAsset('script.js', 'application/javascript; charset=UTF-8'),
+  '/admin': loadAsset('admin.html', 'text/html; charset=UTF-8'),
+  '/admin.html': loadAsset('admin.html', 'text/html; charset=UTF-8'),
+  '/admin.css': loadAsset('admin.css', 'text/css; charset=UTF-8'),
+  '/admin.js': loadAsset('admin.js', 'application/javascript; charset=UTF-8'),
+  '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml')
+};
+
 const server = http.createServer(async (req, res) => {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+  const host = req.headers.host || `localhost:${PORT}`;
+  const parsedUrl = new URL(req.url, `http://${host}`);
   const pathname = parsedUrl.pathname;
   const method = req.method;
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (method === 'OPTIONS') {
     res.writeHead(204);
@@ -101,13 +134,25 @@ const server = http.createServer(async (req, res) => {
   }
 
   // -------------------------------------------------------------
-  // API: Status / Health
+  // API: Status / Health (GET /api/status)
   // -------------------------------------------------------------
   if (pathname === '/api/status' && method === 'GET') {
+    let statusState = 'disconnected';
+    if (pool) {
+      try {
+        const client = await pool.connect();
+        await client.query('SELECT 1;');
+        client.release();
+        statusState = 'connected';
+        dbConnected = true;
+      } catch (e) {
+        statusState = 'connecting/fallback';
+      }
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
-      database: dbConnected ? 'connected' : (DATABASE_URL ? 'connecting/fallback' : 'no_env'),
+      database: statusState,
       timestamp: new Date().toISOString()
     }));
     return;
@@ -147,7 +192,6 @@ const server = http.createServer(async (req, res) => {
         }
 
         if (!savedEntry) {
-          // Local fallback
           const localEntries = readLocalWaitlist();
           savedEntry = {
             id: localEntries.length + 1,
@@ -191,7 +235,6 @@ const server = http.createServer(async (req, res) => {
         entries = readLocalWaitlist();
       }
 
-      // Calculate statistics
       const todayStr = new Date().toISOString().slice(0, 10);
       const stats = {
         total: entries.length,
@@ -268,7 +311,6 @@ const server = http.createServer(async (req, res) => {
         console.error('Delete error:', err);
       }
     }
-    // Also remove from local
     const local = readLocalWaitlist().filter(e => String(e.id) !== String(id));
     saveLocalWaitlist(local);
 
@@ -278,49 +320,38 @@ const server = http.createServer(async (req, res) => {
   }
 
   // -------------------------------------------------------------
-  // Route: /admin -> admin.html
+  // Serve Pre-loaded Static Assets
   // -------------------------------------------------------------
-  if (pathname === '/admin' || pathname === '/admin/') {
-    const adminPath = path.join(__dirname, 'admin.html');
-    if (fs.existsSync(adminPath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
-      res.end(fs.readFileSync(adminPath));
-      return;
-    }
-  }
-
-  // -------------------------------------------------------------
-  // Static Files Server (checks public/ then root)
-  // -------------------------------------------------------------
-  let filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
-  if (!fs.existsSync(filePath)) {
-    filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
-  }
-
-  // Security check: prevent path traversal
-  if (!filePath.startsWith(__dirname)) {
-    res.writeHead(403, { 'Content-Type': 'text/plain' });
-    res.end('Forbidden');
+  const asset = STATIC_ASSETS[pathname];
+  if (asset && asset.content) {
+    res.writeHead(200, {
+      'Content-Type': asset.mimeType,
+      'Cache-Control': 'public, max-age=3600'
+    });
+    res.end(asset.content);
     return;
   }
 
-  fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      // 404 fallback
-      res.writeHead(404, { 'Content-Type': 'text/html' });
-      res.end('<h1>404 Not Found</h1><p><a href="/">Return to Chow45 Home</a></p>');
-      return;
-    }
+  // Fallback disk lookup
+  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
+  }
 
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
     res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(filePath).pipe(res);
-  });
+    res.end(fs.readFileSync(filePath));
+    return;
+  }
+
+  // 404
+  res.writeHead(404, { 'Content-Type': 'text/html; charset=UTF-8' });
+  res.end('<h1>404 Not Found</h1><p><a href="/">Return to Chow45 Home</a></p>');
 });
 
-if (!process.env.VERCEL) {
+if (require.main === module && !process.env.VERCEL) {
   server.listen(PORT, () => {
     console.log(`🚀 Chow45 server running at http://localhost:${PORT}`);
     console.log(`📊 Admin portal available at http://localhost:${PORT}/admin`);
