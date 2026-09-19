@@ -1,6 +1,7 @@
 /**
  * CHOW45 CUSTOMER EXPERIENCE CONTROLLER
- * Discovery, food customization, single-store cart, checkout, and tracking
+ * Discovery, food customization, single-store cart, checkout, live tracking,
+ * search, profile, favorites, and post-delivery reviews.
  */
 
 const CustomerController = {
@@ -31,8 +32,16 @@ const CustomerController = {
 
   render() {
     this.renderCategories();
-    this.renderStores();
+    this.renderDiscoverySections();
     this.renderCartBadge();
+    this.renderActiveFilterPills();
+  },
+
+  renderActiveFilterPills() {
+    const currentFilter = window.chowStore.state.activeFilter;
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.filter === currentFilter);
+    });
   },
 
   renderCategories() {
@@ -52,47 +61,145 @@ const CustomerController = {
     window.chowStore.setCategory(catId);
   },
 
-  renderStores() {
-    const container = document.getElementById('stores-grid');
+  setFilter(filterId) {
+    window.chowStore.setFilter(filterId);
+  },
+
+  renderDiscoverySections() {
+    const container = document.getElementById('discovery-sections-container');
     if (!container) return;
 
-    const { restaurants, activeCategory, searchQuery } = window.chowStore.state;
+    const { restaurants, activeCategory, activeFilter, searchQuery, userProfile } = window.chowStore.state;
 
-    let filtered = restaurants.filter(r => {
-      if (activeCategory === 'all') return true;
-      if (activeCategory === 'campus') return r.isBudget;
-      return r.category === activeCategory;
-    });
+    // Filter restaurants
+    let filteredStores = [...restaurants];
+    if (activeCategory !== 'all') {
+      filteredStores = filteredStores.filter(r => r.category === activeCategory || r.menu.some(m => m.category === activeCategory));
+    }
+
+    if (activeFilter === 'fast') {
+      filteredStores = filteredStores.filter(r => r.isFast);
+    } else if (activeFilter === 'budget') {
+      filteredStores = filteredStores.filter(r => r.isBudget || r.menu.some(m => m.price <= 2000));
+    } else if (activeFilter === 'rating') {
+      filteredStores = filteredStores.filter(r => r.rating >= 4.8);
+    }
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(r =>
+      filteredStores = filteredStores.filter(r =>
         r.name.toLowerCase().includes(q) ||
         r.tags.some(t => t.toLowerCase().includes(q)) ||
         r.menu.some(m => m.name.toLowerCase().includes(q))
       );
     }
 
-    if (filtered.length === 0) {
+    if (filteredStores.length === 0) {
       container.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 48px 16px; background: white; border-radius: var(--radius-xl); border: 1px dashed var(--c-border);">
-          <div style="font-size: 2.5rem; margin-bottom: 8px;">🍲</div>
-          <h3 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 4px;">No food spots match your search</h3>
-          <p style="color: var(--c-text-secondary); font-size: 0.88rem;">Try searching for Jollof, Amala, Suya, or reset category filter.</p>
-          <button class="action-btn-secondary" style="margin-top: 16px;" onclick="window.chowStore.setCategory('all'); window.chowStore.setSearchQuery('');">View All Food Spots</button>
+        <div style="text-align: center; padding: 48px 16px; background: white; border-radius: var(--radius-xl); border: 1px dashed var(--c-border); margin: 24px 0;">
+          <div style="font-size: 2.4rem; margin-bottom: 8px;">🍽️</div>
+          <h3 style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; margin-bottom: 4px;">We couldn't find that.</h3>
+          <p style="color: var(--c-text-secondary); font-size: 0.88rem; max-width: 360px; margin: 0 auto 16px;">
+            Try searching for <strong>rice</strong>, <strong>chicken</strong>, <strong>suya</strong>, <strong>shawarma</strong>, or popular restaurants.
+          </p>
+          <button class="action-btn-secondary" onclick="window.chowStore.setCategory('all'); window.chowStore.setFilter('all'); window.chowStore.setSearchQuery('');">
+            Explore All Food
+          </button>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = filtered.map(store => `
+    // Extract all featured foods from stores
+    const allDishes = [];
+    filteredStores.forEach(store => {
+      store.menu.forEach(dish => {
+        allDishes.push({ ...dish, storeId: store.id, storeName: store.name });
+      });
+    });
+
+    const popularDishes = allDishes.filter(d => d.isPopular || d.rating >= 4.8);
+
+    container.innerHTML = `
+      <!-- Section 1: Popular Near You (Food Cards with Instant + Button) -->
+      <div style="margin-bottom: var(--space-32);">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Popular Near You</h2>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Most ordered dishes around Idimu & Lagos</p>
+          </div>
+          <span class="section-link" onclick="CustomerController.selectCategory('all')">See all</span>
+        </div>
+        <div class="food-cards-grid">
+          ${popularDishes.slice(0, 4).map(dish => this.renderFoodCard(dish)).join('')}
+        </div>
+      </div>
+
+      <!-- Section 2: Restaurants Near You -->
+      <div style="margin-bottom: var(--space-32);">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Top Kitchens & Restaurants</h2>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Verified hygienic local food spots</p>
+          </div>
+        </div>
+        <div class="stores-grid">
+          ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
+        </div>
+      </div>
+
+      <!-- Section 3: Fast Delivery (Under 25 mins) -->
+      <div style="margin-bottom: var(--space-32);">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">⚡ Fast Delivery (Under 25 min)</h2>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Straight to your doorstep in minutes</p>
+          </div>
+        </div>
+        <div class="food-cards-grid">
+          ${allDishes.filter(d => d.prepTime && d.prepTime.includes('15')).slice(0, 4).map(dish => this.renderFoodCard(dish)).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  renderFoodCard(dish) {
+    const isFav = window.chowStore.state.userProfile.favorites.foods.includes(dish.id);
+
+    return `
+      <div class="food-card" onclick="CustomerController.handleFoodCardClick('${dish.storeId}', '${dish.id}')">
+        <div class="food-card-thumb-wrap">
+          <img class="food-card-thumb" src="${dish.img}" alt="${dish.name}" loading="lazy" />
+          <button class="food-fav-btn ${isFav ? 'active' : ''}" title="Save to favorites" 
+                  onclick="event.stopPropagation(); CustomerController.toggleFavFood('${dish.id}')">
+            ${isFav ? '❤️' : '🤍'}
+          </button>
+          <div class="food-time-pill">${dish.prepTime || '20–30 min'}</div>
+        </div>
+        <div class="food-card-body">
+          <div class="food-card-name">${dish.name}</div>
+          <div class="food-card-store">${dish.storeName} • ★ ${dish.rating || 4.8}</div>
+          <div class="food-card-bottom">
+            <span class="food-card-price">₦${dish.price.toLocaleString()}</span>
+            <button class="food-add-plus-btn" aria-label="Add ${dish.name}" 
+                    onclick="event.stopPropagation(); CustomerController.handleQuickAdd('${dish.storeId}', '${dish.id}')">
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderStoreCard(store) {
+    return `
       <div class="store-card" onclick="CustomerController.openStoreMenu('${store.id}')">
         <div class="store-thumb-wrap">
           <img class="store-thumb" src="${store.bannerImg}" alt="${store.name}" loading="lazy" />
           <div class="store-badge-open">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span> Open Now
           </div>
-          ${store.isBudget ? `<div class="store-badge-promo">🎓 Campus Deal</div>` : ''}
+          ${store.isBudget ? `<div class="store-badge-promo">🎓 Budget Deal</div>` : ''}
         </div>
         <div class="store-content">
           <div class="store-name-row">
@@ -107,15 +214,58 @@ const CustomerController = {
             </span>
             <span class="store-meta-item">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              ${store.distanceKm} km away
+              ${store.distanceKm} km
             </span>
             <span class="store-meta-item" style="color: var(--c-primary); font-weight: 700;">
-              Delivery ₦${store.deliveryFee.toLocaleString()}
+              ₦${store.deliveryFee.toLocaleString()} delivery
             </span>
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+  },
+
+  handleFoodCardClick(storeId, dishId) {
+    const store = window.chowStore.state.restaurants.find(r => r.id === storeId);
+    if (!store) return;
+    this.activeRestaurant = store;
+    this.openDishCustomizer(dishId);
+  },
+
+  handleQuickAdd(storeId, dishId) {
+    const store = window.chowStore.state.restaurants.find(r => r.id === storeId);
+    if (!store) return;
+    const dish = store.menu.find(d => d.id === dishId);
+    if (!dish) return;
+
+    // If dish has required addon groups, open customization sheet
+    const hasRequiredAddons = dish.addonGroups && dish.addonGroups.some(g => g.required);
+    if (hasRequiredAddons) {
+      this.activeRestaurant = store;
+      this.openDishCustomizer(dishId);
+      return;
+    }
+
+    // Direct 1-tap add to cart!
+    const item = {
+      dishId: dish.id,
+      name: dish.name,
+      img: dish.img,
+      unitPrice: dish.price,
+      qty: 1,
+      selectedAddons: [],
+      itemTotal: dish.price
+    };
+
+    const added = window.chowStore.addToCart(store, item, (conflict) => this.showSingleStoreConflictModal(conflict));
+    if (added) {
+      window.chowApp.toast(`Added ${dish.name} to cart (₦${dish.price.toLocaleString()})`, 'success');
+    }
+  },
+
+  toggleFavFood(dishId) {
+    const added = window.chowStore.toggleFavoriteFood(dishId);
+    window.chowApp.toast(added ? 'Saved to favorites ❤️' : 'Removed from favorites', added ? 'success' : 'info');
   },
 
   openStoreMenu(storeId) {
@@ -124,7 +274,6 @@ const CustomerController = {
 
     this.activeRestaurant = store;
 
-    // Switch view to store detail
     document.getElementById('customer-home-section').style.display = 'none';
     const storeSection = document.getElementById('customer-store-section');
     storeSection.style.display = 'block';
@@ -135,13 +284,12 @@ const CustomerController = {
     document.getElementById('store-detail-meta').innerHTML = `
       <span>★ ${store.rating} (${store.reviewsCount} reviews)</span> • 
       <span>⏱ ${store.prepTime}</span> • 
-      <span>📍 ${store.distanceKm} km away (₦${store.deliveryFee.toLocaleString()} delivery)</span>
+      <span>📍 ${store.address} (₦${store.deliveryFee.toLocaleString()} delivery)</span>
     `;
 
-    // Render Menu Items
     const menuGrid = document.getElementById('store-dishes-grid');
     menuGrid.innerHTML = store.menu.map(dish => `
-      <div class="dish-card" onclick="CustomerController.openDishCustomizer('${dish.id}')">
+      <div class="dish-card" onclick="CustomerController.handleFoodCardClick('${store.id}', '${dish.id}')">
         <div class="dish-info">
           <h4 class="dish-title">${dish.name}</h4>
           <p class="dish-desc">${dish.desc}</p>
@@ -149,7 +297,9 @@ const CustomerController = {
         </div>
         <div class="dish-thumb-wrap">
           <img class="dish-thumb" src="${dish.img}" alt="${dish.name}" loading="lazy" />
-          <button class="dish-add-btn" aria-label="Add ${dish.name}" ${!dish.inStock ? 'disabled style="background: #94A3B8;"' : ''}>
+          <button class="dish-add-btn" aria-label="Add ${dish.name}" 
+                  onclick="event.stopPropagation(); CustomerController.handleQuickAdd('${store.id}', '${dish.id}')"
+                  ${!dish.inStock ? 'disabled style="background: #94A3B8;"' : ''}>
             ${dish.inStock ? '+' : '✕'}
           </button>
         </div>
@@ -166,7 +316,7 @@ const CustomerController = {
   },
 
   // -------------------------------------------------------------
-  // Food Customization Modal (Add-ons & Quantities)
+  // Food Customization Sheet (Add-ons & Quantities)
   // -------------------------------------------------------------
   openDishCustomizer(dishId) {
     if (!this.activeRestaurant) return;
@@ -174,7 +324,7 @@ const CustomerController = {
     if (!dish) return;
 
     if (!dish.inStock) {
-      window.chowApp.toast('This delicious item is currently sold out for today.', 'warning');
+      window.chowApp.toast('This delicious item is currently out of stock.', 'warning');
       return;
     }
 
@@ -182,9 +332,8 @@ const CustomerController = {
     this.customizingQty = 1;
     this.selectedAddons = [];
 
-    // Pre-select required options
     if (dish.addonGroups && dish.addonGroups.length > 0) {
-      dish.addonGroups.forEach((group, gIdx) => {
+      dish.addonGroups.forEach((group) => {
         if (group.required && group.options.length > 0) {
           this.selectedAddons.push({
             groupTitle: group.title,
@@ -197,6 +346,7 @@ const CustomerController = {
 
     document.getElementById('custom-dish-banner').src = dish.img;
     document.getElementById('custom-dish-title').innerText = dish.name;
+    document.getElementById('custom-dish-store').innerText = this.activeRestaurant.name;
     document.getElementById('custom-dish-desc').innerText = dish.desc;
     document.getElementById('custom-dish-qty').innerText = this.customizingQty;
 
@@ -209,7 +359,7 @@ const CustomerController = {
   renderCustomizerAddons(dish) {
     const container = document.getElementById('custom-addons-container');
     if (!dish.addonGroups || dish.addonGroups.length === 0) {
-      container.innerHTML = `<p style="font-size: 0.85rem; color: var(--c-text-muted);">Standard single portion.</p>`;
+      container.innerHTML = `<p style="font-size: 0.85rem; color: var(--c-text-muted);">Standard full portion.</p>`;
       return;
     }
 
@@ -218,7 +368,7 @@ const CustomerController = {
         <div class="addon-group-title">${group.title}</div>
         <div class="addon-group-subtitle">${group.required ? 'Choose 1 (Required)' : 'Optional Extras'}</div>
         <div class="addon-options-list">
-          ${group.options.map((opt, oIdx) => {
+          ${group.options.map((opt) => {
             const isSelected = this.selectedAddons.some(a => a.groupTitle === group.title && a.name === opt.name);
             const inputType = group.required ? 'radio' : 'checkbox';
             return `
@@ -270,7 +420,7 @@ const CustomerController = {
     const grandTotal = unitPrice * this.customizingQty;
     const btn = document.getElementById('custom-add-to-cart-btn');
     if (btn) {
-      btn.innerText = `Add ${this.customizingQty} to Cart • ₦${grandTotal.toLocaleString()}`;
+      btn.innerText = `Add to Cart • ₦${grandTotal.toLocaleString()}`;
     }
   },
 
@@ -312,7 +462,6 @@ const CustomerController = {
     this.closeDishCustomizer();
     const modal = document.getElementById('cart-conflict-modal');
     document.getElementById('conflict-existing-store').innerText = conflict.currentStoreName;
-    document.getElementById('conflict-new-store').innerText = conflict.newStoreName;
 
     document.getElementById('conflict-confirm-clear-btn').onclick = () => {
       conflict.resolve(true);
@@ -341,16 +490,17 @@ const CustomerController = {
   },
 
   openCart() {
-    const { cart, restaurants, selectedLocation } = window.chowStore.state;
+    const { cart, restaurants, selectedLocation, userProfile } = window.chowStore.state;
     const modal = document.getElementById('cart-modal');
     const itemsList = document.getElementById('cart-items-list');
 
     if (cart.items.length === 0) {
       itemsList.innerHTML = `
-        <div style="text-align: center; padding: 40px 16px;">
-          <div style="font-size: 2.5rem; margin-bottom: 8px;">🛒</div>
-          <h4 style="font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 4px;">Your cart is empty</h4>
-          <p style="color: var(--c-text-secondary); font-size: 0.85rem;">Discover Nigerian flavors and add delicious meals!</p>
+        <div style="text-align: center; padding: 48px 16px;">
+          <div style="font-size: 2.8rem; margin-bottom: 8px;">🛒</div>
+          <h4 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">Your cart is waiting for something delicious</h4>
+          <p style="color: var(--c-text-secondary); font-size: 0.85rem; margin-bottom: 20px;">Explore nearby kitchens and add your favorite Nigerian meals.</p>
+          <button class="cta-primary-btn" onclick="CustomerController.closeCart()">Explore Food</button>
         </div>
       `;
       document.getElementById('cart-checkout-footer').style.display = 'none';
@@ -361,7 +511,7 @@ const CustomerController = {
     const store = restaurants.find(r => r.id === cart.storeId);
     const subtotal = window.chowStore.getCartSubtotal();
     const serviceFee = MANDATORY_SERVICE_FEE;
-    const deliveryFee = store ? store.deliveryFee : 400;
+    const deliveryFee = store ? store.deliveryFee : 800;
     const total = subtotal + serviceFee + deliveryFee;
 
     document.getElementById('cart-store-header-name').innerText = cart.storeName;
@@ -370,7 +520,7 @@ const CustomerController = {
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--c-border-subtle);">
         <div style="flex: 1; padding-right: 12px;">
           <div style="font-weight: 700; font-size: 0.92rem;">${item.name}</div>
-          ${item.selectedAddons.length > 0 ? `
+          ${item.selectedAddons && item.selectedAddons.length > 0 ? `
             <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 2px;">
               ${item.selectedAddons.map(a => a.name).join(', ')}
             </div>
@@ -387,14 +537,18 @@ const CustomerController = {
       </div>
     `).join('');
 
-    // Update Pricing Breakdown
+    // Update Pricing Breakdown matching Point 21 & 56
     document.getElementById('cart-subtotal-val').innerText = `₦${subtotal.toLocaleString()}`;
     document.getElementById('cart-service-fee-val').innerText = `₦${serviceFee.toLocaleString()}`;
     document.getElementById('cart-delivery-fee-val').innerText = `₦${deliveryFee.toLocaleString()}`;
     document.getElementById('cart-grand-total-val').innerText = `₦${total.toLocaleString()}`;
 
-    // Delivery Address Preview
+    // Delivery destination preview
     document.getElementById('checkout-address-input').value = selectedLocation.name;
+    document.getElementById('checkout-name-input').value = userProfile.name;
+    document.getElementById('checkout-phone-input').value = userProfile.phone;
+
+    document.getElementById('cart-pay-cta-btn').innerText = `Pay ₦${total.toLocaleString()} & Place Order`;
 
     document.getElementById('cart-checkout-footer').style.display = 'block';
     modal.classList.add('open');
@@ -425,9 +579,8 @@ const CustomerController = {
     });
 
     this.closeCart();
-    window.chowApp.toast('Payment verified! Order placed successfully 🎉', 'success');
+    window.chowApp.toast('Payment successful! Order confirmed ✓', 'success');
 
-    // Launch live order tracking
     this.openOrderTracking(newOrder.id);
   },
 
@@ -441,13 +594,11 @@ const CustomerController = {
     const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId) || window.chowStore.state.restaurants[0];
     const location = window.chowStore.state.selectedLocation;
 
-    // Switch view to tracking screen
     document.getElementById('customer-home-section').style.display = 'none';
     document.getElementById('customer-store-section').style.display = 'none';
     const trackSection = document.getElementById('customer-tracking-section');
     trackSection.style.display = 'block';
 
-    // Update Drawer text
     document.getElementById('track-order-id').innerText = order.id;
     document.getElementById('track-order-pin').innerText = order.pin;
     document.getElementById('track-store-name').innerText = order.storeName;
@@ -455,26 +606,22 @@ const CustomerController = {
 
     this.updateTrackingStatusUI(order);
 
-    // Initialize Mapbox & Custom markers
     window.chowMap.renderDeliveryMission(order, store, location);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   updateTrackingStatusUI(order) {
     const stage = ORDER_STAGES[order.status] || ORDER_STAGES.PAID;
-    document.getElementById('track-status-heading').innerText = stage.label;
-    document.getElementById('track-status-subtext').innerText = stage.humanText;
+    document.getElementById('track-status-heading').innerText = stage.humanText;
 
-    // Update stepper
     const segments = document.querySelectorAll('.tracking-stepper .stepper-segment');
     segments.forEach((seg, idx) => {
       seg.className = 'stepper-segment';
-      if (idx < stage.stepIndex) seg.classList.add('completed');
-      else if (idx === stage.stepIndex) seg.classList.add('active');
+      if (idx < (stage.stepIndex || 1)) seg.classList.add('completed');
+      else if (idx === (stage.stepIndex || 1)) seg.classList.add('active');
     });
 
-    // ETA Pill
-    const etaText = order.status === 'DELIVERED' ? 'Delivered' : (order.status === 'OUT_FOR_DELIVERY' ? 'Est: 8 mins' : 'Est: 20 mins');
+    const etaText = order.status === 'DELIVERED' ? 'Delivered' : (order.status === 'OUT_FOR_DELIVERY' ? 'Est: 8 mins away' : 'Est: 25 mins');
     document.getElementById('track-eta-badge').innerText = etaText;
   },
 
@@ -482,5 +629,87 @@ const CustomerController = {
     document.getElementById('customer-tracking-section').style.display = 'none';
     document.getElementById('customer-home-section').style.display = 'block';
     if (window.chowMap) window.chowMap.clearMarkers();
+  },
+
+  // -------------------------------------------------------------
+  // Order History & Reviews
+  // -------------------------------------------------------------
+  openOrderHistory() {
+    const modal = document.getElementById('order-history-modal');
+    const container = document.getElementById('order-history-list');
+    if (!modal || !container) return;
+
+    const { orders } = window.chowStore.state;
+    if (orders.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
+          <p style="font-weight: 700;">You haven't placed an order yet.</p>
+          <button class="cta-primary-btn" style="margin-top: 12px;" onclick="document.getElementById('order-history-modal').classList.remove('open')">Find Food</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = orders.map(order => `
+        <div style="background: var(--c-bg-subtle); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div>
+              <strong style="font-size: 1rem;">${order.storeName}</strong>
+              <div style="font-size: 0.78rem; color: var(--c-text-muted);">#${order.id} • ${new Date(order.createdAt).toLocaleDateString()}</div>
+            </div>
+            <span class="table-status-tag" style="background: ${order.status === 'DELIVERED' ? 'var(--c-success-bg)' : 'var(--c-warning-bg)'}; color: ${order.status === 'DELIVERED' ? '#065F46' : '#92400E'};">
+              ${ORDER_STAGES[order.status]?.label || order.status}
+            </span>
+          </div>
+
+          <div style="font-size: 0.85rem; margin-bottom: 10px;">
+            ${order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--c-border); padding-top: 8px;">
+            <strong style="font-size: 0.95rem; color: var(--c-primary);">₦${order.total.toLocaleString()}</strong>
+            <div style="display: flex; gap: 8px;">
+              ${order.status === 'DELIVERED' ? `
+                <button class="action-btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="CustomerController.openReviewModal('${order.id}')">Rate Order</button>
+                <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.reorder('${order.id}')">Reorder</button>
+              ` : `
+                <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.openOrderTracking('${order.id}'); document.getElementById('order-history-modal').classList.remove('open');">Track Live</button>
+              `}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    modal.classList.add('open');
+  },
+
+  reorder(orderId) {
+    const order = window.chowStore.state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId);
+    if (!store) return;
+
+    window.chowStore.clearCart();
+    order.items.forEach(item => {
+      window.chowStore.addToCart(store, item);
+    });
+
+    document.getElementById('order-history-modal').classList.remove('open');
+    this.openCart();
+    window.chowApp.toast('Items added to cart from past order!', 'success');
+  },
+
+  openReviewModal(orderId) {
+    const modal = document.getElementById('review-modal');
+    document.getElementById('review-order-id').innerText = orderId;
+    modal.classList.add('open');
+  },
+
+  submitReview() {
+    const orderId = document.getElementById('review-order-id').innerText;
+    const comment = document.getElementById('review-comment-input').value.trim();
+    window.chowStore.submitOrderReview(orderId, 5, comment || 'Great food and super fast delivery!');
+    document.getElementById('review-modal').classList.remove('open');
+    window.chowApp.toast('Thank you for rating your order! ⭐⭐⭐⭐⭐', 'success');
   }
 };

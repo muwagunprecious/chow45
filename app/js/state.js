@@ -1,25 +1,27 @@
 /**
  * CHOW45 UNIFIED REACTIVE STATE ENGINE
  * Synchronizes state across all 4 roles: Customer, Vendor, Rider, and Admin
- * Persisted in localStorage with event dispatching.
+ * Persisted in localStorage with cross-role event dispatching.
  */
 
 const ORDER_STAGES = {
-  PENDING_PAYMENT: { key: 'PENDING_PAYMENT', label: 'Payment Pending', humanText: 'Awaiting your payment confirmation', stepIndex: 0 },
-  PAID: { key: 'PAID', label: 'Paid & Submitted', humanText: 'Order confirmed! Sent to restaurant', stepIndex: 1 },
-  STORE_CONFIRMED: { key: 'STORE_CONFIRMED', label: 'Store Confirmed', humanText: 'Restaurant accepted your order', stepIndex: 2 },
-  PREPARING: { key: 'PREPARING', label: 'In Kitchen', humanText: 'Chef is preparing your meal fresh with love', stepIndex: 3 },
-  READY_FOR_PICKUP: { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup', humanText: 'Order is packaged and ready at the store', stepIndex: 4 },
-  RIDER_ASSIGNED: { key: 'RIDER_ASSIGNED', label: 'Rider Dispatched', humanText: 'Rider assigned and riding to the restaurant', stepIndex: 5 },
-  RIDER_AT_STORE: { key: 'RIDER_AT_STORE', label: 'Rider at Restaurant', humanText: 'Rider arrived at restaurant to collect your food', stepIndex: 6 },
-  PICKED_UP: { key: 'PICKED_UP', label: 'Food Picked Up', humanText: 'Food secured in thermal delivery box', stepIndex: 7 },
-  OUT_FOR_DELIVERY: { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', humanText: 'Rider is on the way to your doorstep!', stepIndex: 8 },
-  DELIVERED: { key: 'DELIVERED', label: 'Delivered', humanText: 'Order delivered successfully. Enjoy your meal!', stepIndex: 9 }
+  PENDING_PAYMENT: { key: 'PENDING_PAYMENT', label: 'Payment Pending', humanText: 'Awaiting payment confirmation', stepIndex: 0 },
+  PAID: { key: 'PAID', label: 'Order Confirmed', humanText: 'Payment successful! Sent to restaurant', stepIndex: 1 },
+  RESTAURANT_ACCEPTED: { key: 'RESTAURANT_ACCEPTED', label: 'Restaurant Accepted', humanText: 'Restaurant accepted your order', stepIndex: 2 },
+  PREPARING: { key: 'PREPARING', label: 'Preparing Food', humanText: 'Your food is being prepared', stepIndex: 3 },
+  READY_FOR_PICKUP: { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup', humanText: 'Your food is packaged and waiting for the rider', stepIndex: 4 },
+  RIDER_ASSIGNED: { key: 'RIDER_ASSIGNED', label: 'Rider Assigned', humanText: 'David has accepted your delivery', stepIndex: 5 },
+  RIDER_HEADING_TO_STORE: { key: 'RIDER_HEADING_TO_STORE', label: 'Rider Heading to Store', humanText: 'Your rider is heading to the restaurant', stepIndex: 6 },
+  RIDER_AT_STORE: { key: 'RIDER_AT_STORE', label: 'Rider at Store', humanText: 'Your rider is at the restaurant', stepIndex: 7 },
+  PICKED_UP: { key: 'PICKED_UP', label: 'Order Picked Up', humanText: 'Your food has been picked up', stepIndex: 8 },
+  OUT_FOR_DELIVERY: { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', humanText: 'Rider is on the way to your delivery address', stepIndex: 9 },
+  RIDER_NEARBY: { key: 'RIDER_NEARBY', label: 'Rider Nearby', humanText: 'David is 8 minutes away', stepIndex: 10 },
+  DELIVERED: { key: 'DELIVERED', label: 'Delivered', humanText: 'Your food has been delivered! Enjoy your meal.', stepIndex: 11 }
 };
 
 class Chow45Store {
   constructor() {
-    this.STORAGE_KEY = 'chow45_marketplace_state_v1';
+    this.STORAGE_KEY = 'chow45_marketplace_state_v2';
     this.listeners = [];
     this.state = this.loadInitialState();
   }
@@ -29,21 +31,34 @@ class Chow45Store {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Ensure restaurants list is present
-        if (!parsed.restaurants || parsed.restaurants.length === 0) {
-          parsed.restaurants = JSON.parse(JSON.stringify(CHOW45_RESTAURANTS));
+        if (parsed.restaurants && parsed.restaurants.length > 0 && parsed.userProfile) {
+          return parsed;
         }
-        return parsed;
       } catch (e) {
-        console.warn('Failed parsing saved state, restoring seeds');
+        console.warn('Failed parsing saved state, initializing fresh store');
       }
     }
 
     return {
       currentRole: 'customer', // 'customer' | 'vendor' | 'rider' | 'admin'
-      selectedLocation: CHOW45_LOCATIONS[0],
+      selectedLocation: CHOW45_LOCATIONS[0], // 9 Goshen Ave, Idimu, Lagos
       activeCategory: 'all',
+      activeFilter: 'all', // 'all' | 'popular' | 'fast' | 'budget' | 'rating'
       searchQuery: '',
+      userProfile: {
+        name: 'Precious M.',
+        phone: '+234 812 450 4500',
+        email: 'precious@chow45.com',
+        savedAddresses: [
+          { label: 'Home', address: '9 Goshen Ave, Idimu, Lagos', isDefault: true },
+          { label: 'Work', address: 'Egbeda Bus Stop, Akowonjo Rd, Lagos', isDefault: false },
+          { label: 'School', address: 'OOU Main Campus Gate, Sagamu', isDefault: false }
+        ],
+        favorites: {
+          foods: ['dish-mt-1', 'dish-suya-1'],
+          stores: ['rest-mama-t']
+        }
+      },
       cart: {
         storeId: null,
         storeName: null,
@@ -52,43 +67,53 @@ class Chow45Store {
       currentOrderId: null,
       orders: [
         {
-          id: 'ORD-4501',
-          storeId: 'rest-1',
-          storeName: 'Mama Put OOU Special',
-          customerName: 'Bisi Ogunleye',
-          customerPhone: '+234 813 555 0192',
-          deliveryAddress: 'Hall of Residence 3, Room B12, OOU Sagamu Campus',
+          id: 'CH45281',
+          storeId: 'rest-mama-t',
+          storeName: "Mama T's Kitchen",
+          customerName: 'Precious M.',
+          customerPhone: '+234 812 450 4500',
+          deliveryAddress: 'Home • 9 Goshen Ave, Idimu, Lagos',
           status: 'DELIVERED',
           items: [
-            { name: 'Smokey Party Jollof & Peppered Chicken', qty: 1, price: 2600, addons: ['Extra Dodo'] }
+            { name: 'Jollof Rice', qty: 1, unitPrice: 3500, selectedAddons: [{ name: 'Peppered Chicken', price: 1500 }, { name: 'Fried Plantain (Dodo)', price: 700 }], itemTotal: 5200 }
           ],
-          subtotal: 3100,
+          subtotal: 5200,
+          deliveryFee: 800,
           serviceFee: 500,
-          deliveryFee: 400,
-          total: 4000,
-          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          riderId: 'rider-1',
-          riderName: 'Tunde Adeleke',
-          pin: '4591'
+          total: 6500,
+          createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+          riderId: 'rider-david',
+          riderName: 'David Adeleke',
+          pin: '4528',
+          review: {
+            rating: 5,
+            comment: 'Food was steaming hot and delicious! Fast delivery to Idimu.'
+          }
         }
       ],
       restaurants: JSON.parse(JSON.stringify(CHOW45_RESTAURANTS)),
       riders: JSON.parse(JSON.stringify(CHOW45_RIDERS)),
       adminLedger: {
-        totalGmv: 4000,
+        totalGmv: 6500,
         totalServiceFees: 500,
         completedDeliveries: 1
       },
       pendingVendors: [
         {
-          id: 'pv-1',
+          id: 'pv-101',
           name: 'Iya Moria Bukateria',
-          location: 'Faculty of Science Canteen, Ago Iwoye',
-          appliedAt: '2 hours ago',
-          cuisine: 'Local Amala & Pepper Soup',
-          status: 'pending'
+          ownerName: 'Moria Alabi',
+          location: 'Shop 14, Council Market, Idimu, Lagos',
+          lga: 'Alimosho LGA',
+          phone: '+234 802 331 4492',
+          appliedAt: 'Today, 2:15 PM',
+          cuisine: 'Authentic Amala, Ewedu & Gbegiri',
+          status: 'pending',
+          coverImg: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
+          regNumber: 'BN-4920194'
         }
-      ]
+      ],
+      disputes: []
     };
   }
 
@@ -119,7 +144,7 @@ class Chow45Store {
   }
 
   // -------------------------------------------------------------
-  // Role Navigation
+  // Role & Filter Navigation
   // -------------------------------------------------------------
   setRole(role) {
     this.state.currentRole = role;
@@ -137,18 +162,50 @@ class Chow45Store {
     this.save();
   }
 
+  setFilter(filterId) {
+    this.state.activeFilter = filterId;
+    this.save();
+  }
+
   setSearchQuery(q) {
     this.state.searchQuery = q;
     this.save();
   }
 
   // -------------------------------------------------------------
-  // Cart Actions & "Single-Store Rule"
+  // Favorites Management
+  // -------------------------------------------------------------
+  toggleFavoriteFood(dishId) {
+    const favs = this.state.userProfile.favorites.foods;
+    const index = favs.indexOf(dishId);
+    if (index > -1) {
+      favs.splice(index, 1);
+    } else {
+      favs.push(dishId);
+    }
+    this.save();
+    return index === -1; // true if added
+  }
+
+  toggleFavoriteStore(storeId) {
+    const favs = this.state.userProfile.favorites.stores;
+    const index = favs.indexOf(storeId);
+    if (index > -1) {
+      favs.splice(index, 1);
+    } else {
+      favs.push(storeId);
+    }
+    this.save();
+    return index === -1;
+  }
+
+  // -------------------------------------------------------------
+  // Cart Actions & "1 Cart = 1 Store" Rule
   // -------------------------------------------------------------
   addToCart(restaurant, item, onConflict) {
     const currentStoreId = this.state.cart.storeId;
 
-    // Check single-store rule
+    // Strict 1 Cart = 1 Store rule
     if (currentStoreId && currentStoreId !== restaurant.id && this.state.cart.items.length > 0) {
       if (onConflict) {
         onConflict({
@@ -173,9 +230,8 @@ class Chow45Store {
     this.state.cart.storeId = restaurant.id;
     this.state.cart.storeName = restaurant.name;
 
-    // Check if same dish with same selected addons already exists
     const existingIndex = this.state.cart.items.findIndex(i =>
-      i.dishId === item.dishId && JSON.stringify(i.selectedAddons) === JSON.stringify(item.selectedAddons)
+      i.dishId === item.dishId && JSON.stringify(i.selectedAddons || []) === JSON.stringify(item.selectedAddons || [])
     );
 
     if (existingIndex > -1) {
@@ -231,44 +287,43 @@ class Chow45Store {
   // -------------------------------------------------------------
   createOrder(orderDetails) {
     const store = this.state.restaurants.find(r => r.id === orderDetails.storeId);
-    const distanceKm = store ? store.distanceKm : 1.5;
-    const deliveryFee = calculateDeliveryFee(distanceKm);
+    const distanceKm = store ? store.distanceKm : 1.8;
+    const deliveryFee = store ? store.deliveryFee : calculateDeliveryFee(distanceKm);
     const subtotal = this.getCartSubtotal();
     const serviceFee = MANDATORY_SERVICE_FEE;
     const total = subtotal + serviceFee + deliveryFee;
 
     const newOrder = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `CH45${Math.floor(100 + Math.random() * 900)}`,
       storeId: orderDetails.storeId,
       storeName: orderDetails.storeName,
-      customerName: orderDetails.customerName || 'Chow45 Customer',
-      customerPhone: orderDetails.customerPhone || '+234 812 000 4500',
+      customerName: orderDetails.customerName || this.state.userProfile.name,
+      customerPhone: orderDetails.customerPhone || this.state.userProfile.phone,
       deliveryAddress: orderDetails.deliveryAddress || this.state.selectedLocation.name,
       deliveryNotes: orderDetails.deliveryNotes || '',
-      paymentMethod: orderDetails.paymentMethod || 'Card / Paystack',
+      paymentMethod: orderDetails.paymentMethod || 'Debit Card (Paystack)',
       items: JSON.parse(JSON.stringify(this.state.cart.items)),
       subtotal,
       serviceFee,
       deliveryFee,
       total,
-      status: 'PAID', // Start as paid
+      status: 'PAID', // Start confirmed
       createdAt: new Date().toISOString(),
       riderId: null,
       riderName: null,
-      pin: String(Math.floor(1000 + Math.random() * 9000)), // 4-digit dropoff PIN
+      pin: String(Math.floor(1000 + Math.random() * 9000)),
       history: [
-        { status: 'PAID', timestamp: new Date().toISOString(), note: 'Payment verified successfully.' }
+        { status: 'PAID', timestamp: new Date().toISOString(), note: 'Payment successful! Sent to restaurant' }
       ]
     };
 
     this.state.orders.unshift(newOrder);
     this.state.currentOrderId = newOrder.id;
 
-    // Update platform ledger
+    // Platform Ledger
     this.state.adminLedger.totalGmv += total;
     this.state.adminLedger.totalServiceFees += serviceFee;
 
-    // Clear cart after placement
     this.clearCart();
     this.save();
     return newOrder;
@@ -299,8 +354,39 @@ class Chow45Store {
     return order;
   }
 
+  submitOrderReview(orderId, rating, comment) {
+    const order = this.state.orders.find(o => o.id === orderId);
+    if (order) {
+      order.review = { rating, comment, submittedAt: new Date().toISOString() };
+      this.save();
+    }
+  }
+
+  reportDispute(orderId, reason, details) {
+    const dispute = {
+      id: `DISP-${Date.now()}`,
+      orderId,
+      reason,
+      details,
+      status: 'open',
+      createdAt: new Date().toISOString()
+    };
+    this.state.disputes.unshift(dispute);
+    this.save();
+    return dispute;
+  }
+
+  resolveDispute(disputeId, resolution) {
+    const dispute = this.state.disputes.find(d => d.id === disputeId);
+    if (dispute) {
+      dispute.status = 'resolved';
+      dispute.resolution = resolution;
+      this.save();
+    }
+  }
+
   // -------------------------------------------------------------
-  // Vendor Inventory Toggles
+  // Vendor Inventory Toggles & Onboarding
   // -------------------------------------------------------------
   toggleDishStock(storeId, dishId) {
     const store = this.state.restaurants.find(r => r.id === storeId);
@@ -325,54 +411,78 @@ class Chow45Store {
     return false;
   }
 
-  // -------------------------------------------------------------
-  // Admin Vendor Approvals
-  // -------------------------------------------------------------
+  registerVendor(vendorData) {
+    const newPending = {
+      id: `pv-${Date.now()}`,
+      name: vendorData.storeName,
+      ownerName: vendorData.ownerName,
+      location: vendorData.address,
+      lga: vendorData.lga || 'Alimosho LGA',
+      phone: vendorData.phone,
+      appliedAt: 'Just now',
+      cuisine: vendorData.cuisine || 'Nigerian Specialties',
+      status: 'pending',
+      coverImg: vendorData.coverImg || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80'
+    };
+    this.state.pendingVendors.unshift(newPending);
+    this.save();
+    return newPending;
+  }
+
   approveVendor(pvId) {
     const index = this.state.pendingVendors.findIndex(v => v.id === pvId);
     if (index > -1) {
       const v = this.state.pendingVendors[index];
       this.state.pendingVendors.splice(index, 1);
-      // Create new restaurant from pending
       const newRest = {
-        id: `rest-${this.state.restaurants.length + 1}`,
+        id: `rest-${Date.now()}`,
         name: v.name,
         slug: v.name.toLowerCase().replace(/\s+/g, '-'),
         rating: 5.0,
         reviewsCount: 1,
-        prepTime: '20 - 30 min',
-        distanceKm: 1.8,
-        deliveryFee: 450,
-        tags: [v.cuisine, 'Verified Partner'],
-        category: 'swallow',
-        isBudget: true,
-        bannerImg: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
+        prepTime: '20–30 min',
+        distanceKm: 2.0,
+        deliveryFee: 650,
         address: v.location,
-        lat: 6.8410,
-        lng: 3.6510,
+        lat: 6.5780,
+        lng: 3.2710,
         open: true,
+        isVerified: true,
+        tags: [v.cuisine, 'Verified Store'],
+        category: 'rice',
+        isBudget: true,
+        isRecommended: true,
+        isPopular: false,
+        isFast: true,
+        bannerImg: v.coverImg,
         menu: [
           {
             id: `dish-pv-${Date.now()}`,
-            name: `${v.cuisine} Signature Plate`,
-            desc: 'Freshly prepared specialty dish from this verified vendor.',
-            price: 2500,
-            img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80',
+            name: `${v.cuisine} Special Platter`,
+            desc: 'Signature dish prepared with fresh local ingredients.',
+            price: 3200,
+            img: v.coverImg,
             inStock: true,
+            category: 'rice',
+            rating: 5.0,
+            prepTime: '20–30 min',
+            isPopular: true,
             addonGroups: []
           }
         ]
       };
-      this.state.restaurants.push(newRest);
+      this.state.restaurants.unshift(newRest);
       this.save();
     }
   }
 
-  rejectVendor(pvId) {
-    this.state.pendingVendors = this.state.pendingVendors.filter(v => v.id !== pvId);
-    this.save();
+  rejectVendor(pvId, reason = 'Verification documents incomplete') {
+    const index = this.state.pendingVendors.findIndex(v => v.id === pvId);
+    if (index > -1) {
+      this.state.pendingVendors.splice(index, 1);
+      this.save();
+    }
   }
 }
 
-// Global singleton instance
 window.chowStore = new Chow45Store();

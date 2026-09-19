@@ -1,11 +1,13 @@
 /**
  * CHOW45 VENDOR PORTAL CONTROLLER
- * Kitchen order queue fulfillment, inventory in/out-of-stock toggles, store status
+ * Kitchen order queue fulfillment, inventory in/out-of-stock toggles,
+ * guided multi-step vendor registration, store status, and wallet.
  */
 
 const VendorController = {
-  currentStoreId: 'rest-1', // Defaults to Mama Put OOU Special
+  currentStoreId: 'rest-mama-t', // Defaults to Mama T's Kitchen
   activeTab: 'incoming', // 'incoming' | 'preparing' | 'ready' | 'history'
+  regStep: 1,
 
   init() {
     this.bindEvents();
@@ -87,11 +89,10 @@ const VendorController = {
     const container = document.getElementById('vendor-orders-list');
     if (!container) return;
 
-    // Tab counts
     const incoming = storeOrders.filter(o => o.status === 'PAID');
-    const preparing = storeOrders.filter(o => o.status === 'STORE_CONFIRMED' || o.status === 'PREPARING');
-    const ready = storeOrders.filter(o => o.status === 'READY_FOR_PICKUP' || o.status === 'RIDER_ASSIGNED' || o.status === 'RIDER_AT_STORE');
-    const completed = storeOrders.filter(o => o.status === 'PICKED_UP' || o.status === 'OUT_FOR_DELIVERY' || o.status === 'DELIVERED');
+    const preparing = storeOrders.filter(o => o.status === 'RESTAURANT_ACCEPTED' || o.status === 'PREPARING');
+    const ready = storeOrders.filter(o => o.status === 'READY_FOR_PICKUP' || o.status === 'RIDER_ASSIGNED' || o.status === 'RIDER_HEADING_TO_STORE' || o.status === 'RIDER_AT_STORE');
+    const completed = storeOrders.filter(o => o.status === 'PICKED_UP' || o.status === 'OUT_FOR_DELIVERY' || o.status === 'RIDER_NEARBY' || o.status === 'DELIVERED');
 
     const incCount = document.getElementById('vendor-count-incoming');
     if (incCount) incCount.innerText = incoming.length;
@@ -121,11 +122,11 @@ const VendorController = {
       let actionBtn = '';
       if (order.status === 'PAID') {
         actionBtn = `
-          <button class="action-btn-primary" onclick="VendorController.advanceOrder('${order.id}', 'STORE_CONFIRMED')">
+          <button class="action-btn-primary" onclick="VendorController.advanceOrder('${order.id}', 'RESTAURANT_ACCEPTED')">
             Accept & Start Cooking
           </button>
         `;
-      } else if (order.status === 'STORE_CONFIRMED') {
+      } else if (order.status === 'RESTAURANT_ACCEPTED') {
         actionBtn = `
           <button class="action-btn-primary" onclick="VendorController.advanceOrder('${order.id}', 'PREPARING')">
             Mark in Kitchen (Preparing)
@@ -145,7 +146,7 @@ const VendorController = {
         <div class="kitchen-order-card">
           <div class="order-top-row">
             <div>
-              <span class="order-id-badge">${order.id}</span>
+              <span class="order-id-badge">#${order.id}</span>
               <span style="font-size: 0.8rem; color: var(--c-text-secondary); margin-left: 8px;">${order.customerName} (${order.customerPhone})</span>
             </div>
             <span class="order-stage-tag ${order.status === 'READY_FOR_PICKUP' ? 'ready' : ''}">${ORDER_STAGES[order.status]?.label || order.status}</span>
@@ -175,7 +176,7 @@ const VendorController = {
 
   advanceOrder(orderId, newStatus) {
     window.chowStore.advanceOrderStatus(orderId, newStatus);
-    window.chowApp.toast(`Order ${orderId} updated to ${ORDER_STAGES[newStatus]?.label}`, 'success');
+    window.chowApp.toast(`Order #${orderId} updated to ${ORDER_STAGES[newStatus]?.label}`, 'success');
   },
 
   renderInventory(store) {
@@ -192,7 +193,7 @@ const VendorController = {
           <div class="toggle-switch ${dish.inStock ? 'on' : ''}" onclick="VendorController.toggleDish('${dish.id}')">
             <div class="toggle-knob"></div>
           </div>
-          <span class="inv-stock-label ${dish.inStock ? 'in' : 'out'}">${dish.inStock ? 'In Stock' : 'Sold Out'}</span>
+          <span class="inv-stock-label ${dish.inStock ? 'in' : 'out'}">${dish.inStock ? 'In Stock' : 'Out of Stock'}</span>
         </div>
       </div>
     `).join('');
@@ -202,6 +203,50 @@ const VendorController = {
     const store = this.getStore();
     if (!store) return;
     const isStocked = window.chowStore.toggleDishStock(store.id, dishId);
-    window.chowApp.toast(`Dish updated to ${isStocked ? 'IN STOCK' : 'SOLD OUT'}`, isStocked ? 'success' : 'warning');
+    window.chowApp.toast(`Item is now ${isStocked ? 'IN STOCK' : 'OUT OF STOCK'}`, isStocked ? 'success' : 'warning');
+  },
+
+  // -------------------------------------------------------------
+  // Guided Multi-Step Vendor Registration (Point 26)
+  // -------------------------------------------------------------
+  openRegistrationModal() {
+    this.regStep = 1;
+    this.updateRegStepUI();
+    document.getElementById('vendor-register-modal').classList.add('open');
+  },
+
+  setRegStep(step) {
+    this.regStep = step;
+    this.updateRegStepUI();
+  },
+
+  updateRegStepUI() {
+    for (let i = 1; i <= 5; i++) {
+      const stepEl = document.getElementById(`v-reg-step-${i}`);
+      if (stepEl) stepEl.style.display = i === this.regStep ? 'block' : 'none';
+    }
+    const indicator = document.getElementById('v-reg-indicator');
+    if (indicator) indicator.innerText = `Step ${this.regStep} of 5`;
+  },
+
+  submitVendorRegistration() {
+    const storeName = document.getElementById('v-reg-store-name').value.trim() || 'New Lagos Kitchen';
+    const ownerName = document.getElementById('v-reg-owner-name').value.trim() || 'Restaurant Owner';
+    const phone = document.getElementById('v-reg-phone').value.trim() || '+234 800 000 0000';
+    const address = document.getElementById('v-reg-address').value.trim() || 'Idimu, Lagos';
+    const lga = document.getElementById('v-reg-lga').value || 'Alimosho LGA';
+    const cuisine = document.getElementById('v-reg-cuisine').value.trim() || 'Nigerian Canteen';
+
+    window.chowStore.registerVendor({
+      storeName,
+      ownerName,
+      phone,
+      address,
+      lga,
+      cuisine
+    });
+
+    this.setRegStep(5); // Show pending review
+    window.chowApp.toast('Vendor application submitted for admin verification!', 'success');
   }
 };
