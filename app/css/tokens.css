@@ -1,0 +1,87 @@
+/* ==========================================================================
+   CHOW45 DESIGN SYSTEM TOKENS
+   Inspired by modern African consumer technology: Chowdeck density & polish
+   Distinct Chow45 identity: Forest Green, Warm Cream, Golden Honey & Slate
+   ========================================================================== */
+
+:root {
+  /* Brand Colors */
+  --c-primary: #0B4633;           /* Deep Forest Chow45 Green */
+  --c-primary-light: #126349;     /* Vibrant Forest Green */
+  --c-primary-dark: #072B1F;      /* Deepest Pine */
+  --c-primary-surface: #EBF7F2;   /* Soft Sage Tint */
+
+  --c-accent: #FFB800;            /* Warm Golden Honey */
+  --c-accent-hover: #E5A500;
+  --c-accent-soft: #FFF8E5;       /* Warm Butter Tint */
+
+  --c-secondary: #E85A2A;         /* Peppered Red-Orange for spicy/deals */
+  --c-secondary-soft: #FDEEE9;
+
+  /* Surfaces & Backgrounds */
+  --c-bg-canvas: #FBF8F2;         /* Warm Ivory/Cream Canvas */
+  --c-bg-surface: #FFFFFF;        /* Pure White Cards */
+  --c-bg-subtle: #F3EFE6;         /* Secondary Surface Tint */
+  --c-bg-glass: rgba(255, 255, 255, 0.92);
+
+  /* Typography Colors */
+  --c-text-primary: #121826;      /* High-contrast charcoal */
+  --c-text-secondary: #4B5563;    /* Cool slate gray */
+  --c-text-muted: #8892A0;        /* Subtle descriptor text */
+  --c-text-inverse: #FFFFFF;      /* Text on dark/primary buttons */
+
+  /* Borders & Dividers */
+  --c-border: #E8E2D5;
+  --c-border-subtle: #F0ECE3;
+  --c-border-active: #0B4633;
+
+  /* Status Colors */
+  --c-success: #10B981;
+  --c-success-bg: #D1FAE5;
+  --c-warning: #F59E0B;
+  --c-warning-bg: #FEF3C7;
+  --c-error: #EF4444;
+  --c-error-bg: #FEE2E2;
+  --c-info: #3B82F6;
+  --c-info-bg: #DBEAFE;
+
+  /* Typography Families & Weights */
+  --font-display: 'Cabinet Grotesk', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Elevation / Shadows */
+  --shadow-xs: 0 1px 2px rgba(18, 24, 38, 0.05);
+  --shadow-sm: 0 2px 6px rgba(18, 24, 38, 0.06), 0 1px 2px rgba(18, 24, 38, 0.04);
+  --shadow-md: 0 6px 16px -2px rgba(18, 24, 38, 0.08), 0 2px 4px -1px rgba(18, 24, 38, 0.03);
+  --shadow-lg: 0 14px 28px -4px rgba(18, 24, 38, 0.10), 0 6px 12px -2px rgba(18, 24, 38, 0.05);
+  --shadow-floating: 0 20px 40px -8px rgba(11, 70, 51, 0.16), 0 8px 16px -4px rgba(18, 24, 38, 0.08);
+
+  /* Border Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 9999px;
+
+  /* Spacing Scale */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+
+  /* Layout Consts */
+  --nav-height: 72px;
+  --bottom-bar-height: 68px;
+  --max-width: 1280px;
+
+  /* Transitions */
+  --transition-snappy: 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-smooth: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}

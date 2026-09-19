@@ -126,7 +126,34 @@ const STATIC_ASSETS = {
   '/admin.js': loadAsset('admin.js', 'application/javascript; charset=UTF-8'),
   '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml'),
   '/sitemap.xml': loadAsset('sitemap.xml', 'application/xml; charset=UTF-8'),
-  '/robots.txt': loadAsset('robots.txt', 'text/plain; charset=UTF-8')
+  '/robots.txt': loadAsset('robots.txt', 'text/plain; charset=UTF-8'),
+
+  // Marketplace App routes
+  '/app': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+  '/app/': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+  '/app/index.html': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+  '/marketplace': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+  '/marketplace/': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+  '/marketplace/index.html': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
+
+  // App CSS
+  '/app/css/tokens.css': loadAsset('app/css/tokens.css', 'text/css; charset=UTF-8'),
+  '/app/css/layout.css': loadAsset('app/css/layout.css', 'text/css; charset=UTF-8'),
+  '/app/css/marketplace.css': loadAsset('app/css/marketplace.css', 'text/css; charset=UTF-8'),
+  '/app/css/tracking.css': loadAsset('app/css/tracking.css', 'text/css; charset=UTF-8'),
+  '/app/css/vendor.css': loadAsset('app/css/vendor.css', 'text/css; charset=UTF-8'),
+  '/app/css/rider.css': loadAsset('app/css/rider.css', 'text/css; charset=UTF-8'),
+  '/app/css/admin.css': loadAsset('app/css/admin.css', 'text/css; charset=UTF-8'),
+
+  // App JS
+  '/app/js/data.js': loadAsset('app/js/data.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/state.js': loadAsset('app/js/state.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/mapbox-service.js': loadAsset('app/js/mapbox-service.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/customer.js': loadAsset('app/js/customer.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/vendor.js': loadAsset('app/js/vendor.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/rider.js': loadAsset('app/js/rider.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/admin.js': loadAsset('app/js/admin.js', 'application/javascript; charset=UTF-8'),
+  '/app/js/app.js': loadAsset('app/js/app.js', 'application/javascript; charset=UTF-8')
 };
 
 // Helper to read request body in both standard Node and serverless environments
@@ -367,9 +394,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Fallback disk lookup
-  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  let relPath = pathname === '/' ? 'index.html' : pathname;
+  if (relPath === '/app' || relPath === '/app/' || relPath === '/marketplace' || relPath === '/marketplace/') {
+    relPath = 'app/index.html';
+  } else if (relPath.startsWith('/marketplace/')) {
+    relPath = 'app/' + relPath.replace('/marketplace/', '');
+  }
+
+  let filePath = path.join(__dirname, relPath);
   if (!fs.existsSync(filePath)) {
-    filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
+    filePath = path.join(__dirname, 'public', relPath);
   }
 
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {

@@ -1,0 +1,169 @@
+/* ==========================================================================
+   CHOW45 ADMIN OPERATIONS CENTER STYLES
+   Platform KPIs, live order radar, vendor verification, fee ledger
+   ========================================================================== */
+
+.admin-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.admin-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+}
+.admin-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+.admin-badge {
+  background: #1E293B;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+/* KPIs */
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-16);
+}
+.admin-stat-card {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  overflow: hidden;
+}
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--c-primary);
+}
+.admin-stat-card.accent::before {
+  background: var(--c-accent);
+}
+.admin-stat-card.fee::before {
+  background: var(--c-secondary);
+}
+
+.stat-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+  margin-bottom: 6px;
+}
+.stat-number {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--c-text-primary);
+}
+.stat-sub {
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+}
+
+/* Sections Grid */
+.admin-split-view {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-20);
+}
+@media (max-width: 900px) {
+  .admin-split-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-card {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-xs);
+}
+.admin-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: var(--space-16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Live Table */
+.data-table-wrap {
+  overflow-x: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: left;
+}
+.admin-table th {
+  background: var(--c-bg-subtle);
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+  border-bottom: 1px solid var(--c-border);
+}
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--c-border-subtle);
+  color: var(--c-text-primary);
+}
+.admin-table tr:hover td {
+  background: var(--c-bg-canvas);
+}
+
+.table-status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Action Buttons */
+.btn-table-approve {
+  border: none;
+  background: var(--c-success-bg);
+  color: #065F46;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.btn-table-reject {
+  border: none;
+  background: var(--c-error-bg);
+  color: #991B1B;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  margin-left: 4px;
+}

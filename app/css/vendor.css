@@ -1,0 +1,286 @@
+/* ==========================================================================
+   CHOW45 VENDOR / RESTAURANT PORTAL STYLES
+   Kitchen order management, instant stock toggles, wallet earnings
+   ========================================================================== */
+
+.vendor-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+/* Vendor Store Header Banner */
+.vendor-store-banner {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  box-shadow: var(--shadow-sm);
+}
+
+.vendor-profile-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+.vendor-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  border: 2px solid var(--c-border);
+}
+.vendor-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--c-text-primary);
+}
+.vendor-location-tag {
+  font-size: 0.82rem;
+  color: var(--c-text-secondary);
+}
+
+/* Store Open/Close Toggle */
+.store-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  background: var(--c-bg-subtle);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+}
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #CBD5E1;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition-snappy);
+}
+.toggle-switch.on {
+  background: var(--c-primary);
+}
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-snappy);
+}
+.toggle-switch.on .toggle-knob {
+  transform: translateX(20px);
+}
+.status-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Vendor Metrics Grid */
+.vendor-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-16);
+}
+.kpi-card {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-16);
+  box-shadow: var(--shadow-xs);
+}
+.kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--c-text-secondary);
+  margin-bottom: 4px;
+}
+.kpi-val {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--c-text-primary);
+}
+
+/* Kitchen Queue Tabs & List */
+.vendor-tabs {
+  display: flex;
+  gap: var(--space-8);
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: var(--space-12);
+  overflow-x: auto;
+}
+.vendor-tab-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-snappy);
+}
+.vendor-tab-btn.active {
+  background: var(--c-primary);
+  color: white;
+}
+.tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+}
+.vendor-tab-btn:not(.active) .tab-count {
+  background: var(--c-bg-subtle);
+  color: var(--c-text-primary);
+}
+
+.kitchen-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.kitchen-order-card {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.order-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+.order-id-badge {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--c-primary);
+}
+.order-stage-tag {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--c-warning-bg);
+  color: #92400E;
+}
+.order-stage-tag.ready {
+  background: var(--c-success-bg);
+  color: #065F46;
+}
+
+.order-items-box {
+  background: var(--c-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.order-item-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-actions-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin-top: 4px;
+}
+.action-btn-secondary {
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-surface);
+  color: var(--c-text-primary);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.action-btn-primary {
+  border: none;
+  background: var(--c-primary);
+  color: white;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-snappy);
+}
+.action-btn-primary:hover {
+  background: var(--c-primary-light);
+}
+
+/* -------------------------------------------------------------
+   Inventory Management (Instant In-Stock / Out-of-Stock Toggle)
+   ------------------------------------------------------------- */
+.inventory-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-16);
+}
+.inventory-item-card {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+.inv-details {
+  flex: 1;
+}
+.inv-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+.inv-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--c-primary);
+}
+.inv-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.inv-stock-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.inv-stock-label.in {
+  color: var(--c-primary);
+}
+.inv-stock-label.out {
+  color: #DC2626;
+}
