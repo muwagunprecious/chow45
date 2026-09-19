@@ -125,6 +125,28 @@ const STATIC_ASSETS = {
   '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml')
 };
 
+// Helper to read request body in both standard Node and serverless environments
+function getRequestBody(req) {
+  return new Promise((resolve) => {
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+      return resolve(req.body);
+    }
+    if (typeof req.body === 'string') {
+      try { return resolve(JSON.parse(req.body)); } catch (e) { return resolve({}); }
+    }
+    let raw = '';
+    req.on('data', chunk => { raw += chunk; });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(raw || '{}'));
+      } catch (e) {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   const host = req.headers.host || `localhost:${PORT}`;
   const parsedUrl = new URL(req.url, `http://${host}`);
@@ -173,17 +195,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/waitlist' && method === 'POST') {
     (async () => {
       try {
-        let data = req.body;
-        if (!data || typeof data === 'string') {
-          let bodyStr = typeof data === 'string' ? data : '';
-          if (!bodyStr) {
-            for await (const chunk of req) {
-              bodyStr += chunk;
-            }
-          }
-          try { data = JSON.parse(bodyStr || '{}'); } catch (e) { data = {}; }
-        }
-
+        const data = await getRequestBody(req);
         const { name, email, phone, user_type, department } = data || {};
 
         if (!name || !email || !phone || !user_type) {
