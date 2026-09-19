@@ -317,7 +317,11 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Chow45 server running at http://localhost:${PORT}`);
-  console.log(`📊 Admin portal available at http://localhost:${PORT}/admin`);
-});
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`🚀 Chow45 server running at http://localhost:${PORT}`);
+    console.log(`📊 Admin portal available at http://localhost:${PORT}/admin`);
+  });
+}
+
+module.exports = server;
