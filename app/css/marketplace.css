@@ -651,3 +651,135 @@
 .checkout-input:focus, .checkout-select:focus, .checkout-textarea:focus {
   border-color: var(--c-primary);
 }
+
+/* -------------------------------------------------------------
+   Mobile Responsiveness for Marketplace Views
+   ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .marketplace-hero {
+    padding: 22px 16px;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-16);
+  }
+
+  .hero-headline {
+    font-size: 1.55rem;
+    margin-bottom: 6px;
+  }
+
+  .hero-subtitle {
+    font-size: 0.84rem;
+    margin-bottom: var(--space-16);
+  }
+
+  .search-pill-container {
+    padding: 4px 6px 4px 12px;
+    gap: 6px;
+  }
+  .search-pill-input {
+    font-size: 0.85rem;
+  }
+  .search-pill-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  .promo-strip {
+    margin-bottom: var(--space-20);
+    gap: 8px;
+  }
+  .promo-pill {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+  }
+
+  .category-scroll {
+    gap: 8px;
+    margin-bottom: var(--space-20);
+  }
+  .category-card {
+    flex: 0 0 88px;
+    padding: 10px 6px;
+    border-radius: var(--radius-md);
+  }
+  .category-img {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+  }
+  .category-name {
+    font-size: 0.72rem;
+  }
+
+  .stores-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+    margin-bottom: var(--space-24);
+  }
+  .store-thumb-wrap {
+    height: 155px;
+  }
+  .store-title {
+    font-size: 1.05rem;
+  }
+  .store-meta-row {
+    font-size: 0.74rem;
+    gap: 8px;
+  }
+
+  /* Store Detail & Menu */
+  .store-banner-hero {
+    height: 160px;
+  }
+  .store-header-body {
+    padding: 14px;
+  }
+  .menu-items-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dish-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  .dish-info {
+    min-width: 0;
+  }
+  .dish-title {
+    font-size: 0.95rem;
+  }
+  .dish-desc {
+    font-size: 0.76rem;
+    -webkit-line-clamp: 2;
+  }
+  .dish-price {
+    font-size: 0.88rem;
+  }
+  .dish-thumb-wrap {
+    width: 82px;
+    height: 82px;
+  }
+  .dish-add-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  /* Customizer Modal */
+  .custom-dish-banner {
+    height: 140px;
+  }
+  .addon-option-row {
+    padding: 8px 0;
+  }
+  .addon-label-wrap {
+    font-size: 0.82rem;
+  }
+  .addon-price-tag {
+    font-size: 0.8rem;
+  }
+  .cta-primary-btn {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+}

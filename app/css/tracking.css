@@ -248,3 +248,68 @@
 .tracking-back-btn:hover {
   text-decoration: underline;
 }
+
+/* -------------------------------------------------------------
+   Mobile Tracking Overlay Optimization
+   ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .tracking-screen {
+    height: calc(100dvh - 120px);
+    min-height: 460px;
+    border-radius: var(--radius-lg);
+  }
+
+  .tracking-overlay-card {
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    padding: 14px;
+    border-radius: var(--radius-lg);
+    max-height: 52vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .status-headline {
+    font-size: 1.1rem;
+  }
+  .status-subtext {
+    font-size: 0.78rem;
+    margin-bottom: 8px;
+  }
+  .status-eta-pill {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+  }
+
+  .rider-dispatch-card {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .rider-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .rider-name {
+    font-size: 0.82rem;
+  }
+  .rider-rating {
+    font-size: 0.7rem;
+  }
+  .rider-action-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .rider-action-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .pin-security-box {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+  }
+  .pin-code {
+    font-size: 0.98rem;
+  }
+}

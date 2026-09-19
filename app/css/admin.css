@@ -167,3 +167,38 @@
   cursor: pointer;
   margin-left: 4px;
 }
+
+/* -------------------------------------------------------------
+   Mobile Optimization for Admin Command Center
+   ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .admin-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px;
+  }
+  .admin-title {
+    font-size: 1.2rem;
+  }
+
+  .admin-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .admin-stat-card {
+    padding: 14px;
+  }
+  .stat-number {
+    font-size: 1.35rem;
+  }
+
+  .admin-card {
+    padding: 14px;
+  }
+  .admin-table th, .admin-table td {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+}

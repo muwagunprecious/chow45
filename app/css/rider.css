@@ -251,3 +251,52 @@
   border-color: var(--c-primary);
   outline: none;
 }
+
+/* -------------------------------------------------------------
+   Mobile Optimization for Rider Portal
+   ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .rider-status-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+  }
+  .rider-info-group {
+    gap: 10px;
+  }
+  .rider-profile-img {
+    width: 42px;
+    height: 42px;
+  }
+  .rider-name-heading {
+    font-size: 1.05rem;
+  }
+  .rider-online-toggle {
+    width: 100%;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .job-card {
+    padding: 14px;
+    gap: 10px;
+  }
+  .payout-tag {
+    font-size: 1.2rem;
+  }
+  .accept-job-btn {
+    padding: 12px;
+    font-size: 0.86rem;
+  }
+
+  .active-mission-card {
+    padding: 14px;
+    gap: 12px;
+  }
+  .mission-step-btn {
+    padding: 12px;
+    font-size: 0.92rem;
+  }
+}

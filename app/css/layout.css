@@ -440,7 +440,7 @@ body {
 }
 
 /* -------------------------------------------------------------
-   Responsive Breakpoints
+   Responsive Breakpoints & Mobile Enhancements
    ------------------------------------------------------------- */
 @media (min-width: 769px) {
   .bottom-nav {
@@ -451,19 +451,138 @@ body {
   }
 }
 
+@media (max-width: 768px) {
+  .main-viewport {
+    padding: var(--space-12);
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 640px) {
   .top-nav {
-    padding: var(--space-8) var(--space-12);
+    padding: 8px 10px;
+    gap: 8px;
   }
+  .top-nav-inner {
+    gap: 8px;
+  }
+
+  .brand-badge {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .brand-badge .badge-tag {
+    font-size: 0.6rem;
+    padding: 1px 5px;
+  }
+
   .role-bar {
-    display: none; /* Switcher moved to mobile profile or header menu */
+    display: none; /* Handled via bottom dock on mobile */
   }
+
   .location-pill {
-    max-width: 140px;
+    max-width: 130px;
+    padding: 5px 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+    flex-shrink: 1;
   }
+  .location-pill svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .nav-actions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .cart-pill-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+  .cart-pill-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .cart-count-badge {
+    font-size: 0.7rem;
+    padding: 1px 5px;
+    min-width: 18px;
+  }
+
+  .landing-link-btn {
+    display: none; /* Keep header clean on small mobile */
+  }
+
+  /* Bottom Dock on Mobile */
+  .bottom-nav {
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 16px);
+    max-width: 390px;
+    padding: 6px 4px;
+  }
+  .bottom-tab {
+    padding: 4px 6px;
+    font-size: 0.62rem;
+    gap: 2px;
+  }
+  .bottom-tab svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Mobile Bottom Sheet Modal Transition */
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-sheet {
+    max-width: 100%;
+    max-height: 88vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+    transform: translateY(100%);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+  }
+  .modal-backdrop.open .modal-sheet {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+  .modal-title {
+    font-size: 1.1rem;
+  }
+  .modal-body {
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-footer {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
   .toast-container {
-    left: var(--space-16);
-    right: var(--space-16);
-    bottom: 86px;
+    left: var(--space-12);
+    right: var(--space-12);
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 360px) {
+  .location-pill {
+    max-width: 95px;
+  }
+  .bottom-tab span:not(.tab-badge) {
+    font-size: 0.58rem;
+  }
+  .brand-badge span:first-child {
+    font-size: 0.85rem;
   }
 }
