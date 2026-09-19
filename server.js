@@ -162,69 +162,84 @@ function getRequestBody(req) {
     if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
       return resolve(req.body);
     }
+    if (Buffer.isBuffer(req.body)) {
+      try { return resolve(JSON.parse(req.body.toString('utf8'))); } catch (e) { return resolve({}); }
+    }
     if (typeof req.body === 'string') {
       try { return resolve(JSON.parse(req.body)); } catch (e) { return resolve({}); }
     }
+    if (req.readableEnded || req.complete) {
+      return resolve({});
+    }
+
     let raw = '';
+    const timer = setTimeout(() => {
+      try { resolve(JSON.parse(raw || '{}')); } catch (e) { resolve({}); }
+    }, 3000);
+
     req.on('data', chunk => { raw += chunk; });
     req.on('end', () => {
+      clearTimeout(timer);
       try {
         resolve(JSON.parse(raw || '{}'));
       } catch (e) {
         resolve({});
       }
     });
-    req.on('error', () => resolve({}));
+    req.on('error', () => {
+      clearTimeout(timer);
+      resolve({});
+    });
   });
 }
 
 const server = http.createServer(async (req, res) => {
-  const host = req.headers.host || `localhost:${PORT}`;
-  const parsedUrl = new URL(req.url, `http://${host}`);
-  const pathname = parsedUrl.pathname;
-  const method = req.method;
+  try {
+    const host = req.headers.host || `localhost:${PORT}`;
+    const parsedUrl = new URL(req.url, `http://${host}`);
+    const pathname = parsedUrl.pathname;
+    const method = req.method;
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  // -------------------------------------------------------------
-  // API: Status / Health (GET /api/status)
-  // -------------------------------------------------------------
-  if (pathname === '/api/status' && method === 'GET') {
-    let statusState = 'disconnected';
-    if (pool) {
-      try {
-        const client = await pool.connect();
-        await client.query('SELECT 1;');
-        client.release();
-        statusState = 'connected';
-        dbConnected = true;
-      } catch (e) {
-        statusState = 'connecting/fallback';
-      }
+    if (method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      database: statusState,
-      timestamp: new Date().toISOString()
-    }));
-    return;
-  }
 
-  // -------------------------------------------------------------
-  // API: Create Waitlist Entry (POST /api/waitlist)
-  // -------------------------------------------------------------
-  if (pathname === '/api/waitlist' && method === 'POST') {
-    (async () => {
+    // -------------------------------------------------------------
+    // API: Status / Health (GET /api/status)
+    // -------------------------------------------------------------
+    if (pathname === '/api/status' && method === 'GET') {
+      let statusState = 'disconnected';
+      if (pool) {
+        try {
+          const client = await pool.connect();
+          await client.query('SELECT 1;');
+          client.release();
+          statusState = 'connected';
+          dbConnected = true;
+        } catch (e) {
+          statusState = 'connecting/fallback';
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'ok',
+        database: statusState,
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // API: Create Waitlist Entry (POST /api/waitlist)
+    // -------------------------------------------------------------
+    if (pathname === '/api/waitlist' && method === 'POST') {
       try {
         const data = await getRequestBody(req);
         const { name, email, phone, user_type, department } = data || {};
@@ -274,9 +289,8 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message || 'Internal server error' }));
       }
-    })();
-    return;
-  }
+      return;
+    }
 
   // -------------------------------------------------------------
   // API: Get Waitlist Entries & Stats (GET /api/waitlist)
@@ -401,22 +415,33 @@ const server = http.createServer(async (req, res) => {
     relPath = 'app/' + relPath.replace('/marketplace/', '');
   }
 
-  let filePath = path.join(__dirname, relPath);
-  if (!fs.existsSync(filePath)) {
-    filePath = path.join(__dirname, 'public', relPath);
-  }
+  try {
+    let filePath = path.join(__dirname, relPath);
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(__dirname, 'public', relPath);
+    }
 
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(fs.readFileSync(filePath));
-    return;
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(fs.readFileSync(filePath));
+      return;
+    }
+  } catch (fsErr) {
+    console.error('File resolution error:', fsErr.message);
   }
 
   // 404
   res.writeHead(404, { 'Content-Type': 'text/html; charset=UTF-8' });
   res.end('<h1>404 Not Found</h1><p><a href="/">Return to Chow45 Home</a></p>');
+} catch (fatalErr) {
+  console.error('Fatal unhandled request error:', fatalErr);
+  if (!res.headersSent) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Internal server error', message: fatalErr.message }));
+  }
+}
 });
 
 if (require.main === module && !process.env.VERCEL) {
