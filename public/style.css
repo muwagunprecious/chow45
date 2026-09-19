@@ -368,13 +368,39 @@ body {
    ========================================================================== */
 .hero-section,
 .hero {
-  background: var(--cream);
+  background-color: var(--cream);
+  background-image: url('hero-bg.jpg');
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: cover;
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   padding-top: 150px;
   padding-bottom: 0;
   position: relative;
   overflow: hidden;
   border-bottom: var(--border);
+}
+
+.hero-section::before,
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #FBF8F2 0%, rgba(251, 248, 242, 0.98) 44%, rgba(251, 248, 242, 0.4) 66%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .hero-section,
+  .hero {
+    background-position: center bottom;
+    background-size: 100% auto;
+  }
+  .hero-section::before,
+  .hero::before {
+    background: linear-gradient(180deg, #FBF8F2 0%, rgba(251, 248, 242, 0.95) 45%, rgba(251, 248, 242, 0.2) 100%);
+  }
 }
 
 .hero-content {
@@ -512,12 +538,25 @@ body {
   font-size: 16px;
 }
 
-/* Hero Art Illustration */
+/* Hero Art Illustration - showcases the 3D background with floating Chowdeck badges */
 .hero-art {
   height: 520px;
   position: relative;
   isolation: isolate;
-  filter: drop-shadow(0 15px 25px rgba(12, 81, 63, 0.1));
+  pointer-events: none;
+}
+
+.hero-art .sunburst,
+.hero-art .food-bowl,
+.hero-art .takeaway,
+.hero-art .phone,
+.hero-art .rider {
+  display: none !important;
+}
+
+.hero-art .art-label,
+.hero-art .doodle {
+  pointer-events: auto;
 }
 
 .sunburst {
