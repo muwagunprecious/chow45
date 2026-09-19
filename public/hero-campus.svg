@@ -1,0 +1,47 @@
+<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Puffy cartoon clouds in sky matching Chowdeck style -->
+  <path d="M80 160 C80 115 125 90 170 110 C190 70 250 70 280 110 C320 90 370 120 370 160 Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M1200 180 C1200 135 1245 110 1290 130 C1310 90 1375 90 1405 130 C1445 110 1495 140 1495 180 Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M680 140 C680 105 715 85 750 98 C770 68 815 68 840 98 C870 85 910 105 910 140 Z" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Left Architectural Building (Yellow Campus Hall with orange stairs, directly inspired by Chowdeck hero) -->
+  <!-- Orange stairwell on the left side of building -->
+  <path d="M15 250 L45 250 L45 418 L15 418 Z" fill="#E85D04"/>
+  <path d="M15 268 L45 250 M15 293 L45 275 M15 318 L45 300 M15 343 L45 325 M15 368 L45 350 M15 393 L45 375 M15 418 L45 400" stroke="#111111" stroke-width="4"/>
+  <!-- Main yellow block -->
+  <rect x="45" y="220" width="280" height="198" fill="#FFC928" stroke="#111111" stroke-width="4"/>
+  <!-- Rooftop orange structure -->
+  <rect x="155" y="170" width="120" height="50" fill="#FF7043" stroke="#111111" stroke-width="4"/>
+  <line x1="170" y1="150" x2="170" y2="170" stroke="#111111" stroke-width="3.5"/>
+  <line x1="200" y1="140" x2="200" y2="170" stroke="#111111" stroke-width="3.5"/>
+  <!-- Horizontal window stripes / louvers -->
+  <rect x="75" y="248" width="220" height="16" rx="3" fill="#111111"/>
+  <rect x="75" y="282" width="220" height="16" rx="3" fill="#111111"/>
+  <rect x="75" y="316" width="220" height="16" rx="3" fill="#111111"/>
+  <rect x="75" y="350" width="220" height="16" rx="3" fill="#111111"/>
+  <rect x="75" y="384" width="220" height="16" rx="3" fill="#111111"/>
+  <!-- Vertical divider window bars -->
+  <line x1="148" y1="248" x2="148" y2="400" stroke="#FFC928" stroke-width="5"/>
+  <line x1="222" y1="248" x2="222" y2="400" stroke="#FFC928" stroke-width="5"/>
+
+  <!-- Center-right curved stadium / green campus landmark -->
+  <path d="M560 418 Q710 320 860 418" fill="#00B978" stroke="#111111" stroke-width="4"/>
+  <path d="M580 418 Q710 340 840 418" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="12 12"/>
+  
+  <!-- Blue Tower with Spire (directly inspired by Chowdeck hero) -->
+  <rect x="880" y="260" width="180" height="158" fill="#3B82F6" stroke="#111111" stroke-width="4"/>
+  <rect x="900" y="230" width="140" height="30" fill="#FFC928" stroke="#111111" stroke-width="4"/>
+  <!-- Spire base -->
+  <rect x="945" y="170" width="50" height="60" fill="#3B82F6" stroke="#111111" stroke-width="4"/>
+  <!-- Spire needle -->
+  <polygon points="970,85 964,170 976,170" fill="#1E3A8A" stroke="#111111" stroke-width="3"/>
+  <circle cx="970" cy="80" r="7" fill="#FF7043" stroke="#111111" stroke-width="2.5"/>
+
+  <!-- Far right campus trees / greenery -->
+  <circle cx="1320" cy="360" r="50" fill="#00B978" stroke="#0C513F" stroke-width="3"/>
+  <circle cx="1370" cy="335" r="65" fill="#0C513F"/>
+  <circle cx="1430" cy="365" r="55" fill="#00B978" stroke="#0C513F" stroke-width="3"/>
+
+  <!-- Crisp bottom border -->
+  <line x1="0" y1="418" x2="1600" y2="418" stroke="#0C513F" stroke-width="6"/>
+</svg>

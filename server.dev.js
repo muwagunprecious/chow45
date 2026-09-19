@@ -290,9 +290,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   // -------------------------------------------------------------
-  // Static Files Server
+  // Static Files Server (checks public/ then root)
   // -------------------------------------------------------------
-  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  let filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  }
 
   // Security check: prevent path traversal
   if (!filePath.startsWith(__dirname)) {

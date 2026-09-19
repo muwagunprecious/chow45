@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chow45 Admin | Waitlist Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin-body">
+  <div class="page-noise" aria-hidden="true"></div>
+
+  <!-- Admin Navigation Header -->
+  <header class="admin-header">
+    <div class="shell admin-nav">
+      <div class="admin-nav-left">
+        <a class="brand-pill" href="/" title="Go to Chow45 homepage">
+          <span class="brand-chat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+          </span>
+          <span class="brand-title">Chow<span class="brand-accent">45</span></span>
+        </a>
+        <div class="admin-tag-pill">
+          <span>Admin Portal</span>
+          <span class="campus-sub">OOU Sagamu</span>
+        </div>
+      </div>
+
+      <div class="admin-nav-right">
+        <div class="db-status-pill" id="db-status-badge">
+          <span class="status-dot"></span>
+          <span id="db-status-text">Checking Database...</span>
+        </div>
+        <a class="button button-light btn-sm" href="/" target="_blank">
+          View Website <span>↗</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main shell">
+    <!-- Top Greeting & Overview -->
+    <div class="admin-top-bar">
+      <div>
+        <h1 class="admin-title">Waitlist Management</h1>
+        <p class="admin-subtitle">Live signups for Chow45 at OOU Sagamu campus.</p>
+      </div>
+      <div class="admin-top-actions">
+        <button class="button button-light btn-sm" id="refresh-btn" type="button" title="Refresh list">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+        <a class="button button-green btn-sm" href="/api/waitlist/export" download>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          <span>Export CSV</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Statistics Bento Cards -->
+    <div class="stats-grid">
+      <div class="stat-card stat-total">
+        <span class="stat-label">Total Signups</span>
+        <strong class="stat-value" id="stat-total">0</strong>
+        <span class="stat-badge">All roles</span>
+      </div>
+
+      <div class="stat-card stat-students">
+        <span class="stat-label">Students</span>
+        <strong class="stat-value" id="stat-students">0</strong>
+        <span class="stat-badge stat-badge-blue" id="stat-students-pct">0%</span>
+      </div>
+
+      <div class="stat-card stat-vendors">
+        <span class="stat-label">Vendors</span>
+        <strong class="stat-value" id="stat-vendors">0</strong>
+        <span class="stat-badge stat-badge-yellow" id="stat-vendors-pct">0%</span>
+      </div>
+
+      <div class="stat-card stat-staff">
+        <span class="stat-label">Staff &amp; Others</span>
+        <strong class="stat-value" id="stat-staff">0</strong>
+        <span class="stat-badge stat-badge-green" id="stat-staff-pct">0%</span>
+      </div>
+
+      <div class="stat-card stat-today">
+        <span class="stat-label">Today's Signups</span>
+        <strong class="stat-value" id="stat-today">0</strong>
+        <span class="stat-badge stat-badge-orange">New</span>
+      </div>
+    </div>
+
+    <!-- Filters and Search Toolbar -->
+    <div class="admin-toolbar">
+      <div class="search-box">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search by name, email, phone, or department..." />
+      </div>
+
+      <div class="filter-pills" id="role-filters">
+        <button class="filter-pill active" data-role="all" type="button">All (<span id="filter-count-all">0</span>)</button>
+        <button class="filter-pill" data-role="student" type="button">Students (<span id="filter-count-student">0</span>)</button>
+        <button class="filter-pill" data-role="vendor" type="button">Vendors (<span id="filter-count-vendor">0</span>)</button>
+        <button class="filter-pill" data-role="staff" type="button">Staff (<span id="filter-count-staff">0</span>)</button>
+        <button class="filter-pill" data-role="other" type="button">Other (<span id="filter-count-other">0</span>)</button>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Department / Faculty</th>
+              <th>Joined Date</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="waitlist-tbody">
+            <tr>
+              <td colspan="8" class="table-loading">Loading waitlist entries...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div class="table-empty" id="table-empty" style="display: none;">
+        <div class="empty-icon">🍜</div>
+        <h3>No waitlist signups found</h3>
+        <p>No records match your search or filter criteria.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
