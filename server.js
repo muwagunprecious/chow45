@@ -25,32 +25,35 @@ if (DATABASE_URL) {
   pool.on('error', (err) => {
     console.error('PostgreSQL client error:', err.message);
   });
-
-  // Initialize waitlist table
-  (async () => {
-    try {
-      const client = await pool.connect();
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS waitlist (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          email VARCHAR(255) NOT NULL,
-          phone VARCHAR(50) NOT NULL,
-          user_type VARCHAR(50) NOT NULL,
-          department VARCHAR(255),
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-      client.release();
-      dbConnected = true;
-      console.log('✓ PostgreSQL connected and waitlist table ready.');
-    } catch (err) {
-      console.error('PostgreSQL connection error:', err.message);
-      dbConnected = false;
-    }
-  })();
 } else {
   console.warn('⚠ No DATABASE_URL found in environment.');
+}
+
+async function ensureTable() {
+  if (dbConnected || !pool) return;
+  try {
+    const client = await pool.connect();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS waitlist (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        user_type VARCHAR(50) NOT NULL,
+        department VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    client.release();
+    dbConnected = true;
+  } catch (err) {
+    console.error('ensureTable error:', err.message);
+  }
+}
+
+// Initial table check
+if (pool) {
+  ensureTable();
 }
 
 // Local JSON backup path (used if DB connection temporarily fails)
@@ -60,9 +63,13 @@ function readLocalWaitlist() {
     if (fs.existsSync(BACKUP_FILE)) {
       return JSON.parse(fs.readFileSync(BACKUP_FILE, 'utf8'));
     }
-  } catch (e) {
-    console.error('Error reading local waitlist:', e);
-  }
+  } catch (e) {}
+  try {
+    const tmpBackup = path.join('/tmp', 'waitlist_backup.json');
+    if (fs.existsSync(tmpBackup)) {
+      return JSON.parse(fs.readFileSync(tmpBackup, 'utf8'));
+    }
+  } catch (e) {}
   return [];
 }
 
@@ -70,7 +77,9 @@ function saveLocalWaitlist(entries) {
   try {
     fs.writeFileSync(BACKUP_FILE, JSON.stringify(entries, null, 2), 'utf8');
   } catch (e) {
-    console.error('Error saving local waitlist:', e);
+    try {
+      fs.writeFileSync(path.join('/tmp', 'waitlist_backup.json'), JSON.stringify(entries, null, 2), 'utf8');
+    } catch (e2) {}
   }
 }
 
@@ -162,12 +171,20 @@ const server = http.createServer(async (req, res) => {
   // API: Create Waitlist Entry (POST /api/waitlist)
   // -------------------------------------------------------------
   if (pathname === '/api/waitlist' && method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', async () => {
+    (async () => {
       try {
-        const data = JSON.parse(body || '{}');
-        const { name, email, phone, user_type, department } = data;
+        let data = req.body;
+        if (!data || typeof data === 'string') {
+          let bodyStr = typeof data === 'string' ? data : '';
+          if (!bodyStr) {
+            for await (const chunk of req) {
+              bodyStr += chunk;
+            }
+          }
+          try { data = JSON.parse(bodyStr || '{}'); } catch (e) { data = {}; }
+        }
+
+        const { name, email, phone, user_type, department } = data || {};
 
         if (!name || !email || !phone || !user_type) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -179,6 +196,7 @@ const server = http.createServer(async (req, res) => {
 
         if (pool) {
           try {
+            await ensureTable();
             const query = `
               INSERT INTO waitlist (name, email, phone, user_type, department)
               VALUES ($1, $2, $3, $4, $5)
@@ -187,7 +205,7 @@ const server = http.createServer(async (req, res) => {
             const result = await pool.query(query, [name, email, phone, user_type, department || '']);
             savedEntry = result.rows[0];
           } catch (dbErr) {
-            console.error('DB insert failed, falling back to local file:', dbErr.message);
+            console.error('DB insert failed:', dbErr.message);
           }
         }
 
@@ -211,9 +229,9 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         console.error('Waitlist submission error:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Internal server error' }));
+        res.end(JSON.stringify({ error: err.message || 'Internal server error' }));
       }
-    });
+    })();
     return;
   }
 
