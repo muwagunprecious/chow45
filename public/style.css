@@ -382,7 +382,7 @@ body {
   grid-template-columns: 1.05fr 0.95fr;
   align-items: center;
   gap: 20px;
-  padding-bottom: 70px;
+  padding-bottom: 24px;
   position: relative;
   z-index: 2;
 }
@@ -833,12 +833,14 @@ body {
 .hero-skyline {
   position: relative;
   width: 100%;
-  height: 160px;
+  height: 230px;
   background-image: url('hero-campus.svg');
   background-repeat: no-repeat;
   background-position: bottom center;
   background-size: contain;
-  margin-top: -30px;
+  margin-top: -110px;
+  margin-bottom: -8px;
+  z-index: 1;
 }
 
 /* ==========================================================================
@@ -2122,6 +2124,11 @@ input:focus, select:focus {
     grid-template-columns: 1fr;
     gap: 40px;
   }
+
+  .hero-skyline {
+    height: 190px;
+    margin-top: -60px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2146,6 +2153,11 @@ input:focus, select:focus {
     transform: scale(0.72);
     transform-origin: top center;
     height: 380px;
+  }
+
+  .hero-skyline {
+    height: 140px;
+    margin-top: -30px;
   }
   
   .problem-grid, .offer-grid, .steps-grid {
