@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Chow45 waitlist landing page",
   "scripts": {
-    "start": "node local-server.js",
-    "dev": "node local-server.js"
+    "dev": "node server.dev.js"
   },
   "keywords": [],
   "author": "",
