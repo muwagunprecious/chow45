@@ -122,8 +122,7 @@ const STATIC_ASSETS = {
   '/admin.html': loadAsset('admin.html', 'text/html; charset=UTF-8'),
   '/admin.css': loadAsset('admin.css', 'text/css; charset=UTF-8'),
   '/admin.js': loadAsset('admin.js', 'application/javascript; charset=UTF-8'),
-  '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml'),
-  '/hero-bg.jpg': loadAsset('hero-bg.jpg', 'image/jpeg')
+  '/hero-campus.svg': loadAsset('hero-campus.svg', 'image/svg+xml')
 };
 
 // Helper to read request body in both standard Node and serverless environments
