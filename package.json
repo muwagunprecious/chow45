@@ -1,8 +1,7 @@
 {
   "name": "chow45",
   "version": "1.0.0",
-  "description": "",
-  "main": "script.js",
+  "description": "Chow45 waitlist landing page",
   "scripts": {
     "start": "node local-server.js",
     "dev": "node local-server.js"
