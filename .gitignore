@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.local
+waitlist_backup.json
+.DS_Store
+*.log
