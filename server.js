@@ -128,36 +128,8 @@ const STATIC_ASSETS = {
   '/sitemap.xml': loadAsset('sitemap.xml', 'application/xml; charset=UTF-8'),
   '/robots.txt': loadAsset('robots.txt', 'text/plain; charset=UTF-8'),
 
-  // Marketplace App routes
-  '/app': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-  '/app/': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-  '/app/index.html': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-  '/marketplace': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-  '/marketplace/': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-  '/marketplace/index.html': loadAsset('app/index.html', 'text/html; charset=UTF-8'),
-
-  // App CSS
-  '/app/css/tokens.css': loadAsset('app/css/tokens.css', 'text/css; charset=UTF-8'),
-  '/app/css/layout.css': loadAsset('app/css/layout.css', 'text/css; charset=UTF-8'),
-  '/app/css/marketplace.css': loadAsset('app/css/marketplace.css', 'text/css; charset=UTF-8'),
-  '/app/css/tracking.css': loadAsset('app/css/tracking.css', 'text/css; charset=UTF-8'),
-  '/app/css/vendor.css': loadAsset('app/css/vendor.css', 'text/css; charset=UTF-8'),
-  '/app/css/rider.css': loadAsset('app/css/rider.css', 'text/css; charset=UTF-8'),
-  '/app/css/admin.css': loadAsset('app/css/admin.css', 'text/css; charset=UTF-8'),
-
-  // App JS
-  '/app/js/data.js': loadAsset('app/js/data.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/state.js': loadAsset('app/js/state.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/mapbox-service.js': loadAsset('app/js/mapbox-service.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/customer.js': loadAsset('app/js/customer.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/vendor.js': loadAsset('app/js/vendor.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/rider.js': loadAsset('app/js/rider.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/admin.js': loadAsset('app/js/admin.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/app.js': loadAsset('app/js/app.js', 'application/javascript; charset=UTF-8'),
-
-  // Images & Media
-  '/app/hero-food-bg.jpg': loadAsset('app/hero-food-bg.jpg', 'image/jpeg'),
-  '/hero-food-bg.jpg': loadAsset('app/hero-food-bg.jpg', 'image/jpeg')
+  // Media
+  '/hero-food-bg.jpg': loadAsset('hero-food-bg.jpg', 'image/jpeg')
 };
 
 // Helper to read request body in both standard Node and serverless environments
@@ -211,6 +183,14 @@ const server = http.createServer(async (req, res) => {
 
     if (method === 'OPTIONS') {
       res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // Redirect /app and /marketplace to home
+    if (pathname === '/app' || pathname === '/app/' || pathname.startsWith('/app/') ||
+        pathname === '/marketplace' || pathname === '/marketplace/' || pathname.startsWith('/marketplace/')) {
+      res.writeHead(302, { Location: '/' });
       res.end();
       return;
     }
@@ -402,11 +382,6 @@ const server = http.createServer(async (req, res) => {
   // Serve Static Assets (Fresh from disk if available, fallback to memory)
   // -------------------------------------------------------------
   let relPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
-  if (relPath === 'app' || relPath === 'app/' || relPath === 'marketplace' || relPath === 'marketplace/') {
-    relPath = 'app/index.html';
-  } else if (relPath.startsWith('marketplace/')) {
-    relPath = 'app/' + relPath.replace(/^marketplace\//, '');
-  }
 
   try {
     let filePath = path.join(__dirname, relPath);
