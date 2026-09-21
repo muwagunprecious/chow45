@@ -7,23 +7,23 @@
   <meta name="description" content="A simple way to discover, order and receive food from nearby stores across Lagos & Sagamu campus." />
   <link rel="icon" type="image/svg+xml" href="/hero-campus.svg" />
 
-  <!-- Google Fonts: Inter -->
+  <!-- Typography & Font Fallbacks -->
+  <link rel="preconnect" href="https://media.brand.dev" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet" />
 
   <!-- Mapbox GL JS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
   <!-- Chow45 Design System & Role Styles -->
-  <link rel="stylesheet" href="/app/css/tokens.css" />
-  <link rel="stylesheet" href="/app/css/layout.css" />
-  <link rel="stylesheet" href="/app/css/marketplace.css" />
-  <link rel="stylesheet" href="/app/css/tracking.css" />
-  <link rel="stylesheet" href="/app/css/vendor.css" />
-  <link rel="stylesheet" href="/app/css/rider.css" />
-  <link rel="stylesheet" href="/app/css/admin.css" />
+  <link rel="stylesheet" href="/app/css/tokens.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/layout.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/marketplace.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/tracking.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/vendor.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/rider.css?v=20260921b" />
+  <link rel="stylesheet" href="/app/css/admin.css?v=20260921b" />
 </head>
 <body>
   <div class="app-shell">
@@ -89,14 +89,16 @@
         <!-- 1A: Home Discovery Section -->
         <div id="customer-home-section">
           <!-- Hero Search Experience (Point 4) -->
-          <div class="marketplace-hero">
-            <h1 class="hero-headline">What are you craving today?</h1>
-            <p class="hero-subtitle">Simple food discovery and fast delivery across Idimu, Egbeda, Ikeja, Lagos and OOU Sagamu.</p>
+          <div class="marketplace-hero" style="background-color: #008751; background-image: url('/app/hero-food-bg.jpg'); background-size: cover; background-position: right center; background-repeat: no-repeat; min-height: 280px;">
+            <div class="hero-content">
+              <h1 class="hero-headline">What are you craving today?</h1>
+              <p class="hero-subtitle">Simple food discovery and fast delivery across Idimu, Egbeda, Ikeja, Lagos and OOU Sagamu.</p>
 
-            <div class="search-pill-container">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="market-search-input" class="search-pill-input" placeholder="What are you craving? (e.g. Jollof Rice, Suya, Amala)" />
-              <button class="search-pill-btn" onclick="document.getElementById('market-search-input').focus()">Search</button>
+              <div class="search-pill-container">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="market-search-input" class="search-pill-input" placeholder="What are you craving? (e.g. Jollof Rice, Suya, Amala)" />
+                <button class="search-pill-btn" onclick="document.getElementById('market-search-input').focus()">Search</button>
+              </div>
             </div>
           </div>
 

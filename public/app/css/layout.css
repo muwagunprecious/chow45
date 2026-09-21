@@ -12,12 +12,63 @@
 
 body {
   font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 0px;
   background-color: var(--c-bg-canvas);
   color: var(--c-text-primary);
   min-height: 100vh;
-  line-height: 1.45;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* -------------------------------------------------------------
+   Typography Headings from User Specification
+   ------------------------------------------------------------- */
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 76px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -2px;
+  color: var(--c-text-primary);
+}
+
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4.2vw, 44px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -1.2px;
+  color: var(--c-text-primary);
+}
+
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.2vw, 24px);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.4px;
+  color: var(--c-text-primary);
+}
+
+h4, .h4 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: 0px;
+  color: var(--c-text-primary);
+}
+
+p, .p {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 0px;
+  color: var(--c-text-primary);
 }
 
 /* App Viewport Container */
@@ -30,16 +81,16 @@ body {
 }
 
 /* -------------------------------------------------------------
-   Top Navigation Bar (Sticky Floating Pill Aesthetic)
+   Top Navigation Bar (Clean Minimalist White Canvas)
    ------------------------------------------------------------- */
 .top-nav {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(251, 248, 242, 0.94);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--c-border-subtle);
+  border-bottom: 1px solid var(--c-border);
   padding: var(--space-12) var(--space-16);
   display: flex;
   align-items: center;
@@ -62,23 +113,23 @@ body {
   align-items: center;
   gap: var(--space-8);
   text-decoration: none;
-  background: var(--c-primary);
+  background: var(--c-accent);
   color: var(--c-text-inverse);
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-weight: 700;
+  font-size: 1rem;
   letter-spacing: -0.02em;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   transition: transform var(--transition-snappy);
 }
 .brand-badge:hover {
   transform: scale(1.02);
 }
 .brand-badge .badge-tag {
-  background: var(--c-accent);
-  color: #072B1F;
+  background: var(--c-primary);
+  color: #ffffff;
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -97,18 +148,17 @@ body {
   padding: 6px 14px;
   border-radius: var(--radius-pill);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   transition: all var(--transition-snappy);
   max-width: 260px;
 }
 .location-pill:hover {
-  border-color: var(--c-primary);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--c-accent);
 }
 .location-pill svg {
-  color: var(--c-primary);
+  color: var(--c-accent);
   flex-shrink: 0;
 }
 .location-pill .loc-text {
@@ -133,7 +183,7 @@ body {
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--c-text-secondary);
   cursor: pointer;
   transition: all var(--transition-snappy);
@@ -145,9 +195,9 @@ body {
   color: var(--c-text-primary);
 }
 .role-btn.active {
-  background: var(--c-bg-surface);
-  color: var(--c-primary);
-  box-shadow: var(--shadow-xs);
+  background: var(--c-accent);
+  color: #ffffff;
+  box-shadow: none;
 }
 
 /* Right Nav Actions */
@@ -165,24 +215,24 @@ body {
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   transition: all var(--transition-snappy);
   position: relative;
 }
 .cart-pill-btn:hover {
-  border-color: var(--c-primary);
+  border-color: var(--c-accent);
   transform: translateY(-1px);
 }
 .cart-count-badge {
   background: var(--c-primary);
   color: var(--c-text-inverse);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 2px 7px;
   border-radius: var(--radius-pill);
   min-width: 20px;
@@ -193,13 +243,95 @@ body {
   text-decoration: none;
   color: var(--c-text-secondary);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   transition: color var(--transition-snappy);
 }
 .landing-link-btn:hover {
-  color: var(--c-primary);
+  color: var(--c-accent);
+}
+
+/* -------------------------------------------------------------
+   Components Specified by User Design Tokens
+   ------------------------------------------------------------- */
+/* Primary Button from spec */
+.cta-primary-btn, .button-primary, .btn-primary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 119px;
+  min-height: 48px;
+  background-color: #038b5c;
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-display);
+  text-decoration: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color var(--transition-snappy), transform var(--transition-snappy);
+}
+.cta-primary-btn:hover, .button-primary:hover, .btn-primary:hover {
+  background-color: #02734c;
+}
+.cta-primary-btn:disabled, .button-primary:disabled, .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary Button from spec */
+.action-btn-secondary, .button-secondary, .btn-secondary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 119px;
+  min-height: 48px;
+  background-color: transparent;
+  color: #0c513f;
+  border: 1px solid #e7eeec;
+  border-radius: 9999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-display);
+  text-decoration: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color var(--transition-snappy), background-color var(--transition-snappy);
+}
+.action-btn-secondary:hover, .button-secondary:hover, .btn-secondary:hover {
+  border-color: #0c513f;
+  background-color: #f0fdf4;
+}
+
+/* Link component from spec */
+a.text-link, .link-btn {
+  color: #000000;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: var(--font-display);
+  text-decoration: underline;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Card component from spec: #ffffff background, 1px solid #e5e7eb, 8px radius, 16px padding, no shadow */
+.card, .food-card, .dish-card, .order-card, .stat-card, .table-card {
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: none;
 }
 
 /* -------------------------------------------------------------

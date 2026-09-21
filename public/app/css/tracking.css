@@ -9,10 +9,10 @@
   height: calc(100vh - 120px);
   min-height: 520px;
   position: relative;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-card);
   overflow: hidden;
   border: 1px solid var(--c-border);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   background: var(--c-bg-surface);
 }
 
@@ -40,7 +40,7 @@
   height: 44px;
   border-radius: 50%;
   background: white;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   border: 2px solid white;
   position: relative;
   cursor: pointer;
@@ -51,7 +51,7 @@
 }
 
 .marker-store {
-  background: var(--c-primary);
+  background: var(--c-accent);
   color: white;
 }
 .marker-customer {
@@ -59,8 +59,8 @@
   color: white;
 }
 .marker-rider {
-  background: var(--c-accent);
-  color: #072B1F;
+  background: var(--c-primary);
+  color: #ffffff;
   border: 3px solid white;
   z-index: 10;
 }
@@ -71,7 +71,7 @@
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: rgba(255, 184, 0, 0.4);
+  background: rgba(3, 139, 92, 0.35);
   animation: radarPulse 1.8s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: -1;
 }
@@ -95,12 +95,12 @@
   right: 16px;
   max-width: 480px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-floating);
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: var(--space-20);
   z-index: 20;
 }
@@ -115,8 +115,8 @@
 
 .status-headline {
   font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: 1.2rem;
+  font-weight: 600;
   color: var(--c-text-primary);
   line-height: 1.2;
 }
@@ -124,7 +124,7 @@
   background: var(--c-primary-surface);
   color: var(--c-primary);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   white-space: nowrap;

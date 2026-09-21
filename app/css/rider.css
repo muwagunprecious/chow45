@@ -13,12 +13,12 @@
 .rider-status-bar {
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-card);
   padding: var(--space-16) var(--space-20);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 .rider-info-group {
   display: flex;
@@ -35,7 +35,7 @@
 .rider-name-heading {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 .rider-vehicle-type {
   font-size: 0.78rem;
@@ -49,7 +49,7 @@
   background: var(--c-primary-surface);
   color: var(--c-primary);
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 600;
   padding: 8px 16px;
   border-radius: var(--radius-pill);
 }
@@ -70,7 +70,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--c-primary);
   background: var(--c-primary-surface);
   padding: 4px 10px;
@@ -81,7 +81,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--c-primary);
-  box-shadow: 0 0 0 2px rgba(11, 70, 51, 0.2);
+  box-shadow: none;
   animation: pulseDot 1.5s infinite;
 }
 
@@ -94,9 +94,9 @@
 .job-card {
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-card);
   padding: var(--space-20);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
@@ -104,7 +104,7 @@
 }
 .job-card:hover {
   border-color: var(--c-accent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .job-payout-row {
@@ -114,14 +114,14 @@
 }
 .payout-tag {
   font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: 1.3rem;
+  font-weight: 600;
   color: var(--c-primary);
 }
 .distance-badge {
   background: var(--c-bg-subtle);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   color: var(--c-text-secondary);

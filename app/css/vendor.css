@@ -13,14 +13,14 @@
 .vendor-store-banner {
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-card);
   padding: var(--space-20);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-16);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .vendor-profile-info {
@@ -31,14 +31,14 @@
 .vendor-avatar {
   width: 64px;
   height: 64px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   object-fit: cover;
-  border: 2px solid var(--c-border);
+  border: 1px solid var(--c-border);
 }
 .vendor-title {
   font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--c-text-primary);
 }
 .vendor-location-tag {
@@ -59,7 +59,7 @@
   position: relative;
   width: 44px;
   height: 24px;
-  background: #CBD5E1;
+  background: var(--c-border);
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--transition-snappy);
@@ -75,15 +75,15 @@
   height: 20px;
   background: white;
   border-radius: 50%;
-  box-shadow: var(--shadow-xs);
   transition: transform var(--transition-snappy);
+  box-shadow: none;
 }
 .toggle-switch.on .toggle-knob {
   transform: translateX(20px);
 }
 .status-label {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Vendor Metrics Grid */
@@ -95,20 +95,20 @@
 .kpi-card {
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   padding: var(--space-16);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 .kpi-label {
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--c-text-secondary);
   margin-bottom: 4px;
 }
 .kpi-val {
   font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--c-text-primary);
 }
 
@@ -122,9 +122,10 @@
 }
 .vendor-tab-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
+  font-family: var(--font-display);
   color: var(--c-text-secondary);
   padding: 8px 16px;
   border-radius: var(--radius-pill);
@@ -135,7 +136,7 @@
   transition: all var(--transition-snappy);
 }
 .vendor-tab-btn.active {
-  background: var(--c-primary);
+  background: var(--c-accent);
   color: white;
 }
 .tab-count {
@@ -158,9 +159,9 @@
 .kitchen-order-card {
   background: var(--c-bg-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-card);
   padding: var(--space-20);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
@@ -173,13 +174,13 @@
 }
 .order-id-badge {
   font-family: monospace;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 0.95rem;
   color: var(--c-primary);
 }
 .order-stage-tag {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   background: var(--c-warning-bg);

@@ -153,7 +153,11 @@ const STATIC_ASSETS = {
   '/app/js/vendor.js': loadAsset('app/js/vendor.js', 'application/javascript; charset=UTF-8'),
   '/app/js/rider.js': loadAsset('app/js/rider.js', 'application/javascript; charset=UTF-8'),
   '/app/js/admin.js': loadAsset('app/js/admin.js', 'application/javascript; charset=UTF-8'),
-  '/app/js/app.js': loadAsset('app/js/app.js', 'application/javascript; charset=UTF-8')
+  '/app/js/app.js': loadAsset('app/js/app.js', 'application/javascript; charset=UTF-8'),
+
+  // Images & Media
+  '/app/hero-food-bg.jpg': loadAsset('app/hero-food-bg.jpg', 'image/jpeg'),
+  '/hero-food-bg.jpg': loadAsset('app/hero-food-bg.jpg', 'image/jpeg')
 };
 
 // Helper to read request body in both standard Node and serverless environments
@@ -395,24 +399,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   // -------------------------------------------------------------
-  // Serve Pre-loaded Static Assets
+  // Serve Static Assets (Fresh from disk if available, fallback to memory)
   // -------------------------------------------------------------
-  const asset = STATIC_ASSETS[pathname];
-  if (asset && asset.content) {
-    res.writeHead(200, {
-      'Content-Type': asset.mimeType,
-      'Cache-Control': 'public, max-age=3600'
-    });
-    res.end(asset.content);
-    return;
-  }
-
-  // Fallback disk lookup
-  let relPath = pathname === '/' ? 'index.html' : pathname;
-  if (relPath === '/app' || relPath === '/app/' || relPath === '/marketplace' || relPath === '/marketplace/') {
+  let relPath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '');
+  if (relPath === 'app' || relPath === 'app/' || relPath === 'marketplace' || relPath === 'marketplace/') {
     relPath = 'app/index.html';
-  } else if (relPath.startsWith('/marketplace/')) {
-    relPath = 'app/' + relPath.replace('/marketplace/', '');
+  } else if (relPath.startsWith('marketplace/')) {
+    relPath = 'app/' + relPath.replace(/^marketplace\//, '');
   }
 
   try {
@@ -424,12 +417,27 @@ const server = http.createServer(async (req, res) => {
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': contentType });
+      const isCode = ext === '.html' || ext === '.css' || ext === '.js' || ext === '.json';
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': isCode ? 'no-cache, no-store, must-revalidate' : 'public, max-age=600'
+      });
       res.end(fs.readFileSync(filePath));
       return;
     }
   } catch (fsErr) {
     console.error('File resolution error:', fsErr.message);
+  }
+
+  const asset = STATIC_ASSETS[pathname];
+  if (asset && asset.content) {
+    const isCode = asset.mimeType.includes('text/') || asset.mimeType.includes('javascript') || asset.mimeType.includes('json');
+    res.writeHead(200, {
+      'Content-Type': asset.mimeType,
+      'Cache-Control': isCode ? 'no-cache, no-store, must-revalidate' : 'public, max-age=600'
+    });
+    res.end(asset.content);
+    return;
   }
 
   // 404
