@@ -1,3 +1,72 @@
+// =============================================================
+// Admin Authentication Gate
+// =============================================================
+const ADMIN_PASSWORD = 'admin2026';
+const AUTH_KEY = 'chow45_admin_auth';
+
+const authOverlay = document.getElementById('admin-auth-overlay');
+const loginForm = document.getElementById('admin-login-form');
+const passwordInput = document.getElementById('admin-password-input');
+const authErrorMsg = document.getElementById('auth-error-msg');
+const togglePasswordBtn = document.getElementById('toggle-password-btn');
+const logoutBtn = document.getElementById('logout-btn');
+
+function isAuthenticated() {
+  return sessionStorage.getItem(AUTH_KEY) === 'true';
+}
+
+function unlockAdmin() {
+  sessionStorage.setItem(AUTH_KEY, 'true');
+  authOverlay.classList.add('hidden');
+  logoutBtn.style.display = '';
+  initAdminDashboard();
+}
+
+function lockAdmin() {
+  sessionStorage.removeItem(AUTH_KEY);
+  authOverlay.classList.remove('hidden');
+  logoutBtn.style.display = 'none';
+  passwordInput.value = '';
+  authErrorMsg.style.display = 'none';
+  passwordInput.focus();
+}
+
+// Login form submission
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const entered = passwordInput.value;
+
+  if (entered === ADMIN_PASSWORD) {
+    unlockAdmin();
+  } else {
+    authErrorMsg.textContent = 'Incorrect password. Please try again.';
+    authErrorMsg.style.display = 'block';
+    passwordInput.value = '';
+    passwordInput.focus();
+    // Re-trigger shake animation
+    authErrorMsg.style.animation = 'none';
+    authErrorMsg.offsetHeight; // force reflow
+    authErrorMsg.style.animation = '';
+  }
+});
+
+// Toggle password visibility
+togglePasswordBtn.addEventListener('click', () => {
+  const isPassword = passwordInput.type === 'password';
+  passwordInput.type = isPassword ? 'text' : 'password';
+  document.getElementById('eye-icon').innerHTML = isPassword
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+  lockAdmin();
+});
+
+// =============================================================
+// Admin Dashboard (loads only after authentication)
+// =============================================================
 let allEntries = [];
 let currentFilterRole = 'all';
 let currentSearchTerm = '';
@@ -226,12 +295,25 @@ refreshBtn.addEventListener('click', () => {
   });
 });
 
-// Initialize on page load
-checkStatus();
-fetchWaitlist();
+// Initialize the dashboard (called only after auth)
+let dashboardInitialized = false;
+function initAdminDashboard() {
+  if (dashboardInitialized) return;
+  dashboardInitialized = true;
 
-// Auto-refresh every 30 seconds
-setInterval(() => {
   checkStatus();
   fetchWaitlist();
-}, 30000);
+
+  // Auto-refresh every 30 seconds
+  setInterval(() => {
+    checkStatus();
+    fetchWaitlist();
+  }, 30000);
+}
+
+// On page load: check if already authenticated in this session
+if (isAuthenticated()) {
+  unlockAdmin();
+} else {
+  lockAdmin();
+}
