@@ -2,14 +2,39 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111111;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-brand-green: #0c513f;
+  --color-brand-green-dark: #073b2e;
+  --color-brand-green-light: #e4f7ec;
+  --color-brand-green-bright: #00b978;
+  --color-brand-mint: #d2f2dd;
+  --color-brand-blue: #d5e7fd;
+  --color-brand-pink: #fcd8e3;
+  --color-brand-yellow-pastel: #fff2b2;
+  --color-brand-cream: #faf6eb;
+  --color-brand-paper: #fffdf6;
+  --color-brand-dark-bg: #0a0f0d;
+  --color-brand-dark-card: #131b18;
+  --color-brand-yellow: #ffc928;
+  --color-brand-orange: #ff5e3a;
+  --color-brand-ink: #111111;
+  --color-brand-ink-soft: #383834;
+  --color-brand-muted: #6e6d66;
+
+  --font-display: var(--font-jakarta);
+  --font-accent: var(--font-grotesk);
+  --font-sans: var(--font-jakarta);
+
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +44,18 @@
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--color-brand-paper);
+  color: var(--color-brand-ink);
+  font-family: var(--font-display), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
