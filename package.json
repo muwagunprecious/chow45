@@ -11,6 +11,10 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "@upstash/qstash": "^2.11.3",
+    "@upstash/redis": "^1.39.0",
     "better-auth": "^1.7.5",
     "dotenv": "^18.0.2",
     "drizzle-orm": "^0.45.3",
