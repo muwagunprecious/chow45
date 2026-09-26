@@ -64,7 +64,7 @@ function generateUsernameFromEmail(email: string) {
  * Authentication roles supported by this authentication setup.
  *
  * USER:
- * Normal Tixkarios users.
+ * Normal Chow45 users.
  *
  * VENDOR:
  * Event organizers/vendors.
@@ -483,7 +483,7 @@ function createAuth(role: Role) {
                         await sendMail({
                             to: user.email,
                             template: {
-                                subject: "Reset your Tixkarios password",
+                                subject: `Reset your ${process.env.NAME}  password`,
                                 html,
                                 text,
                             },
@@ -638,7 +638,7 @@ function createAuth(role: Role) {
                         await sendMail({
                             to: user.email,
                             template: {
-                                subject: "Verify your Tixkarios account",
+                                subject: `Verify your ${process.env.NAME} account`,
                                 html,
                                 text,
                             },
