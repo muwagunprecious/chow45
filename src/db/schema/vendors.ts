@@ -1,10 +1,9 @@
-import { timestamptz } from "drizzle-orm/gel-core";
 import { users } from "./users";
 import { pgTable,bigserial, bigint, varchar, boolean, text, jsonb, timestamp, unique, numeric} from "drizzle-orm/pg-core";
 
 export const vendors = pgTable("vendors",{
     id: bigserial("id", { mode: "number"}).primaryKey(),
-    user_id: bigint("user_id", {mode: "number"}).notNull().unique().references(() => users.id, {onDelete: "cascade"}),
+    userId: bigint("user_id", {mode: "number"}).notNull().unique().references(() => users.id, {onDelete: "cascade"}),
 
     businessName: varchar("business_name", {length : 255}).notNull(),
     description: text("description"),
