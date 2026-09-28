@@ -22,6 +22,15 @@ const Chow45App = {
       Chow45Auth.init();
     }
 
+    // Pull the vendor's real profile from the server. Only on the vendor route
+    // and only once a session exists, so the onboarding gate stays on top for
+    // signed-out visitors.
+    if (window.location.pathname.startsWith('/vendor')
+        && typeof Chow45Auth !== 'undefined'
+        && Chow45Auth.isLoggedIn()) {
+      Chow45Auth.loadVendorProfile();
+    }
+
     this.bindGlobalEvents();
     this.updateRoleUI(window.chowStore.state.currentRole);
     this.updateLocationUI(window.chowStore.state.selectedLocation);

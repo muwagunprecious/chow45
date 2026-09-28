@@ -326,15 +326,16 @@
 
             <!-- SUB-TAB 3: MONEY -->
             <div id="vnd-tab-pane-money" class="vnd-tab-pane">
-              <div class="vnd-card vnd-wallet-card">
-                <div class="vnd-wallet-row">
-                  <div>
-                    <div class="vnd-wallet-label">Available Balance</div>
-                    <div id="vendor-wallet-balance" class="vnd-wallet-balance">₦45,000</div>
-                  </div>
-                  <button class="vnd-btn vnd-btn-primary vnd-btn-big" onclick="VendorController.openWithdrawModal()">Request Withdrawal</button>
+              <div class="vnd-empty vnd-empty-sm">
+                <div class="vnd-empty-emoji" aria-hidden="true">💳</div>
+                <div class="vnd-empty-title">Earnings &amp; payouts</div>
+                <div class="vnd-empty-hint">
+                  Your balance, earnings history and bank payouts will appear here once
+                  you start selling. Nothing is shown until real order earnings come in.
                 </div>
-                <div id="vendor-withdraw-banner" class="vnd-status-banner"></div>
+                <a class="vnd-btn vnd-btn-secondary" href="/vendor/food" style="margin-top: 16px;">
+                  Add your first dish
+                </a>
               </div>
             </div>
 
@@ -344,9 +345,9 @@
                 <div class="vendor-profile-info">
                   <img id="vendor-store-avatar" class="vendor-avatar" src="" alt="Store" />
                   <div>
-                    <h2 id="vendor-store-name" class="vendor-title">Mama T's Kitchen</h2>
-                    <div id="vendor-store-location" class="vendor-location-tag">9 Goshen Ave, Idimu, Lagos</div>
-                    <div id="vendor-store-hours" class="vendor-hours-tag">🕐 7:00 AM – 9:00 PM</div>
+                    <h2 id="vendor-store-name" class="vendor-title">Your Store</h2>
+                    <div id="vendor-store-location" class="vendor-location-tag">Set your pickup/delivery address</div>
+                    <div id="vendor-store-hours" class="vendor-hours-tag">🕐 Set your operating hours</div>
                   </div>
                 </div>
 
@@ -1487,46 +1488,6 @@
       </div>
     </div>
 
-    <!-- Modal 5c: Request Withdrawal -->
-    <div id="vendor-withdraw-modal" class="modal-backdrop">
-      <div class="modal-sheet" style="max-width: 460px;">
-        <div class="modal-header">
-          <div>
-            <div class="modal-title">Request Withdrawal</div>
-            <small style="color: var(--c-text-muted); font-size: 0.78rem;">Money is credited to your bank account within 1 day.</small>
-          </div>
-          <button class="modal-close-btn" onclick="VendorController.closeWithdrawModal()">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="vnd-wallet-tile">
-            <div class="vnd-wallet-label">Available to withdraw</div>
-            <div id="vnd-withdraw-available" class="vnd-wallet-balance">₦45,000</div>
-          </div>
-          <div class="checkout-input-group">
-            <label class="checkout-label">Your Bank</label>
-            <select id="vnd-withdraw-bank" class="checkout-input vnd-input">
-              <option value="GTBank">GTBank</option>
-              <option value="First Bank">First Bank</option>
-              <option value="Access Bank">Access Bank</option>
-              <option value="Zenith Bank">Zenith Bank</option>
-              <option value="UBA">UBA</option>
-              <option value="Kuda">Kuda</option>
-              <option value="Opay">Opay</option>
-              <option value="PalmPay">PalmPay</option>
-            </select>
-          </div>
-          <div class="checkout-input-group">
-            <label class="checkout-label">Account Number</label>
-            <input type="text" id="vnd-withdraw-account" class="checkout-input vnd-input" inputmode="numeric" placeholder="10-digit account number" />
-          </div>
-          <div class="checkout-input-group">
-            <label class="checkout-label">Amount (₦)</label>
-            <input type="number" id="vnd-withdraw-amount" class="checkout-input vnd-input" placeholder="e.g. 20000" min="0" />
-          </div>
-          <button class="cta-primary-btn vnd-btn-big" style="width: 100%;" onclick="VendorController.submitWithdrawal()">Withdraw Funds</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Modal 6: Customer Order History (Point 24) -->
     <div id="order-history-modal" class="modal-backdrop">
@@ -1780,22 +1741,23 @@
                 <label class="checkout-label" for="auth-cust-phone">Phone Number</label>
                 <div class="auth-input-wrap">
                   <span class="auth-input-icon">📱</span>
-                  <input type="tel" id="auth-cust-phone" class="checkout-input auth-input" placeholder="e.g. 0812 345 6789" required autocomplete="tel" />
+                    <input type="tel" id="auth-cust-phone" class="checkout-input auth-input" placeholder="e.g. 0812 345 6789" required autocomplete="tel" />
+                  </div>
                 </div>
-              </div>
 
-              <div class="checkout-input-group">
-                <div class="auth-label-row">
-                  <label class="checkout-label" for="auth-cust-address">Delivery Address</label>
-                  <button type="button" class="auth-use-location-btn" onclick="Chow45Auth.useCurrentLocationForCustomer()">
-                    📍 Use Current Location
-                  </button>
+                <div class="checkout-input-group">
+                  <div class="auth-label-row">
+                    <label class="checkout-label" for="auth-cust-address">Home / Delivery Address</label>
+                    <button type="button" class="auth-use-location-btn" onclick="Chow45Auth.useCurrentLocationForCustomer()">
+                      📍 Use my current location
+                    </button>
+                  </div>
+                  <div class="auth-input-wrap">
+                    <span class="auth-input-icon">📍</span>
+                    <input type="text" id="auth-cust-address" class="checkout-input auth-input" placeholder="e.g. Block B, Hostel 4, OOU or 12 Adeola St." required autocomplete="street-address" />
+                  </div>
+                  <small class="auth-field-hint">You can type your address manually, or tap “Use my current location” to fill it automatically.</small>
                 </div>
-                <div class="auth-input-wrap">
-                  <span class="auth-input-icon">📍</span>
-                  <input type="text" id="auth-cust-address" class="checkout-input auth-input" placeholder="e.g. Hostel A, OOU Main Campus or 9 Goshen Ave" required autocomplete="street-address" />
-                </div>
-              </div>
 
               <div class="checkout-input-group">
                 <label class="checkout-label" for="auth-cust-name">Full Name <small style="color: var(--c-text-muted); font-weight: normal;">(Optional)</small></label>
@@ -1901,16 +1863,17 @@
 
               <div class="checkout-input-group">
                 <div class="auth-label-row">
-                  <label class="checkout-label" for="auth-vnd-address">Store / Pickup Address</label>
-                  <button type="button" class="auth-use-location-btn" onclick="Chow45Auth.useCurrentLocationForVendor()">
-                    📍 Use Map Location
-                  </button>
+                    <label class="checkout-label" for="auth-vnd-address">Store / Pickup Address</label>
+                    <button type="button" class="auth-use-location-btn" onclick="Chow45Auth.useCurrentLocationForVendor()">
+                      📍 Use my current location
+                    </button>
+                  </div>
+                  <div class="auth-input-wrap">
+                    <span class="auth-input-icon">📍</span>
+                    <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Science Canteen, Ago-Iwoye, Ogun" required />
+                  </div>
+                  <small class="auth-field-hint">Type your current address manually, or use your live location to populate it.</small>
                 </div>
-                <div class="auth-input-wrap">
-                  <span class="auth-input-icon">📍</span>
-                  <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Science Canteen, Ago-Iwoye, Ogun" required />
-                </div>
-              </div>
 
               <div class="checkout-input-group">
                 <label class="checkout-label" for="auth-vnd-password">Store Password</label>

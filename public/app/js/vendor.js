@@ -121,13 +121,38 @@ const VendorController = {
     return window.chowStore.state.vendorOnboarding || { status: 'approved', storeId: 'rest-mama-t' };
   },
 
+  /**
+   * The store the signed-in vendor is looking at.
+   *
+   * Only ever their own store. There is deliberately no "fall back to the first
+   * restaurant in the seed list" branch: that handed the vendor Mama T's
+   * Kitchen, so someone signing up saw another business's name, address and
+   * hours. With no store of their own the dashboard renders an empty profile
+   * rather than sample data.
+   */
   getStore() {
     const ob = this.getOnboarding();
-    if (ob.status === 'approved' && ob.storeId) {
+    if (ob && ob.status === 'approved' && ob.storeId) {
       const store = window.chowStore.state.restaurants.find(r => r.id === ob.storeId);
       if (store) return store;
     }
-    return window.chowStore.state.restaurants.find(r => r.id === 'rest-mama-t') || window.chowStore.state.restaurants[0];
+    return null;
+  },
+
+  /**
+   * Placeholder used while the real store has not loaded yet. Rendered as an
+   * explicit "not set" state, never as someone else's business.
+   */
+  emptyStore() {
+    return {
+      id: null,
+      name: 'Your Store',
+      address: '',
+      openingTime: '',
+      closingTime: '',
+      bannerImg: '',
+      menu: []
+    };
   },
 
   isLive() {
@@ -153,8 +178,16 @@ const VendorController = {
       }
     }
 
+    // With no store of their own yet, paint an honest empty profile and stop.
+    // Falling through would render seeded dishes and orders as if they were real.
     const store = this.getStore();
-    if (!store) return;
+    if (!store) {
+      this.renderHeader(this.emptyStore());
+      this.renderMenu(this.emptyStore());
+      this.renderKitchenOrders(this.emptyStore());
+      this.stopStatusPolling();
+      return;
+    }
     this.renderHeader(store);
     this.renderWallet();
     this.renderStatsGrid(store);
@@ -170,14 +203,26 @@ const VendorController = {
   },
 
   renderHeader(store) {
+    const isReal = !!(store && store.id);
     const avatar = document.getElementById('vendor-store-avatar');
-    if (avatar) avatar.src = store.bannerImg || this.placeholderImg;
+    if (avatar) {
+      if (isReal && store.bannerImg) {
+        avatar.src = store.bannerImg;
+        avatar.style.display = '';
+      } else {
+        avatar.style.display = 'none';
+      }
+    }
     const name = document.getElementById('vendor-store-name');
-    if (name) name.innerText = store.name;
+    if (name) name.innerText = isReal ? store.name : 'Your Store';
     const loc = document.getElementById('vendor-store-location');
-    if (loc) loc.innerText = store.address || '';
+    if (loc) loc.innerText = isReal && store.address ? store.address : 'No pickup address set yet';
     const hours = document.getElementById('vendor-store-hours');
-    if (hours && store.openingTime) hours.innerText = `🕐 ${store.openingTime} – ${store.closingTime || '9:00 PM'}`;
+    if (hours) {
+      hours.innerText = isReal && store.openingTime
+        ? `🕐 ${store.openingTime} – ${store.closingTime || '9:00 PM'}`
+        : '🕐 No opening hours set yet';
+    }
 
     const toggle = document.getElementById('vendor-open-toggle');
     const label = document.getElementById('vendor-open-label');
@@ -380,56 +425,25 @@ const VendorController = {
 
   // ---------------------------------------------------------------
   // Wallet & withdrawals
+  //
+  // Payouts are not built yet, so the money tab shows an empty state.
+  // There is deliberately no balance figure and no "mark as paid" helper
+  // any more: a payout cannot exist without a server-side ledger, and a
+  // hardcoded one would be showing the vendor money that is not theirs.
   // ---------------------------------------------------------------
   renderWallet() {
-    const wallet = window.chowStore.state.vendorWallet || { available: 0, processing: 0 };
-    const balanceEl = document.getElementById('vendor-wallet-balance');
-    if (balanceEl) balanceEl.innerText = this._naira(wallet.available);
-    
-    // Also update the wallet balance in the food tab
-    const balanceElFood = document.getElementById('vendor-wallet-balance-food');
-    if (balanceElFood) balanceElFood.innerText = this._naira(wallet.available);
-
-    const banner = document.getElementById('vendor-withdraw-banner');
-    if (!banner) return;
-    const wds = window.chowStore.state.vendorWithdrawals || [];
-    if (!wds.length) {
-      banner.innerHTML = '';
-      return;
-    }
-    banner.innerHTML = wds.slice(0, 4).map(w => {
-      if (w.status === 'paid') {
-        const at = new Date(w.paidOutAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        return `<div class="vnd-status-line vnd-status-paid">✅ &nbsp;Paid out on ${at}</div>`;
-      }
-      const when = this._payoutWhen(w.expectedPayDate);
-      return `<div class="vnd-status-line vnd-status-processing">
-        ⏳ &nbsp;Withdrawal Processing: ${this._naira(w.amount)} is being processed and will be credited to your bank account ${when}.
-        <button class="vnd-link-btn" onclick="VendorController.markPaid('${w.id}')">Mark as paid (test)</button>
-      </div>`;
-    }).join('');
+    return;
   },
 
-  _payoutWhen(iso) {
-    const d = new Date(iso);
-    const now = new Date();
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    if (d.toDateString() === now.toDateString()) return `today by ${time}`;
-    const tomorrow = new Date(now.getTime() + 86400000);
-    if (d.toDateString() === tomorrow.toDateString()) return `tomorrow by ${time}`;
-    return `on ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} by ${time}`;
-  },
-
-  markPaid(id) {
-    const w = window.chowStore.markWithdrawalPaid(id);
-    if (w) window.chowApp.toast(`Withdrawal of ${this._naira(w.amount)} paid out on this date`, 'success');
+  _payoutWhen() {
+    return '';
   },
 
   renderStatsGrid(store) {
-    // Update wallet balance in food tab
-    const wallet = window.chowStore.state.vendorWallet || { available: 0, processing: 0 };
+    // Earnings are server-backed; do not render a fabricated wallet balance in
+    // the food tab.
     const balanceElFood = document.getElementById('vendor-wallet-balance-food');
-    if (balanceElFood) balanceElFood.innerText = this._naira(wallet.available);
+    if (balanceElFood) balanceElFood.innerText = '';
 
     // Calculate average earnings (from completed orders)
     const orders = window.chowStore.state.orders.filter(o => o.storeId === store.id && o.status === 'DELIVERED');
@@ -460,47 +474,17 @@ const VendorController = {
     if (ratingEl) ratingEl.innerText = avgRating;
   },
 
+  // Withdrawals were removed along with the demo wallet. The methods are kept
+  // as inert stubs so any stale inline handler fails quietly instead of
+  // throwing on a missing element or, worse, inventing a balance.
   openWithdrawModal() {
-    const wallet = window.chowStore.state.vendorWallet || { available: 45000 };
-    const avail = document.getElementById('vnd-withdraw-available');
-    if (avail) avail.innerText = this._naira(wallet.available);
-    const amount = document.getElementById('vnd-withdraw-amount');
-    if (amount) amount.value = Math.min(wallet.available, 20000);
-    const account = document.getElementById('vnd-withdraw-account');
-    if (account) account.value = '';
-    document.getElementById('vendor-withdraw-modal').classList.add('open');
+    window.chowApp.toast('Withdrawals are not available yet.', 'info');
   },
 
-  closeWithdrawModal() {
-    document.getElementById('vendor-withdraw-modal').classList.remove('open');
-  },
+  closeWithdrawModal() {},
 
   submitWithdrawal() {
-    const wallet = window.chowStore.state.vendorWallet || { available: 45000 };
-    const amount = Number(document.getElementById('vnd-withdraw-amount').value);
-    const bankName = document.getElementById('vnd-withdraw-bank').value;
-    const accountNumber = document.getElementById('vnd-withdraw-account').value.trim();
-
-    if (!/^\d{10}$/.test(accountNumber)) {
-      window.chowApp.toast('Please enter a valid 10-digit account number', 'warning');
-      return;
-    }
-    if (!amount || amount <= 0) {
-      window.chowApp.toast('Please enter the amount you want to withdraw', 'warning');
-      return;
-    }
-    if (amount > wallet.available) {
-      window.chowApp.toast('Amount is more than your available balance', 'warning');
-      return;
-    }
-
-    const w = window.chowStore.requestWithdrawal(amount, bankName, accountNumber);
-    if (w) {
-      window.chowApp.toast(`Withdrawal of ${this._naira(amount)} is being processed`, 'success');
-      this.closeWithdrawModal();
-    } else {
-      window.chowApp.toast('Could not process withdrawal', 'warning');
-    }
+    window.chowApp.toast('Withdrawals are not available yet.', 'info');
   },
 
   // ---------------------------------------------------------------
@@ -703,7 +687,14 @@ const VendorController = {
   // Store tab owns the store banner, so its counts refresh when it is shown.
   renderStoreTab() {
     const store = this.getStore();
-    if (!store) return;
+    if (!store) {
+      // Report zeros rather than the seeded restaurant's numbers.
+      const foodCount = document.getElementById('vnd-quick-food-count');
+      if (foodCount) foodCount.innerText = 'No dishes yet — add your first one';
+      const orderCount = document.getElementById('vnd-quick-orders-count');
+      if (orderCount) orderCount.innerText = 'No live orders';
+      return;
+    }
 
     const orders = window.chowStore.state.orders.filter((o) => o.storeId === store.id);
     const buckets = this._orderBuckets(orders);
@@ -968,6 +959,7 @@ const VendorController = {
 
   openEditFoodFlow(dishId) {
     const store = this.getStore();
+    if (!store) return;
     const dish = (store.menu || []).find(d => d.id === dishId);
     if (!dish) return;
 
@@ -1676,6 +1668,10 @@ const VendorController = {
     const d = this.flowDraft;
     if (!d) return;
     const store = this.getStore();
+    if (!store) {
+      window.chowApp.toast('Set up your store profile before adding dishes.', 'warning');
+      return;
+    }
 
     const isPiece = this.flowDraft.priceType === window.ChowUnits.PIECE;
 

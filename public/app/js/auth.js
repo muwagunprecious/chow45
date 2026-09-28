@@ -128,7 +128,9 @@ const Chow45Auth = {
   showStep1() {
     this.currentStep = 'step1';
     this.pendingRole = null;
-    this.intent = null;
+    // Do NOT reset intent here: a user navigating back from the vendor form
+    // (intent='vendor') must remain in vendor context so unknown emails route
+    // to vendor registration, not customer signup.
     this.clearAlerts();
 
     const s1 = document.getElementById('auth-step-1');
@@ -511,30 +513,171 @@ const Chow45Auth = {
     if (previewBox) previewBox.style.display = 'none';
   },
 
-  useCurrentLocationForCustomer() {
-    const addrInput = document.getElementById('auth-cust-address');
+  /**
+   * Fills an address field from the device's GPS position.
+   *
+   * Prefers a pin the user already dropped on the map, then browser geolocation
+   * (reverse geocoded through Mapbox when a token is present), and finally falls
+   * back to raw coordinates so the field is never left silently empty. Any
+   * failure produces a message telling the user they can type the address
+   * instead — manual entry is always available and always wins.
+   */
+  async _captureLiveLocation(inputId, label) {
+    const addrInput = document.getElementById(inputId);
     if (!addrInput) return;
 
-    if (window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation) {
-      const loc = window.chowStore.state.selectedLocation;
-      addrInput.value = loc.formattedAddress || loc.name || 'OOU Campus, Ago-Iwoye';
-      if (window.chowApp && window.chowApp.toast) {
-        window.chowApp.toast('Location applied from active map pin', 'info');
+    const setAddr = (text, coords) => {
+      addrInput.value = text;
+      if (window.chowStore && window.chowStore.state) {
+        window.chowStore.state.selectedLocation = {
+          name: 'Current Location',
+          formattedAddress: text,
+          lat: coords ? coords.lat : null,
+          lng: coords ? coords.lng : null,
+          type: 'current',
+          isUserSelected: true
+        };
+        if (typeof window.chowStore.save === 'function') window.chowStore.save();
       }
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Location captured. You can still edit the address.', 'success');
+      }
+    };
+
+    // Only reuse an existing pin when the user actually chose one. The seed
+    // ships a default campus location, and treating that as "their" location
+    // would silently fill the field with someone else's address.
+    const pinned = window.chowStore
+      && window.chowStore.state
+      && window.chowStore.state.selectedLocation;
+    const pinIsUserChosen = pinned && pinned.type === 'current' || (pinned && pinned.isUserSelected);
+    if (pinIsUserChosen && (pinned.formattedAddress || pinned.name)) {
+      setAddr(pinned.formattedAddress || pinned.name, { lat: pinned.lat, lng: pinned.lng });
+      return;
     }
+
+    if (!navigator.geolocation) {
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('This browser cannot share a live location. Type your address instead.', 'warning');
+      }
+      return;
+    }
+
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Getting your current location...', 'info');
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        let text = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+
+        const token = window.__CHOW45_MAPBOX_TOKEN__;
+        if (token) {
+          try {
+            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(token)}&limit=1`;
+            const res = await fetch(url);
+            if (res.ok) {
+              const json = await res.json();
+              const place = json && json.features && json.features[0] && json.features[0].place_name;
+              if (place) text = place;
+            }
+          } catch (e) {
+            // Reverse geocoding is best effort; coordinates are still usable.
+          }
+        }
+
+        setAddr(text, { lat, lng });
+        if (label && window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast(`${label} set from your live location`, 'success');
+        }
+      },
+      (err) => {
+        const denied = err && err.code === 1;
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast(
+            denied
+              ? 'Location permission denied. Type your address instead.'
+              : 'Could not get your location. Type your address instead.',
+            'warning'
+          );
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  },
+
+  useCurrentLocationForCustomer() {
+    return this._captureLiveLocation('auth-cust-address');
   },
 
   useCurrentLocationForVendor() {
-    const addrInput = document.getElementById('auth-vnd-address');
-    if (!addrInput) return;
+    return this._captureLiveLocation('auth-vnd-address', 'Store pickup address');
+  },
 
-    if (window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation) {
-      const loc = window.chowStore.state.selectedLocation;
-      addrInput.value = loc.formattedAddress || loc.name || 'Ago-Iwoye, Ogun State';
-      if (window.chowApp && window.chowApp.toast) {
-        window.chowApp.toast('Store pickup address set from map pin', 'info');
+  /**
+   * Loads the vendor's real profile from the server and paints the Store tab.
+   *
+   * Anything that cannot be loaded is left blank rather than filled with a
+   * placeholder, so the vendor never mistakes sample data for their own.
+   */
+  async loadVendorProfile() {
+    if (window.__chow45VendorProfileLoading) return;
+    window.__chow45VendorProfileLoading = true;
+
+    const nameEl = document.getElementById('vendor-store-name');
+    const locEl = document.getElementById('vendor-store-location');
+    const hoursEl = document.getElementById('vendor-store-hours');
+    const avatarEl = document.getElementById('vendor-store-avatar');
+
+    // A profile written during signup may not have reached the server yet.
+    let pending = null;
+    try {
+      const raw = sessionStorage.getItem('chow45_vendor_pending_profile');
+      if (raw) pending = JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+
+    let profile = null;
+    try {
+      const res = await fetch('/api/vendor/profile', { headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        profile = data && data.vendor ? data.vendor : null;
       }
+    } catch (e) {
+      // Offline or server down: fall back to whatever signup captured.
     }
+
+    if (!profile && pending) profile = pending;
+
+    if (profile) {
+      if (nameEl) nameEl.textContent = profile.businessName || 'Your Store';
+      if (locEl) {
+        locEl.textContent = profile.address || 'No pickup address set yet';
+      }
+      if (hoursEl) {
+        const oh = profile.operatingHours;
+        hoursEl.textContent = (oh && (oh.display || oh.text))
+          ? `🕐 ${oh.display || oh.text}`
+          : '🕐 No opening hours set yet';
+      }
+      if (avatarEl) {
+        if (profile.image) {
+          avatarEl.src = profile.image;
+          avatarEl.style.display = '';
+        } else {
+          avatarEl.style.display = 'none';
+        }
+      }
+    } else {
+      if (nameEl) nameEl.textContent = 'Your Store';
+      if (locEl) locEl.textContent = 'No pickup address set yet';
+      if (hoursEl) hoursEl.textContent = '🕐 No opening hours set yet';
+      if (avatarEl) avatarEl.style.display = 'none';
+    }
+
+    window.__chow45VendorProfileLoading = false;
   },
 
   // -------------------------------------------------------------
@@ -654,16 +797,26 @@ const Chow45Auth = {
         ? window.VendorOnboarding.zoneInfo(window.VendorOnboarding.getZoneId())
         : null;
 
+      // A manually typed address is the source of truth. It is validated, then
+      // written onto the store object that goes to the server, so it is saved
+      // whether it was typed or filled in from the live location.
+      const live = window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation;
+      const liveCoords = live && live.type === 'current' && live.lat && live.lng
+        ? { lat: live.lat, lng: live.lng }
+        : null;
+
       const newStore = {
         id: storeId,
         name: storeName,
         storeType: storeType === 'physical' ? 'Physical Restaurant' : 'Online Kitchen',
         address: address,
+        latitude: liveCoords ? liveCoords.lat : null,
+        longitude: liveCoords ? liveCoords.lng : null,
         phone: phone,
         email: email,
         banner: photo,
         avatar: photo,
-        rating: 5.0,
+        rating: 0,
         prepTime: '20-30 mins',
         tags: [storeType === 'physical' ? 'Restaurant' : 'Cloud Kitchen', 'Campus Delivery'],
         isOpen: true,
@@ -694,6 +847,27 @@ const Chow45Auth = {
 
       this.completeLogin(userData);
       this.close();
+
+      // Persist the vendor profile to the server (Supabase). Fire and forget so
+      // the dashboard is not blocked, but stage the payload so a reload can
+      // retry it if the first request does not land.
+      const vndBody = {
+        businessName: storeName,
+        address: address,
+        image: photo,
+        latitude: newStore.latitude,
+        longitude: newStore.longitude
+      };
+      try {
+        sessionStorage.setItem('chow45_vendor_pending_profile', JSON.stringify(vndBody));
+      } catch (e) { /* non-fatal */ }
+      fetch('/api/vendor/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vndBody)
+      }).then(r => {
+        if (r && r.ok) sessionStorage.removeItem('chow45_vendor_pending_profile');
+      }).catch(() => {});
 
       if (window.chowApp && window.chowApp.toast) {
         window.chowApp.toast(`🎉 Store registered! Redirecting to Vendor Dashboard...`, 'success');
