@@ -544,15 +544,17 @@ const Chow45Auth = {
       }
     };
 
-    // Only reuse an existing pin when the user actually chose one. The seed
-    // ships a default campus location, and treating that as "their" location
-    // would silently fill the field with someone else's address.
+    // Only reuse an existing pin when the user actually chose a real street address.
+    // Never reuse raw coordinate strings like "Lat: 6.5802...".
     const pinned = window.chowStore
       && window.chowStore.state
       && window.chowStore.state.selectedLocation;
-    const pinIsUserChosen = pinned && pinned.type === 'current' || (pinned && pinned.isUserSelected);
-    if (pinIsUserChosen && (pinned.formattedAddress || pinned.name)) {
-      setAddr(pinned.formattedAddress || pinned.name, { lat: pinned.lat, lng: pinned.lng });
+    const pinIsUserChosen = pinned && (pinned.type === 'current' || pinned.isUserSelected);
+    const existingAddr = pinned && (pinned.formattedAddress || pinned.name);
+    const isCoordinateString = existingAddr && (/^lat[:\s]/i.test(existingAddr) || /^\d+\.\d+,\s*\d+\.\d+/.test(existingAddr));
+
+    if (pinIsUserChosen && existingAddr && !isCoordinateString) {
+      setAddr(existingAddr, { lat: pinned.lat, lng: pinned.lng });
       return;
     }
 
@@ -598,11 +600,24 @@ const Chow45Auth = {
 
   /**
    * Reverse geocodes coordinates to a human-readable street address.
-   * Tries Mapbox -> OpenStreetMap Nominatim -> BigDataCloud -> local landmark.
+   * Tries server route /api/geocode/reverse -> Mapbox -> OpenStreetMap Nominatim -> BigDataCloud.
    * Never falls back to raw latitude and longitude strings.
    */
   async _reverseGeocodeToStreet(lat, lng) {
-    // 1. Try Mapbox if token available
+    // 1. First priority: Server-side geocoding endpoint (zero CORS, server-side Mapbox + OSM)
+    try {
+      const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.address && !data.address.startsWith('Location near')) {
+          return data.address;
+        }
+      }
+    } catch (e) {
+      console.warn('[auth] Server reverse geocode error:', e);
+    }
+
+    // 2. Direct Mapbox if client token is available
     const token = window.__CHOW45_MAPBOX_TOKEN__
       || (window.CHOW45_MAPBOX_CONFIG && window.CHOW45_MAPBOX_CONFIG.token)
       || '';
