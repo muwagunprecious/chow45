@@ -1156,11 +1156,11 @@
             <div class="checkout-input-group">
               <label class="checkout-label">Add a photo</label>
               <div class="vnd-photo-dropzone" id="vnd-photo-dropzone" onclick="document.getElementById('vnd-flow-file-input').click()">
-                <input type="file" id="vnd-flow-file-input" accept="image/jpeg,image/png,image/webp" capture="environment" style="display: none;" />
+                <input type="file" id="vnd-flow-file-input" accept="image/*" style="display: none;" />
                 <div id="vnd-photo-empty-state">
                   <div class="vnd-photo-icon">📷</div>
                   <div class="vnd-photo-title">Add food photo</div>
-                  <div class="vnd-photo-sub">Camera or Gallery (JPG, PNG, WebP)</div>
+                  <div class="vnd-photo-sub">Choose from Gallery or Camera (JPG, PNG, WebP)</div>
                 </div>
                 <div id="vnd-photo-preview-wrap" style="display: none;">
                   <img id="vnd-flow-photo-preview" src="" alt="Food Preview" />
@@ -1824,13 +1824,13 @@
               <div class="checkout-input-group">
                 <label class="checkout-label" id="auth-vnd-upload-label">Upload your store picture</label>
                 
-                <input type="file" id="auth-vnd-photo-input" accept="image/jpeg,image/png,image/webp" capture="environment" style="display: none;" onchange="Chow45Auth.handlePhotoUpload(event)" />
+                <input type="file" id="auth-vnd-photo-input" accept="image/*" style="display: none;" onchange="Chow45Auth.handlePhotoUpload(event)" />
 
                 <div class="auth-upload-dropzone" onclick="Chow45Auth.triggerPhotoSelect()">
                   <div id="auth-dropzone-empty">
                     <div id="auth-dropzone-icon" class="auth-dropzone-icon">🏪</div>
-                    <div class="auth-dropzone-title">Tap to upload photo</div>
-                    <div id="auth-vnd-upload-hint" class="auth-dropzone-hint">Storefront, restaurant entrance, or kitchen photo</div>
+                    <div class="auth-dropzone-title">Choose from Gallery or Take Photo</div>
+                    <div id="auth-vnd-upload-hint" class="auth-dropzone-hint">Upload storefront, restaurant entrance, or kitchen photo</div>
                   </div>
                   <div id="auth-dropzone-preview" class="auth-photo-preview-wrap" style="display: none;">
                     <img id="auth-vnd-photo-preview" class="auth-photo-preview-img" src="" alt="Uploaded Preview" />
