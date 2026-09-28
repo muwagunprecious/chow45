@@ -500,14 +500,48 @@ class MapboxService {
         state: state || region || '',
         country: lookup('country') || 'Nigeria',
         placeId: feature.id || null,
-        formattedAddress: feature.place_name || '',
         lng,
         lat
       };
       this.reverseCache.set(key, result);
       return result;
     } catch (err) {
-      console.error('Reverse geocode failed:', err);
+      console.warn('Mapbox reverse geocode failed, attempting Nominatim fallback:', err);
+      // Fallback 1: OpenStreetMap Nominatim
+      try {
+        const nomRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          const a = nomData.address || {};
+          const street = a.road || a.pedestrian || a.suburb || '';
+          const locality = a.neighbourhood || a.suburb || '';
+          const place = a.city || a.town || a.county || '';
+          const state = a.state || '';
+          const country = a.country || 'Nigeria';
+          const formatted = [street, locality, place, state, country].filter(Boolean).join(', ') || nomData.display_name;
+
+          const nomResult = {
+            address: street || place || 'Current Location',
+            street: street,
+            locality: locality,
+            place: place,
+            lga: a.county || place || '',
+            state: state,
+            country: country,
+            placeId: nomData.place_id ? String(nomData.place_id) : null,
+            formattedAddress: formatted,
+            lng,
+            lat
+          };
+          this.reverseCache.set(key, nomResult);
+          return nomResult;
+        }
+      } catch (nomErr) {
+        console.warn('Nominatim fallback failed:', nomErr);
+      }
+
       this.reverseCache.set(key, fallback);
       return fallback;
     }

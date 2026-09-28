@@ -564,36 +564,24 @@ const Chow45Auth = {
     }
 
     if (window.chowApp && window.chowApp.toast) {
-      window.chowApp.toast('Getting your current location...', 'info');
+      window.chowApp.toast('Getting your current street address...', 'info');
     }
+    addrInput.value = 'Locating street address…';
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        let text = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+        const streetText = await this._reverseGeocodeToStreet(lat, lng);
 
-        const token = window.__CHOW45_MAPBOX_TOKEN__;
-        if (token) {
-          try {
-            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(token)}&limit=1`;
-            const res = await fetch(url);
-            if (res.ok) {
-              const json = await res.json();
-              const place = json && json.features && json.features[0] && json.features[0].place_name;
-              if (place) text = place;
-            }
-          } catch (e) {
-            // Reverse geocoding is best effort; coordinates are still usable.
-          }
-        }
-
-        setAddr(text, { lat, lng });
+        setAddr(streetText, { lat, lng });
         if (label && window.chowApp && window.chowApp.toast) {
-          window.chowApp.toast(`${label} set from your live location`, 'success');
+          const shortName = streetText.split(',')[0];
+          window.chowApp.toast(`${label} set to ${shortName}`, 'success');
         }
       },
       (err) => {
+        addrInput.value = '';
         const denied = err && err.code === 1;
         if (window.chowApp && window.chowApp.toast) {
           window.chowApp.toast(
@@ -604,8 +592,94 @@ const Chow45Auth = {
           );
         }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
     );
+  },
+
+  /**
+   * Reverse geocodes coordinates to a human-readable street address.
+   * Tries Mapbox -> OpenStreetMap Nominatim -> BigDataCloud -> local landmark.
+   * Never falls back to raw latitude and longitude strings.
+   */
+  async _reverseGeocodeToStreet(lat, lng) {
+    // 1. Try Mapbox if token available
+    const token = window.__CHOW45_MAPBOX_TOKEN__
+      || (window.CHOW45_MAPBOX_CONFIG && window.CHOW45_MAPBOX_CONFIG.token)
+      || '';
+    if (token) {
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(token)}&limit=1`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          const place = json && json.features && json.features[0] && json.features[0].place_name;
+          if (place && !place.startsWith('Lat:')) {
+            return place;
+          }
+        }
+      } catch (e) {
+        console.warn('Mapbox reverse geocode error:', e);
+      }
+    }
+
+    // 2. Fallback to OpenStreetMap / Nominatim (free, detailed street names in Nigeria)
+    try {
+      const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+      const res = await fetch(nomUrl, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        const a = data.address || {};
+        const parts = [];
+        if (a.road || a.pedestrian) parts.push(a.road || a.pedestrian);
+        if (a.neighbourhood && !parts.includes(a.neighbourhood)) parts.push(a.neighbourhood);
+        if (a.suburb && !parts.includes(a.suburb)) parts.push(a.suburb);
+        if (a.city || a.town || a.county) parts.push(a.city || a.town || a.county);
+        if (a.state) parts.push(a.state);
+        if (a.country) parts.push(a.country);
+
+        if (parts.length > 0) return parts.join(', ');
+        if (data.display_name) return data.display_name;
+      }
+    } catch (e) {
+      console.warn('Nominatim reverse geocode error:', e);
+    }
+
+    // 3. Fallback to BigDataCloud client API
+    try {
+      const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+      const res = await fetch(bdcUrl);
+      if (res.ok) {
+        const data = await res.json();
+        const parts = [];
+        if (data.locality) parts.push(data.locality);
+        if (data.city && data.city !== data.locality) parts.push(data.city);
+        if (data.principalSubdivision) parts.push(data.principalSubdivision);
+        if (data.countryName) parts.push(data.countryName);
+        if (parts.length > 0) return parts.join(', ');
+      }
+    } catch (e) {
+      console.warn('BigDataCloud reverse geocode error:', e);
+    }
+
+    // 4. Fallback to closest known landmark from seed data
+    if (typeof window.CHOW45_LOCATIONS !== 'undefined' && Array.isArray(window.CHOW45_LOCATIONS)) {
+      let nearest = null;
+      let minDist = Infinity;
+      for (const loc of window.CHOW45_LOCATIONS) {
+        const dLat = loc.lat - lat;
+        const dLng = loc.lng - lng;
+        const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = loc;
+        }
+      }
+      if (nearest && minDist < 0.15) {
+        return `Near ${nearest.name}, ${nearest.city || 'Ogun'}`;
+      }
+    }
+
+    return 'Current Location';
   },
 
   useCurrentLocationForCustomer() {

@@ -11,13 +11,15 @@
  */
 
 (function () {
+  const token = ((window.__CHOW45_MAPBOX_TOKEN__ || '').trim()) || '';
+
   const schema = {
     isConfigError: true,
     error: 'Mapbox token is missing. Add NEXT_PUBLIC_MAPBOX_TOKEN to your environment.'
   };
 
   window.CHOW45_MAPBOX_CONFIG = {
-    token: ((window.__CHOW45_MAPBOX_TOKEN__ || '').trim()) || '',
+    token: token,
     // Google Maps-style base: land, road casings, buildings & POIs
     style: 'mapbox://styles/mapbox/streets-v12',
     // Attempt to retune the base style toward Google's visual palette

@@ -27,20 +27,20 @@ declare global {
 
 const SCRIPTS_TO_LOAD = [
   'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js',
-  '/app/js/mapbox-config.js',
+  '/app/js/mapbox-config.js?v=20260928c',
   '/app/js/service-zones.js',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
   '/app/js/units.js?v=20260928a',
   '/app/js/data.js?v=20260927f',
   '/app/js/state.js?v=20260928a',
-  '/app/js/mapbox-service.js',
+  '/app/js/mapbox-service.js?v=20260928c',
   '/app/js/location-picker.js',
   '/app/js/customer.js?v=20260928a',
   '/app/js/vendor.js?v=20260928b',
   '/app/js/rider.js',
   '/app/js/admin.js',
-  '/app/js/auth.js?v=20260928b',
+  '/app/js/auth.js?v=20260928c',
   // Must be ready before app.js boots, because app.js starts the gate.
   '/app/js/vendor-onboarding.js?v=20260928a',
   '/app/js/app.js?v=20260928b',
