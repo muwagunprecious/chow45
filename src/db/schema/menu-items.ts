@@ -12,6 +12,14 @@ export const menuItems = pgTable("menu_items", {
   imageUrl: text("image_url"),
   category: varchar("category", { length: 100 }),
   priceType: varchar("price_type", { length: 20 }).notNull().default("plate"), // scoop | plate | both | piece
+  /**
+   * The single price the customer is shown and charged before extras, derived
+   * from whichever of the three columns below `priceType` selects. The bundled
+   * seed data mixes per-item pricing with scoop/plate and per-piece pricing, so
+   * the effective price is stored rather than recomputed on every read, which
+   * would otherwise need the whole pricing rule set in each serialiser.
+   */
+  price: integer("price").notNull().default(0),
   scoopPrice: integer("scoop_price"), // stored in kobo or naira
   platePrice: integer("plate_price"),
   piecePrice: integer("piece_price"),

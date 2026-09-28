@@ -1,0 +1,1 @@
+ALTER TABLE "vendors" ADD COLUMN "contact_email" varchar(255);

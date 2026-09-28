@@ -95,7 +95,6 @@ export function EmailLayout({
                                             cellPadding="0"
                                             cellSpacing="0"
                                             width="36"
-                                            height="36"
                                             style={{
                                                 width: "36px",
                                                 height: "36px",
@@ -141,7 +140,6 @@ export function EmailLayout({
                                             cellPadding="0"
                                             cellSpacing="0"
                                             width="36"
-                                            height="36"
                                             style={{
                                                 width: "36px",
                                                 height: "36px",
@@ -187,7 +185,6 @@ export function EmailLayout({
                                             cellPadding="0"
                                             cellSpacing="0"
                                             width="36"
-                                            height="36"
                                             style={{
                                                 width: "36px",
                                                 height: "36px",

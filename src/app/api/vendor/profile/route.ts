@@ -1,8 +1,10 @@
 ﻿import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { vendors } from "@/db/schema/vendors";
 import { eq } from "drizzle-orm";
-import { vendorAuth } from "@/auth";
+
+import { db } from "@/db";
+import { vendors, vendorWallets } from "@/db";
+import { currentVendorUserId } from "@/lib/session";
+import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
 /**
  * The vendor profile is read and written by the signed-in vendor.
@@ -11,14 +13,6 @@ import { vendorAuth } from "@/auth";
  * upsert. `latitude`/`longitude` are filled in when the vendor shares their live
  * location; a manually typed address leaves them null.
  */
-async function resolveUserId(request: Request): Promise<number | null> {
-  const session = await vendorAuth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) return null;
-
-  // Better Auth carries the id as a string while the column is a bigserial.
-  const userId = Number(session.user.id);
-  return Number.isFinite(userId) ? userId : null;
-}
 
 function toCoord(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
@@ -27,9 +21,23 @@ function toCoord(value: unknown): string | null {
   return n.toFixed(6);
 }
 
+function slugify(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "store";
+}
+
+function text(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  return s.length > 0 ? s : null;
+}
+
 export async function GET(request: Request) {
   try {
-    const userId = await resolveUserId(request);
+    const userId = await currentVendorUserId(request);
     if (userId === null) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -46,27 +54,56 @@ export async function GET(request: Request) {
   }
 }
 
-
 export async function POST(request: Request) {
   try {
-    const userId = await resolveUserId(request);
+    const userId = await currentVendorUserId(request);
     if (userId === null) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => ({} as any));
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
 
-    const businessName = (body.businessName || "").toString().trim();
+    const businessName = String(body.businessName ?? "").trim();
     if (businessName.length < 2) {
       return NextResponse.json({ error: "businessName is required" }, { status: 400 });
     }
 
-    const address = body.address ? body.address.toString().trim() : null;
-    const image = body.image ? body.image.toString().trim() : null;
+    // Contact email is validated server-side. The signup forms mark the field
+    // required and the client checks the format, but a request can be posted
+    // directly, so the server cannot rely on either.
+    //
+    // This is the storefront's contact address for order and payout notices, and
+    // it is deliberately separate from `users.email`: that column is the login
+    // identity, managed and verified by Better Auth, and overwriting it here
+    // would let a profile update silently redirect sign-in and verification to
+    // an address the vendor may not own.
+    const rawEmail = String(body.contactEmail ?? "").trim();
+    if (rawEmail.length > 0 && !isValidEmail(rawEmail)) {
+      return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
+    }
+    const contactEmail = rawEmail.length > 0 ? normalizeEmail(rawEmail) : null;
+
+    const address = text(body.address);
+    const image = text(body.image);
     const latitude = toCoord(body.latitude);
     const longitude = toCoord(body.longitude);
 
-    const patch = { businessName, address, image, latitude, longitude, updatedAt: new Date() };
+    const patch = {
+      businessName,
+      slug: slugify(businessName),
+      address,
+      image,
+      latitude,
+      longitude,
+      contactEmail,
+      cuisine: text(body.cuisine),
+      ownerName: text(body.ownerName),
+      ownerPhone: text(body.ownerPhone),
+      openingTime: text(body.openingTime),
+      closingTime: text(body.closingTime),
+      bannerImage: text(body.bannerImage) ?? image,
+      updatedAt: new Date(),
+    };
 
     const existing = await db
       .select({ id: vendors.id })
@@ -83,10 +120,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ vendor: updated });
     }
 
+    // A new storefront needs a public id. It is derived from the business name
+    // and de-duplicated, because `vendors.store_id` is unique and two vendors
+    // can easily pick the same trading name.
+    const storeId = await uniqueStoreId(slugify(businessName));
+    const slug = await uniqueSlug(slugify(businessName));
+
     const [created] = await db
       .insert(vendors)
-      .values({ ...patch, userId, status: "pending" })
+      .values({ ...patch, storeId, slug, userId, status: "pending", source: "vendor" })
       .returning();
+
+    // A vendor with no wallet row reads as a zero balance rather than as an
+    // error, so the row is created alongside the storefront.
+    await db.insert(vendorWallets).values({ vendorId: created.id });
 
     return NextResponse.json({ vendor: created }, { status: 201 });
   } catch (e: any) {
@@ -94,3 +141,29 @@ export async function POST(request: Request) {
   }
 }
 
+/** Appends a numeric suffix until the id is free. */
+async function uniqueStoreId(base: string): Promise<string> {
+  for (let n = 0; n < 50; n += 1) {
+    const candidate = n === 0 ? base : `${base}-${n + 1}`;
+    const taken = await db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(eq(vendors.storeId, candidate))
+      .limit(1);
+    if (taken.length === 0) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}
+
+async function uniqueSlug(base: string): Promise<string> {
+  for (let n = 0; n < 50; n += 1) {
+    const candidate = n === 0 ? base : `${base}-${n + 1}`;
+    const taken = await db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(eq(vendors.slug, candidate))
+      .limit(1);
+    if (taken.length === 0) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}
