@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   image: text("image"),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
   phone: varchar("phone", { length: 20 }),
   phoneVerified: boolean("phone_verified").notNull().default(false),
   role: varchar("role", { length: 20 }).notNull().default("USER"), //USER, VENDOR, ADMIN

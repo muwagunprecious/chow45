@@ -1,0 +1,2279 @@
+/* ==========================================================================
+   CHOW45 VENDOR / RESTAURANT PORTAL STYLES
+   Mobile-first, big text, huge touch targets, minimal palette:
+   Deep Green #075B4D · Off-White #FAFAF7 · Soft Mint #E8F6F0
+   ========================================================================== */
+
+.vendor-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  --vnd-green: #075B4D;
+  --vnd-green-dark: #054A3F;
+  --vnd-green-mid: #0E7A63;
+  --vnd-mint: #E8F6F0;
+  --vnd-offwhite: #FAFAF7;
+  --vnd-danger: #BF2F2F;
+  --vnd-danger-bg: #FDECEC;
+  --vnd-red-soft: #FBE9E8;
+  --vnd-green-soft: #E7F4EE;
+  --vnd-warning-soft: #FBF2DE;
+}
+
+/* ----------------------------------------------------------------
+   Store header
+   ---------------------------------------------------------------- */
+.vendor-store-banner {
+  background: var(--vnd-offwhite, var(--c-bg-surface));
+  border: 1px solid var(--c-border);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.vendor-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.vendor-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 2px solid var(--vnd-mint);
+  flex-shrink: 0;
+}
+.vendor-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #06372F;
+  line-height: 1.15;
+}
+.vendor-location-tag,
+.vendor-hours-tag {
+  font-size: 0.85rem;
+  color: #355E53;
+  margin-top: 2px;
+}
+.vendor-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.store-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--vnd-mint);
+  padding: 10px 16px;
+  border-radius: 999px;
+}
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  background: #D6E6DE;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease;
+  flex-shrink: 0;
+}
+.toggle-switch.on {
+  background: var(--vnd-green);
+}
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.toggle-switch.on .toggle-knob {
+  transform: translateX(20px);
+}
+.status-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.vendor-register-link {
+  background: none;
+  border: none;
+  color: var(--vnd-green);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* ----------------------------------------------------------------
+   Cards
+   ---------------------------------------------------------------- */
+.vnd-card {
+  background: var(--c-bg-surface, #fff);
+  border: 1px solid var(--c-border);
+  border-radius: 20px;
+  padding: 18px;
+}
+.vnd-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vnd-card-head h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #06372F;
+}
+.vnd-live {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--vnd-green);
+  background: var(--vnd-mint);
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------
+   Wallet
+   ---------------------------------------------------------------- */
+.vnd-wallet-card {
+  background: linear-gradient(135deg, var(--vnd-green-dark), var(--vnd-green));
+  color: #fff;
+  border: none;
+}
+.vnd-wallet-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.vnd-wallet-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.8;
+  letter-spacing: 0.3px;
+}
+.vnd-wallet-balance {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.vnd-wallet-card .vnd-wallet-balance {
+  color: #fff;
+}
+.vnd-status-banner {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vnd-status-line {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vnd-status-paid {
+  color: #D7F3E4;
+}
+.vnd-status-processing {
+  color: #FFE8C2;
+}
+.vnd-link-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+}
+.vnd-wallet-tile {
+  text-align: center;
+  background: var(--vnd-mint);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.vnd-wallet-tile .vnd-wallet-balance {
+  color: var(--vnd-green);
+}
+
+/* ----------------------------------------------------------------
+   Stats Grid — Wallet landing page metrics
+   ---------------------------------------------------------------- */
+.vnd-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.vnd-stat-card {
+  background: var(--c-bg-surface, #fff);
+  border: 1px solid var(--c-border);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.vnd-stat-card:hover {
+  border-color: var(--vnd-green);
+  transform: translateY(-2px);
+}
+.vnd-stat-icon {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+.vnd-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--vnd-green);
+  margin-bottom: 4px;
+}
+.vnd-stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6B7280;
+}
+.vnd-stat-action {
+  background: var(--vnd-mint);
+  border-color: var(--vnd-green);
+}
+.vnd-stat-action .vnd-stat-icon {
+  color: var(--vnd-green);
+}
+.vnd-stat-action-btn {
+  width: 100%;
+  background: var(--vnd-green);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.vnd-stat-action-btn:hover {
+  background: var(--vnd-green-mid);
+}
+
+@media (max-width: 640px) {
+  .vnd-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .vnd-stat-card {
+    padding: 12px;
+  }
+  .vnd-stat-value {
+    font-size: 1.1rem;
+  }
+  .vnd-stat-label {
+    font-size: 0.72rem;
+  }
+  .vnd-stat-icon {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .vnd-stats-grid {
+    gap: 8px;
+  }
+  .vnd-stat-card {
+    padding: 10px;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Buttons — big, rounded, generous padding
+   ---------------------------------------------------------------- */
+.vnd-btn {
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+}
+.vnd-btn:active {
+  transform: scale(0.97);
+}
+.vnd-btn-big {
+  min-height: 54px;
+  font-size: 1.02rem;
+  padding: 14px 22px;
+}
+.vnd-btn-sm {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+}
+.vnd-btn-primary {
+  background: var(--vnd-green);
+  color: #fff;
+}
+.vnd-btn-primary:hover {
+  background: var(--vnd-green-mid);
+}
+.vnd-btn-secondary {
+  background: var(--vnd-mint);
+  color: var(--vnd-green);
+}
+.vnd-btn-secondary:hover {
+  background: #D9F0E5;
+}
+.vnd-btn-success {
+  background: #0FA46A;
+  color: #fff;
+}
+.vnd-btn-danger {
+  background: var(--vnd-danger);
+  color: #fff;
+}
+.vnd-btn-danger:hover {
+  background: #A62929;
+}
+
+/* ----------------------------------------------------------------
+   Orders
+   ---------------------------------------------------------------- */
+.vendor-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
+.vnd-tabs.vendor-tabs {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.vendor-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: #35614F;
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.vendor-tab-btn.active {
+  background: var(--vnd-green);
+  color: #fff;
+}
+.tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+.vendor-tab-btn:not(.active) .tab-count {
+  background: var(--vnd-warning-soft);
+  color: #6B4D00;
+}
+
+.kitchen-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.vnd-empty {
+  text-align: center;
+  padding: 36px 16px;
+  border: 1px dashed #D5E4DE;
+  border-radius: 18px;
+}
+.vnd-empty-sm {
+  padding: 18px;
+}
+.vnd-empty-emoji {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.vnd-empty-title {
+  font-weight: 800;
+  color: #06372F;
+  margin-bottom: 4px;
+}
+.vnd-empty-hint {
+  font-size: 0.85rem;
+  color: #355E53;
+}
+
+.vnd-order-card {
+  border: 1px solid var(--c-border);
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--c-bg-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vnd-order-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vnd-order-id {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--vnd-green);
+  background: var(--vnd-mint);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.vnd-customer-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #06372F;
+}
+.vnd-customer-spot {
+  font-size: 0.8rem;
+  color: #355E53;
+}
+.vnd-order-items {
+  background: var(--vnd-mint);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vnd-item-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+.vnd-item-qty {
+  font-weight: 800;
+  color: var(--vnd-green);
+  min-width: 24px;
+}
+.vnd-item-name {
+  font-weight: 600;
+  flex: 1;
+}
+.vnd-item-price {
+  font-weight: 800;
+}
+.vnd-item-addons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 32px;
+}
+.vnd-addon-pill {
+  background: #fff;
+  border: 1px solid #CFE6DB;
+  color: var(--vnd-green);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.vnd-order-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vnd-meta-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4A6B62;
+  background: var(--c-bg-subtle, #F2F2F0);
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.vnd-rider-line {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--vnd-green);
+}
+.vnd-order-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vnd-stage-chip {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0FA46A;
+  background: var(--vnd-green-soft);
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------
+   Menu management
+   ---------------------------------------------------------------- */
+.inventory-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.vnd-food-card {
+  border: 1px solid var(--c-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--c-bg-surface, #fff);
+  display: flex;
+  flex-direction: column;
+}
+.vnd-food-img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
+.vnd-food-meta {
+  padding: 12px 14px 4px;
+  flex: 1;
+}
+.vnd-food-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #06372F;
+}
+.vnd-food-price {
+  font-weight: 800;
+  color: var(--vnd-green);
+  margin-top: 2px;
+}
+.vnd-food-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.vnd-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4A6B62;
+  background: var(--c-bg-subtle, #F2F2F0);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.vnd-food-controls {
+  padding: 10px 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vnd-stock-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inv-stock-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.inv-stock-label.in {
+  color: var(--vnd-green);
+}
+.inv-stock-label.out {
+  color: var(--vnd-danger);
+}
+
+/* ----------------------------------------------------------------
+   Holding screen (verification pending)
+   ---------------------------------------------------------------- */
+.vnd-holding {
+  text-align: center;
+  padding: 40px 0 20px;
+}
+.vnd-holding-card {
+  background: var(--vnd-offwhite, var(--c-bg-surface));
+  border: 1px solid var(--c-border);
+  border-radius: 24px;
+  padding: 36px 20px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.vnd-holding-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+.vnd-holding-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #06372F;
+  margin-bottom: 8px;
+}
+.vnd-holding-text {
+  font-size: 1rem;
+  color: #355E53;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.vnd-holding-note {
+  background: var(--vnd-warning-soft);
+  color: #6B4D00;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.vnd-holding-small {
+  font-size: 0.8rem;
+  color: #355E53;
+  margin-top: 14px;
+}
+.vnd-holding-card .vnd-btn {
+  min-width: 220px;
+}
+
+/* ----------------------------------------------------------------
+   Wizard & form inputs
+   ---------------------------------------------------------------- */
+.vnd-step {
+  padding-top: 4px;
+}
+.vnd-step-center {
+  text-align: center;
+  padding: 24px 12px;
+}
+.vnd-step-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #06372F;
+  margin-bottom: 14px;
+}
+.vnd-input {
+  width: 100%;
+  font-size: 1rem;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--c-border);
+  background: #fff;
+  color: #06372F;
+  box-sizing: border-box;
+}
+.vnd-input:focus {
+  outline: none;
+  border-color: var(--vnd-green);
+  box-shadow: 0 0 0 3px rgba(7, 91, 77, 0.12);
+}
+.vnd-input::placeholder {
+  color: #43655B;
+}
+.vnd-muted {
+  font-size: 0.9rem;
+  color: #355E53;
+}
+.vnd-muted-sm {
+  font-size: 0.78rem;
+}
+
+/* ----------------------------------------------------------------
+   Pickup address (map picker + current location)
+   ---------------------------------------------------------------- */
+.vnd-pickup-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vnd-pickup-input {
+  cursor: pointer;
+  background: var(--vnd-mint);
+  color: #06372F;
+  font-weight: 700;
+  padding-right: 56px;
+}
+.vnd-pickup-input::placeholder {
+  color: #0E7A63;
+}
+.vnd-pickup-input:focus {
+  border-color: var(--vnd-green);
+}
+.vnd-pickup-input.picked {
+  background: #fff;
+}
+.vnd-pickup-map-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  background: var(--vnd-green);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vnd-gps-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+.vnd-pickup-hint {
+  font-size: 0.8rem;
+  color: #355E53;
+  margin-top: 6px;
+}
+
+.vnd-time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vnd-time-col label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4A6B62;
+  display: block;
+  margin-bottom: 6px;
+}
+.vnd-time-selects {
+  display: flex;
+  gap: 6px;
+}
+.vnd-time-select {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--c-border);
+  background: #fff;
+  color: #06372F;
+}
+
+/* ----------------------------------------------------------------
+   Media upload
+   ---------------------------------------------------------------- */
+.vnd-uploader {
+  margin-bottom: 16px;
+}
+.vnd-upload-box {
+  border: 2px dashed #BFD9CE;
+  border-radius: 18px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--vnd-mint);
+  transition: background 0.15s ease;
+}
+.vnd-upload-box:hover {
+  background: #D9F0E5;
+}
+.vnd-upload-emoji {
+  font-size: 2.2rem;
+  margin-bottom: 6px;
+}
+.vnd-upload-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--vnd-green);
+}
+.vnd-upload-hint {
+  font-size: 0.82rem;
+  color: #355E53;
+  margin-top: 2px;
+}
+.vnd-upload-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 2px solid var(--vnd-mint);
+}
+.vnd-uploader-sm .vnd-upload-box {
+  padding: 18px;
+}
+.vnd-uploader-sm .vnd-upload-emoji {
+  font-size: 1.6rem;
+}
+
+/* ----------------------------------------------------------------
+   Extras (add-on groups) builder
+   ---------------------------------------------------------------- */
+.vnd-extras-head {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vnd-extras-head h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+.vnd-extras-tag {
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  color: var(--vnd-green);
+  background: var(--vnd-mint);
+  border: 1px solid rgba(7, 91, 77, 0.16);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.vnd-extras-sub {
+  display: block;
+  margin-bottom: 10px;
+}
+.vnd-empty-card {
+  background: #fff;
+  border-style: dashed;
+  border-color: #D8E6E0;
+}
+
+.vnd-addon-group {
+  background: var(--c-bg-surface, #fff);
+  border: 1px solid var(--c-border);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.vnd-addon-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.vnd-addon-top .vnd-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+}
+.vnd-req-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.vnd-req-text {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--vnd-green-dark);
+  white-space: nowrap;
+}
+.vnd-req-switch .toggle-switch {
+  transform: scale(0.82);
+}
+.vnd-icon-btn {
+  background: #fff;
+  border: 1px solid var(--c-border);
+  color: var(--vnd-danger);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 800;
+}
+.vnd-icon-btn-sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.vnd-addon-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.vnd-addon-opt-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.vnd-addon-opt-row .vnd-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+}
+.vnd-addon-opt-price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 110px;
+  flex-shrink: 0;
+}
+.vnd-addon-opt-price .vnd-input {
+  padding: 9px 8px;
+}
+.vnd-plus {
+  font-weight: 800;
+  color: var(--vnd-green);
+  white-space: nowrap;
+}
+.vnd-opt-empty {
+  padding: 2px 2px 8px;
+}
+.vnd-add-option {
+  background: none;
+  border: none;
+  color: var(--vnd-green);
+  font-size: 0.88rem;
+  font-weight: 800;
+  width: 100%;
+  text-align: left;
+  padding: 10px 2px 2px;
+  cursor: pointer;
+}
+.vnd-add-option:hover {
+  color: var(--vnd-green-mid);
+}
+
+/* ----------------------------------------------------------------
+   Food draft stock row
+   ---------------------------------------------------------------- */
+.vnd-stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vnd-stock-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #06372F;
+}
+
+/* ----------------------------------------------------------------
+   Mobile optimization
+   ---------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .vendor-store-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+  .vendor-header-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .vendor-store-banner {
+    align-items: flex-start;
+  }
+  .vendor-profile-info {
+    gap: 12px;
+  }
+  .vendor-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+  }
+  .vendor-title {
+    font-size: 1.12rem;
+  }
+
+  .vnd-card {
+    padding: 14px;
+  }
+  .vnd-wallet-balance {
+    font-size: 1.7rem;
+  }
+  .vnd-wallet-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vnd-tabs {
+    gap: 4px;
+  }
+  .vendor-tab-btn {
+    padding: 9px 12px;
+    font-size: 0.78rem;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .vnd-order-actions {
+    flex-direction: column;
+  }
+  .vnd-order-actions .vnd-btn {
+    width: 100%;
+  }
+
+  .inventory-list {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .vnd-food-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .vnd-stock-toggle-row {
+    justify-content: space-between;
+  }
+
+  .vnd-time-row {
+    grid-template-columns: 1fr;
+  }
+  .vnd-addon-opt-row {
+    flex-wrap: wrap;
+  }
+  .vnd-addon-opt-price {
+    width: 100%;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   CHOW45 VENDOR MENU SYSTEM & MY FOOD PAGE (Points 1–3, 38–41)
+   Clean, simple cards · No gradients · No glassmorphism · Mobile-first
+   ═════════════════════════════════════════════════════════════════ */
+
+/* Vendor navigation moved to the role-scoped bars in layout.css
+   (.bottom-nav on mobile, .vendor-topnav from 769px). The old five-tab
+   .vendor-subnav markup and its rules are retired. */
+
+/* Sub-Tab Panes */
+.vnd-tab-pane {
+  display: none;
+}
+.vnd-tab-pane.active {
+  display: block;
+}
+
+/* ── Primary Header: My Food & + Add Food (Points 1, 41) ── */
+.vnd-food-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vnd-food-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.5px;
+}
+.vnd-food-subtitle {
+  font-size: 0.88rem;
+  color: #4B5563;
+  margin: 0;
+}
+.vnd-btn-add-food-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #038B5C;
+  color: #FFFFFF;
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(3, 139, 92, 0.2);
+}
+.vnd-btn-add-food-star:hover {
+  background: #02704a;
+  transform: translateY(-1px);
+}
+.vnd-btn-add-food-star .plus-sign {
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* ── Category Filter Chips (Point 29) ── */
+.vnd-category-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 22px;
+  -webkit-overflow-scrolling: touch;
+}
+.vnd-category-bar::-webkit-scrollbar {
+  display: none;
+}
+.vnd-cat-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  color: #374151;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.vnd-cat-chip:hover {
+  border-color: #0C513F;
+  color: #0C513F;
+}
+.vnd-cat-chip.active {
+  background: #0C513F;
+  color: #FFFFFF;
+  border-color: #0C513F;
+}
+
+/* ── Section Dividers: Available & Out of stock (Point 2) ── */
+.vnd-menu-section {
+  margin-bottom: 28px;
+}
+.vnd-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #E5E7EB;
+  margin-bottom: 14px;
+}
+.vnd-section-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
+}
+.vnd-section-count {
+  background: #F3F4F6;
+  color: #4B5563;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.vnd-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.vnd-section-empty-hint {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+/* ── Empty State (Point 45) ── */
+.vnd-empty-menu-box {
+  text-align: center;
+  background: #FFFFFF;
+  border: 1.5px dashed #E5E7EB;
+  border-radius: 20px;
+  padding: 48px 20px;
+  margin: 20px 0;
+}
+.vnd-empty-plate-icon {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+}
+.vnd-empty-h {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+.vnd-empty-p {
+  font-size: 0.9rem;
+  color: #6B7280;
+  margin: 0 0 20px 0;
+}
+
+/* ── Visual Food Card (Points 3, 40) ── */
+.vnd-visual-food-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.vnd-visual-food-card:hover {
+  border-color: #D1D5DB;
+  transform: translateY(-2px);
+}
+.vnd-visual-food-card.is-out-of-stock {
+  opacity: 0.78;
+  background: #FAFAFA;
+}
+.vnd-fc-thumb-wrap {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  background: #F3F4F6;
+  overflow: hidden;
+}
+.vnd-fc-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vnd-fc-badge-pos {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+}
+.vnd-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.vnd-status-tag.tag-avail {
+  background: #E8F6F0;
+  color: #075B4D;
+  border: 1px solid #C1E8D9;
+}
+.vnd-status-tag.tag-out {
+  background: #FDECEC;
+  color: #B91C1C;
+  border: 1px solid #FCA5A5;
+}
+.vnd-status-tag.tag-preorder {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+}
+
+.vnd-fc-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.vnd-fc-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.vnd-fc-name {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  line-height: 1.25;
+}
+.vnd-fc-del-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  opacity: 0.5;
+  padding: 2px;
+  transition: opacity 0.12s ease;
+}
+.vnd-fc-del-btn:hover {
+  opacity: 1;
+}
+
+.vnd-fc-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0C513F;
+  margin-bottom: 2px;
+}
+.vnd-fc-unit {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6B7280;
+}
+.vnd-fc-price-sub {
+  font-size: 0.78rem;
+  color: #6B7280;
+  margin-bottom: 6px;
+}
+
+.vnd-fc-extras-summary {
+  background: #F9FAFB;
+  border: 1px solid #F3F4F6;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 8px 0;
+  font-size: 0.74rem;
+  color: #374151;
+  line-height: 1.35;
+}
+.vnd-fc-extra-line {
+  margin-bottom: 2px;
+}
+.vnd-fc-extra-line strong {
+  color: #111827;
+}
+
+.vnd-fc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.vnd-fc-btn-edit {
+  flex: 1;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #111827;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.vnd-fc-btn-edit:hover {
+  border-color: #0C513F;
+  color: #0C513F;
+}
+.vnd-fc-btn-toggle {
+  flex: 1.3;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.vnd-fc-btn-toggle.btn-mark-out {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+.vnd-fc-btn-toggle.btn-mark-out:hover {
+  background: #FECACA;
+}
+.vnd-fc-btn-toggle.btn-make-avail {
+  background: #D1FAE5;
+  color: #065F46;
+}
+.vnd-fc-btn-toggle.btn-make-avail:hover {
+  background: #A7F3D0;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   STEP-BY-STEP FOOD CREATION FLOW (Points 4–26, 43, 44)
+   "Every screen should answer one question."
+   ═════════════════════════════════════════════════════════════════ */
+.vnd-flow-sheet {
+  background: #FFFFFF;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.vnd-flow-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #F3F4F6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vnd-flow-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vnd-flow-step-tag {
+  font-size: 0.76rem;
+  color: #6B7280;
+  font-weight: 600;
+  margin-top: 1px;
+}
+.vnd-flow-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #F3F4F6;
+}
+.vnd-flow-progress-fill {
+  height: 100%;
+  background: #038B5C;
+  transition: width 0.25s ease;
+}
+
+.vnd-flow-body {
+  padding: 22px 20px;
+  max-height: calc(88vh - 120px);
+  overflow-y: auto;
+}
+.vnd-step-pane {
+  display: none;
+}
+.vnd-step-pane.active {
+  display: block;
+}
+
+.vnd-step-question {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.4px;
+  margin-bottom: 6px;
+}
+.vnd-step-helper {
+  font-size: 0.86rem;
+  color: #6B7280;
+  margin: 0 0 18px 0;
+  line-height: 1.4;
+}
+
+/* Photo Dropzone (Point 4) */
+.vnd-photo-dropzone {
+  border: 2px dashed #D1D5DB;
+  border-radius: 16px;
+  background: #F9FAFB;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.vnd-photo-dropzone:hover {
+  border-color: #0C513F;
+  background: #F3F4F6;
+}
+.vnd-photo-icon {
+  font-size: 2.4rem;
+  margin-bottom: 6px;
+}
+.vnd-photo-title {
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.95rem;
+}
+.vnd-photo-sub {
+  font-size: 0.78rem;
+  color: #6B7280;
+  margin-top: 2px;
+}
+#vnd-photo-preview-wrap {
+  width: 100%;
+  text-align: center;
+}
+#vnd-flow-photo-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.vnd-photo-change-btn {
+  margin-top: 10px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.vnd-optional-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6B7280;
+  background: #F3F4F6;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* Pricing Type Selectable Cards (Points 6–9) */
+.vnd-price-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.vnd-price-type-card {
+  border: 2px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vnd-price-type-card:hover {
+  border-color: #9CA3AF;
+}
+.vnd-price-type-card.selected {
+  border-color: #0C513F;
+  background: #E8F6F0;
+}
+.vnd-pt-icon {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+.vnd-pt-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 2px;
+}
+.vnd-pt-sub {
+  font-size: 0.72rem;
+  color: #6B7280;
+}
+
+.vnd-currency-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.vnd-currency-prefix {
+  position: absolute;
+  left: 14px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+}
+.vnd-currency-input {
+  padding-left: 32px !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #0C513F !important;
+}
+
+/* Extras Choice Grid (Points 11–18) */
+.vnd-extras-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vnd-choice-card {
+  border: 2px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 16px 12px;
+  text-align: center;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vnd-choice-card:hover {
+  border-color: #9CA3AF;
+}
+.vnd-choice-card.selected {
+  border-color: #0C513F;
+  background: #E8F6F0;
+}
+.vnd-choice-emoji {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+.vnd-choice-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+}
+.vnd-choice-sub {
+  font-size: 0.76rem;
+  color: #6B7280;
+}
+
+.vnd-extras-section-box {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 14px;
+}
+.vnd-extras-sec-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.vnd-extras-sec-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #111827;
+}
+.vnd-extras-sec-sub {
+  font-size: 0.76rem;
+  color: #6B7280;
+  margin-top: 1px;
+}
+.vnd-btn-add-extra-pill {
+  background: #FFFFFF;
+  border: 1.5px solid #0C513F;
+  color: #0C513F;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.vnd-btn-add-extra-pill:hover {
+  background: #0C513F;
+  color: #FFFFFF;
+}
+
+.vnd-extra-pill-row {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.vnd-extra-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.vnd-extra-tag.required {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+.vnd-extra-tag.optional {
+  background: #E5E7EB;
+  color: #374151;
+}
+.vnd-extra-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #111827;
+  flex: 1;
+}
+.vnd-extra-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0C513F;
+}
+.vnd-extra-remove {
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.vnd-extra-remove:hover {
+  color: #EF4444;
+}
+
+.vnd-quick-extra-box {
+  background: #FFFFFF;
+  border: 1.5px solid #0C513F;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 12px;
+}
+.vnd-quick-extra-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #111827;
+}
+.vnd-quick-extra-inputs {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.vnd-quick-extra-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Availability & Preorder Cards (Points 19–22) */
+.vnd-avail-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 16px;
+  gap: 12px;
+}
+.vnd-avail-badge {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #111827;
+  margin-bottom: 2px;
+}
+.vnd-avail-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #111827;
+  margin-bottom: 2px;
+}
+.vnd-avail-sub {
+  font-size: 0.8rem;
+  color: #6B7280;
+}
+
+.vnd-preorder-box {
+  background: #FFFBEB;
+  border: 1.5px solid #FCD34D;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+.vnd-preorder-heading {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #92400E;
+  margin-bottom: 12px;
+}
+
+/* Final Review Screen (Point 24) */
+.vnd-review-card {
+  border: 1.5px solid #E5E7EB;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #FFFFFF;
+  margin-bottom: 20px;
+}
+.vnd-review-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #F3F4F6;
+}
+.vnd-review-body {
+  padding: 16px;
+}
+.vnd-review-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 4px;
+}
+.vnd-review-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0C513F;
+  margin-bottom: 10px;
+}
+.vnd-review-extras-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.vnd-review-lbl {
+  font-weight: 700;
+  color: #111827;
+}
+.vnd-review-status-row {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #F3F4F6;
+}
+.vnd-badge-status {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Success Screen (Points 25 & 26) */
+.vnd-step-center {
+  text-align: center;
+  padding: 30px 10px;
+}
+.vnd-success-icon {
+  font-size: 3.8rem;
+  margin-bottom: 10px;
+}
+.vnd-success-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+.vnd-success-text {
+  font-size: 0.92rem;
+  color: #4B5563;
+  margin: 0 0 24px 0;
+}
+.vnd-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Flow Action Buttons */
+.vnd-flow-actions {
+  margin-top: 22px;
+}
+.vnd-flow-actions-dual {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+.vnd-flow-btn-next {
+  flex: 2;
+}
+
+/* Quick Jump Grid on Home tab */
+.vnd-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.vnd-quick-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vnd-quick-card:hover {
+  border-color: #0C513F;
+  transform: translateY(-2px);
+}
+.vnd-quick-icon {
+  font-size: 2rem;
+}
+.vnd-quick-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #111827;
+}
+.vnd-quick-sub {
+  font-size: 0.78rem;
+  color: #6B7280;
+}
+.vnd-quick-arrow {
+  margin-left: auto;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0C513F;
+}
+
+/* Mobile Media Queries (Point 39) */
+@media (max-width: 640px) {
+  .vnd-food-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .vnd-btn-add-food-star {
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+  }
+  .vnd-price-type-grid {
+    grid-template-columns: 1fr;
+  }
+  .vnd-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .vnd-fc-actions {
+    flex-direction: row;
+  }
+}
+
+/* =============================================================
+   MOBILE TOUCH & LEGIBILITY PASS
+   ============================================================= */
+
+/* Horizontally scrolling strips: the category chips were the only things
+   sticking out of a 375px viewport. That is intentional, but it was
+   invisible — no scrollbar, no hint that more exists. Snap the strips so
+   they land on whole items, and fade the trailing edge to signal overflow. */
+@media (max-width: 768px) {
+  .vnd-category-bar {
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-padding-left: 4px;
+    /* room for the fade mask without clipping the last chip */
+    padding-right: 20px;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
+  }
+  .vnd-cat-chip {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+}
+
+/* Vendor controls that were below the 44px touch minimum.
+   Gated on touch capability rather than width alone, so a tablet or touch
+   laptop gets the same targets even though it has room to spare. */
+@media (max-width: 768px), (pointer: coarse) {
+  .vnd-cat-chip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .vnd-cat-chip {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* The row-level delete affordance was 25x28 with 2px of padding */
+  .vnd-fc-del-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    opacity: 0.7;
+  }
+
+  .vnd-fc-btn-edit,
+  .vnd-fc-btn-toggle {
+    min-height: 44px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .vnd-holding-card .vnd-btn {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Underlined text buttons with no padding were one line-box tall */
+  .vnd-link-btn,
+  .vendor-register-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* 0.74rem renders at 11.8px, which is below comfortable reading size */
+  .vnd-status-tag,
+  .vnd-fc-extras-summary,
+  .vnd-optional-pill {
+    font-size: 0.78rem;
+  }
+  .vnd-fc-extras-summary {
+    line-height: 1.45;
+  }
+}
+
+/* The store-open switch is a 48x28 pill. Growing the element itself would make
+   it look wrong next to its label, so the extra hit area is added as a
+   transparent overlay instead of changing the visible control. */
+@media (pointer: coarse) {
+  .toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: max(100%, 48px);
+    height: 44px;
+  }
+}
+
+/* Keep the food-card action buttons from being squeezed into two cramped
+   columns once the card itself is full width. */
+@media (max-width: 400px) {
+  .vnd-fc-actions {
+    flex-wrap: wrap;
+  }
+  .vnd-fc-btn-edit,
+  .vnd-fc-btn-toggle {
+    flex: 1 1 100%;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   VENDOR ONBOARDING GATE
+   Welcome → Service area → Sign in. Covers the dashboard until a
+   first-time visitor on /vendor has an account.
+   ═════════════════════════════════════════════════════════════════ */
+.vnd-onb {
+  position: fixed;
+  inset: 0;
+  /* Above the page chrome (.top-nav 100, nav bars 120) but below
+     .modal-backdrop (200), because step 3 hands off to the auth modal. */
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(12, 81, 63, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+
+.vnd-onb-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 26px 22px 22px;
+  background: var(--c-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+}
+
+/* Progress dots: the current step is filled, earlier steps are ticked. */
+.vnd-onb-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.vnd-onb-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-border);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.vnd-onb-dot.active {
+  background: var(--c-primary);
+  transform: scale(1.35);
+}
+.vnd-onb-dot.done {
+  background: var(--c-primary);
+  opacity: 0.45;
+}
+
+.vnd-onb-step {
+  display: none;
+}
+.vnd-onb-step.active {
+  display: block;
+}
+
+.vnd-onb-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.vnd-onb-title {
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--c-primary);
+  letter-spacing: -0.01em;
+}
+
+.vnd-onb-text {
+  margin: 0 0 18px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--c-text-secondary);
+}
+
+.vnd-onb-perks {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vnd-onb-perks li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  color: var(--c-text-secondary);
+  background: var(--c-primary-surface);
+  border-radius: var(--radius-sm);
+}
+
+.vnd-onb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-primary);
+  background: var(--c-primary-surface);
+  border-radius: var(--radius-pill);
+}
+
+.vnd-onb-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  text-align: left;
+}
+.vnd-onb-hint.error {
+  color: var(--c-error);
+}
+
+.vnd-onb-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.vnd-onb-actions .vnd-onb-btn {
+  flex: 1 1 0;
+}
+
+.vnd-onb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--c-text-inverse);
+  background: var(--c-primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.vnd-onb-btn:hover {
+  filter: brightness(1.08);
+}
+.vnd-onb-btn.ghost {
+  color: var(--c-primary);
+  background: transparent;
+  border: 1px solid var(--c-border);
+}
+.vnd-onb-btn.ghost:hover {
+  background: var(--c-primary-surface);
+}
+
+/* The select inherits the auth input shell, so drop the icon gap. */
+.vnd-onb .auth-input-wrap select {
+  width: 100%;
+  min-height: 46px;
+  padding-left: 40px;
+  appearance: none;
+  cursor: pointer;
+}
+.vnd-onb .auth-input-wrap::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--c-text-muted);
+  border-bottom: 2px solid var(--c-text-muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+.vnd-onb .auth-input-wrap {
+  position: relative;
+}
+
+@media (max-width: 380px) {
+  .vnd-onb {
+    padding: 12px;
+  }
+  .vnd-onb-card {
+    padding: 22px 16px 18px;
+  }
+  .vnd-onb-title {
+    font-size: 1.2rem;
+  }
+}

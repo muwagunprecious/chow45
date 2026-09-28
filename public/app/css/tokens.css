@@ -1,0 +1,146 @@
+/* ==========================================================================
+   CHOW45 DESIGN SYSTEM TOKENS
+   Theme: Light
+   Accent: #0c513f
+   Canvas: #ffffff
+   Text: #000000
+   Primary Button: #038b5c
+   Cards: #ffffff with 1px solid #e5e7eb, 8px border-radius, no shadow
+   ========================================================================== */
+
+/* -------------------------------------------------------------
+   Font Definitions: Plus Jakarta Display (Custom)
+   ------------------------------------------------------------- */
+@font-face {
+  font-family: 'Plus Jakarta Display';
+  src: url('https://media.brand.dev/fonts/856ac8f8014b97ec80c73ac48dd91c4ec99f436b2862511c8dfdcab190a6579d.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Display';
+  src: url('https://media.brand.dev/fonts/648b7231dc5b29644ad10863410b5968214179d316452b14548fdaa8f53dc889.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Display';
+  src: url('https://media.brand.dev/fonts/4efb704bc71227c453d1387bb11709cd298767522eae8bbc726e1c2d5b211b32.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Display';
+  src: url('https://media.brand.dev/fonts/93d2ae7baaa14a6a5783b98b6ce9b343095c211d2938e8a30f0a67dd1f7b6637.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Mode */
+  color-scheme: light;
+
+  /* Chow45 Brand Colors */
+  --c-accent: #0C513F;             /* Deep Chow45 Forest Green */
+  --c-primary: #0C513F;            /* Primary brand green */
+  --c-primary-hover: #073B2E;
+  --c-primary-light: #00B978;      /* Vibrant Mint Green */
+  --c-primary-dark: #073B2E;
+  --c-primary-surface: #E4F7EC;    /* Mint Pastel Tint */
+  --c-accent-hover: #073B2E;
+  --c-accent-soft: #E4F7EC;
+  --c-yellow: #FFC928;             /* Chow45 Gold / Yellow */
+  --c-yellow-soft: #FFF2B2;
+
+  /* Surfaces & Backgrounds */
+  --c-bg-canvas: #FFFDF6;          /* Authentic Chow45 Warm Paper */
+  --c-bg-surface: #FFFFFF;         /* Crisp White Cards */
+  --c-bg-subtle: #FAF6EB;          /* Warm Cream Tint */
+  --c-bg-glass: rgba(255, 253, 246, 0.96);
+
+  /* Typography Colors */
+  --c-text-primary: #111111;       /* High-contrast ink text */
+  --c-text-secondary: #383834;     /* Soft charcoal secondary */
+  --c-text-muted: #6E6D66;         /* Subtle gray descriptor text */
+  --c-text-inverse: #FFFFFF;       /* Pure white on dark surfaces */
+
+  /* Borders & Dividers */
+  --c-border: rgba(12, 81, 63, 0.12); /* Subtle branded green border */
+  --c-border-subtle: rgba(12, 81, 63, 0.07);
+  --c-border-secondary-btn: rgba(12, 81, 63, 0.16);
+  --c-border-active: #0C513F;
+
+  /* Status Colors */
+  --c-success: #00B978;
+  --c-success-bg: #E4F7EC;
+  --c-warning: #FFC928;
+  --c-warning-bg: #FFF2B2;
+  --c-error: #FF5E3A;
+  --c-error-bg: #FCD8E3;
+  --c-info: #0C513F;
+  --c-info-bg: #E4F7EC;
+
+  /* Secondary accent for spicy/tags */
+  --c-secondary: #FF5E3A;
+  --c-secondary-soft: #FFF2B2;
+
+  /* Typography Families & Fallbacks */
+  --font-family-fallbacks: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', var(--font-family-fallbacks);
+  --font-body: 'Plus Jakarta Sans', var(--font-family-fallbacks);
+
+  /* Element Spacing Scale */
+  --space-xs: 8px;
+  --space-sm: 16px;
+  --space-md: 24px;
+  --space-lg: 48px;
+  --space-xl: 96px;
+
+  /* Utility Spacing aliases */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(12, 81, 63, 0.06);
+  --shadow-md: 0 6px 20px rgba(12, 81, 63, 0.08);
+  --shadow-lg: 0 12px 32px rgba(12, 81, 63, 0.12);
+  --shadow-xl: 0 20px 48px rgba(12, 81, 63, 0.16);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-floating: 0 12px 36px rgba(12, 81, 63, 0.16);
+
+  /* Border Radii: Rounded, friendly, and modern */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-card: 20px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+
+  /* Layout Consts */
+  --nav-height: 72px;
+  --bottom-bar-height: 68px;
+  --max-width: 1280px;
+
+  /* Transitions */
+  --transition-snappy: 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-smooth: 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}

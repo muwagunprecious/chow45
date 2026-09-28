@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Dev tooling and scratch scripts (CommonJS, not app source):
+    "scratch/**",
+    ".kilo/**",
   ]),
 ]);
 

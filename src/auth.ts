@@ -6,7 +6,7 @@ import { createAuthMiddleware, APIError } from "better-auth/api";
 
 import { db } from "./db";
 import { nanoid, customAlphabet } from "nanoid";
-import { redis } from "./lib/redis";
+import { redis, isRedisConfigured } from "./lib/redis";
 
 import {
     users,
@@ -248,14 +248,18 @@ function createAuth(role: Role) {
          * - Rate limiting
          * - Temporary authentication data
          * - Other short-lived Better Auth storage
+         *
+         * Only wired up when Upstash credentials are present. Without Redis
+         * the option is omitted entirely so Better Auth falls back to its
+         * default storage instead of calling into a null client.
          */
-        secondaryStorage: {
+        ...(isRedisConfigured ? { secondaryStorage: {
 
             /**
              * Get a value from Redis.
              */
             get: async (key) => {
-                const value = await redis.get(key);
+                const value = await redis!.get(key);
 
                 // Redis doesn't have the value.
                 if (value === null || value === undefined) {
@@ -275,7 +279,7 @@ function createAuth(role: Role) {
              * Useful for one-time values.
              */
             getAndDelete: async (key) => {
-                const value = await redis.getdel(key);
+                const value = await redis!.getdel(key);
 
                 if (value === null || value === undefined) {
                     return null;
@@ -295,7 +299,7 @@ function createAuth(role: Role) {
              * The first request sets the expiration time.
              */
             increment: async (key, ttl) => {
-                const result = await redis.eval(
+                const result = await redis!.eval(
                     `
                     local count = redis.call("INCR", KEYS[1])
 
@@ -321,9 +325,9 @@ function createAuth(role: Role) {
              */
             set: async (key, value, ttl) => {
                 if (ttl) {
-                    await redis.set(key, value, { ex: ttl });
+                    await redis!.set(key, value, { ex: ttl });
                 } else {
-                    await redis.set(key, value);
+                    await redis!.set(key, value);
                 }
             },
 
@@ -332,19 +336,21 @@ function createAuth(role: Role) {
              * Delete a value from Redis.
              */
             delete: async (key) => {
-                await redis.del(key);
+                await redis!.del(key);
             },
-        },
+        } } : {}),
 
 
         /**
          * Authentication rate limiting.
          *
-         * Redis is used as the storage provider.
+         * Redis is used as the storage provider when it is configured.
+         * Otherwise Better Auth keeps counters in process memory, which is
+         * enough for single-instance local development.
          */
         rateLimit: {
             enabled: true,
-            storage: "secondary-storage",
+            storage: isRedisConfigured ? "secondary-storage" : "memory",
 
             /**
              * Custom limits for sensitive authentication endpoints.
