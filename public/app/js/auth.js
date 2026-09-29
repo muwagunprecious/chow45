@@ -15,6 +15,94 @@ const Chow45Auth = {
   init() {
     this.restoreSession();
     this.updateUI();
+    this.bindEmailInputs();
+  },
+
+  async checkEmailAccount(email) {
+    if (!email || typeof email !== 'string') return null;
+    const clean = email.trim().toLowerCase();
+    if (!clean.includes('@') || !clean.includes('.')) return null;
+
+    try {
+      const res = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('[auth] check-email failed:', e);
+    }
+    return null;
+  },
+
+  async checkVendorEmailInput() {
+    const input = document.getElementById('auth-vnd-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    const lookup = await this.checkEmailAccount(email);
+    if (lookup && lookup.exists) {
+      // Vendor already has an account! Transition directly to password step
+      this.showPasswordStep(lookup.role || 'VENDOR', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account found! Please enter your password to sign in.', 'info');
+      }
+    }
+  },
+
+  async checkCustomerEmailInput() {
+    const input = document.getElementById('auth-cust-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    const lookup = await this.checkEmailAccount(email);
+    if (lookup && lookup.exists) {
+      this.showPasswordStep(lookup.role || 'USER', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account found! Please enter your password to sign in.', 'info');
+      }
+    }
+  },
+
+  async checkStep1EmailInput() {
+    const input = document.getElementById('auth-step1-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    const lookup = await this.checkEmailAccount(email);
+    if (lookup && lookup.exists) {
+      this.showPasswordStep(lookup.role || (this.intent === 'vendor' ? 'VENDOR' : 'USER'), email);
+    }
+  },
+
+  _debounceTimer: null,
+  bindEmailInputs() {
+    const attach = (id, checkFn) => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.boundEmailCheck === 'true') return;
+      el.dataset.boundEmailCheck = 'true';
+
+      el.addEventListener('blur', () => {
+        checkFn.call(this);
+      });
+
+      el.addEventListener('input', () => {
+        clearTimeout(this._debounceTimer);
+        const val = (el.value || '').trim();
+        if (val.includes('@') && val.includes('.') && val.length > 5) {
+          this._debounceTimer = setTimeout(() => {
+            checkFn.call(this);
+          }, 450);
+        }
+      });
+    };
+
+    attach('auth-step1-email', this.checkStep1EmailInput);
+    attach('auth-vnd-email', this.checkVendorEmailInput);
+    attach('auth-cust-email', this.checkCustomerEmailInput);
   },
 
   restoreSession() {
@@ -147,6 +235,8 @@ const Chow45Auth = {
     if (backBtn) backBtn.style.display = 'none';
     if (tag) tag.textContent = 'Sign In / Join';
 
+    this.bindEmailInputs();
+
     setTimeout(() => {
       const inp = document.getElementById('auth-step1-email');
       if (inp) inp.focus();
@@ -250,14 +340,14 @@ const Chow45Auth = {
     if (sc) sc.style.display = 'none';
     if (sv) sv.style.display = 'none';
     if (backBtn) backBtn.style.display = 'inline-flex';
-    if (tag) tag.textContent = 'Sign In';
+    if (tag) tag.textContent = this.pendingRole === 'VENDOR' ? 'Vendor Sign In' : 'Sign In';
 
     if (emailField) emailField.value = email || '';
     if (pwField) pwField.value = '';
     if (subheading) {
       subheading.textContent = this.pendingRole === 'VENDOR'
-        ? 'Enter your password to reach your vendor dashboard.'
-        : 'Enter your password to continue.';
+        ? 'Account found! Enter your password to reach your vendor dashboard.'
+        : 'Welcome back! Enter your password to continue.';
     }
 
     setTimeout(() => {
@@ -379,6 +469,8 @@ const Chow45Auth = {
       }
     }
 
+    this.bindEmailInputs();
+
     setTimeout(() => {
       const phoneInp = document.getElementById('auth-cust-phone');
       if (phoneInp) phoneInp.focus();
@@ -410,6 +502,7 @@ const Chow45Auth = {
 
     // Default to physical store
     this.setVendorStoreType(this.vendorStoreType || 'physical');
+    this.bindEmailInputs();
 
     setTimeout(() => {
       const storeInp = document.getElementById('auth-vnd-store-name');
@@ -785,6 +878,17 @@ const Chow45Auth = {
       this.showAlert('customer', 'Please provide a valid email address.');
       return;
     }
+
+    // Check if account already exists before trying to register
+    const existingCustLookup = await this.checkEmailAccount(email);
+    if (existingCustLookup && existingCustLookup.exists) {
+      this.showPasswordStep(existingCustLookup.role || 'USER', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account already exists! Please enter your password to sign in.', 'info');
+      }
+      return;
+    }
+
     if (!phone || phone.length < 9) {
       this.showAlert('customer', 'Please enter a valid phone number (at least 9 digits).');
       return;
@@ -852,6 +956,16 @@ const Chow45Auth = {
 
     if (!email || !email.includes('@')) {
       this.showAlert('vendor', 'Please provide a valid email address.');
+      return;
+    }
+
+    // Check if account already exists before trying to register
+    const existingVndLookup = await this.checkEmailAccount(email);
+    if (existingVndLookup && existingVndLookup.exists) {
+      this.showPasswordStep(existingVndLookup.role || 'VENDOR', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account already exists! Please enter your password to sign in.', 'info');
+      }
       return;
     }
     if (!phone || phone.length < 9) {

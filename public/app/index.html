@@ -1661,7 +1661,7 @@
                 <label class="checkout-label" for="auth-step1-email">Email Address</label>
                 <div class="auth-input-wrap">
                   <span class="auth-input-icon">✉️</span>
-                  <input type="email" id="auth-step1-email" class="checkout-input auth-input" placeholder="e.g. name@student.oou.edu.ng" required autofocus autocomplete="email" />
+                  <input type="email" id="auth-step1-email" class="checkout-input auth-input" placeholder="e.g. name@student.oou.edu.ng" required autofocus autocomplete="email" onblur="Chow45Auth.checkStep1EmailInput()" />
                 </div>
               </div>
 
@@ -1723,7 +1723,7 @@
                 <label class="checkout-label" for="auth-cust-email">Email Address</label>
                 <div class="auth-input-wrap">
                   <span class="auth-input-icon">✉️</span>
-                  <input type="email" id="auth-cust-email" class="checkout-input auth-input" placeholder="name@domain.com" required autocomplete="email" />
+                  <input type="email" id="auth-cust-email" class="checkout-input auth-input" placeholder="name@domain.com" required autocomplete="email" onblur="Chow45Auth.checkCustomerEmailInput()" />
                 </div>
               </div>
 
@@ -1777,6 +1777,11 @@
             <div class="auth-panel-intro">
               <h3 class="auth-heading">Join as a Food Vendor</h3>
               <p class="auth-subheading">Sell your food and reach students & campus customers.</p>
+            </div>
+
+            <div class="auth-vendor-signin-callout" style="display: flex; align-items: center; justify-content: space-between; background: #E8F6F0; padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 14px; border: 1px solid #C4EBDD;">
+              <span style="font-size: 0.82rem; color: #0C513F; font-weight: 500;">Already registered as a vendor?</span>
+              <button type="button" style="background: #00B978; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" onclick="Chow45Auth.showStep1()">Sign In Instead →</button>
             </div>
 
             <div id="auth-vnd-alert" class="auth-alert error" style="display: none;"></div>
@@ -1838,7 +1843,7 @@
                   <label class="checkout-label" for="auth-vnd-email">Email Address</label>
                   <div class="auth-input-wrap">
                     <span class="auth-input-icon">✉️</span>
-                    <input type="email" id="auth-vnd-email" class="checkout-input auth-input" placeholder="vendor@chow45.com" required autocomplete="email" />
+                    <input type="email" id="auth-vnd-email" class="checkout-input auth-input" placeholder="vendor@chow45.com" required autocomplete="email" onblur="Chow45Auth.checkVendorEmailInput()" />
                   </div>
                 </div>
 

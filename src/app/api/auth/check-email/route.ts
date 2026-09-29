@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema/users";
+import { vendors } from "@/db/schema/vendors";
+import { waitlist } from "@/db/schema/waitlist";
 
 /**
  * Looks up an email address so the sign-in flow can decide whether to ask for a
@@ -14,9 +16,7 @@ import { users } from "@/db/schema/users";
  *   { exists: true, role: "USER" }           -> sign in, land on /app
  *   { exists: true, role: "VENDOR" }         -> sign in, land on /vendor
  *
- * Note: this endpoint reveals whether an email is registered. That is required
- * by the "enter email, then password" UX. The rate limit below keeps it from
- * being used to bulk-enumerate accounts.
+ * Checks `users` table, `vendors` table (contact_email), and vendor waitlist.
  */
 
 // Simple in-memory throttle. Redis is optional in this project, so a per
@@ -65,23 +65,73 @@ export async function POST(request: Request) {
         );
     }
 
-    // Emails are stored lowercased by Better Auth, so normalise before matching.
+    // Normalise email for matching
     const normalised = email.trim().toLowerCase();
 
-    const found = await db
+    // 1. Check users table
+    const userMatches = await db
         .select({ id: users.id, role: users.role })
         .from(users)
-        .where(eq(users.email, normalised))
+        .where(sql`LOWER(${users.email}) = ${normalised}`)
         .limit(1);
 
-    const match = found[0];
+    // 2. Check vendors table by contact_email
+    const vendorMatches = await db
+        .select({ id: vendors.id, userId: vendors.userId, businessName: vendors.businessName })
+        .from(vendors)
+        .where(sql`LOWER(${vendors.contactEmail}) = ${normalised}`)
+        .limit(1);
 
-    if (!match) {
+    let exists = false;
+    let isVendor = false;
+
+    if (userMatches.length > 0) {
+        exists = true;
+        const user = userMatches[0];
+        if (user.role?.toUpperCase() === "VENDOR") {
+            isVendor = true;
+        } else {
+            // Check if this user is linked to any vendor profile
+            const linked = await db
+                .select({ id: vendors.id })
+                .from(vendors)
+                .where(eq(vendors.userId, user.id))
+                .limit(1);
+            if (linked.length > 0) {
+                isVendor = true;
+            }
+        }
+    }
+
+    if (vendorMatches.length > 0) {
+        exists = true;
+        isVendor = true;
+    }
+
+    // 3. Fallback: check waitlist
+    if (!exists) {
+        const waitlistMatches = await db
+            .select({ id: waitlist.id, userType: waitlist.userType })
+            .from(waitlist)
+            .where(sql`LOWER(${waitlist.email}) = ${normalised}`)
+            .limit(1);
+
+        if (waitlistMatches.length > 0) {
+            exists = true;
+            const ut = (waitlistMatches[0].userType || "").toLowerCase();
+            if (ut.includes("vendor") || ut.includes("restaurant") || ut.includes("food")) {
+                isVendor = true;
+            }
+        }
+    }
+
+    if (!exists) {
         return NextResponse.json({ exists: false });
     }
 
     return NextResponse.json({
         exists: true,
-        role: match.role === "VENDOR" ? "VENDOR" : "USER",
+        role: isVendor ? "VENDOR" : "USER",
     });
 }
+
