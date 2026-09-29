@@ -20,6 +20,7 @@ import * as ordersSchema from "./schema/orders";
 import * as cartSchema from "./schema/cart";
 import * as vendorFinanceSchema from "./schema/vendor-finance";
 import * as categoriesSchema from "./schema/categories";
+import * as waitlistSchema from "./schema/waitlist";
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL!,
@@ -39,6 +40,7 @@ export const db = drizzle({ client: pool,
         ...cartSchema,
         ...vendorFinanceSchema,
         ...categoriesSchema,
+        ...waitlistSchema,
     },
 });
 
@@ -53,3 +55,4 @@ export * from "./schema/orders";
 export * from "./schema/cart";
 export * from "./schema/vendor-finance";
 export * from "./schema/categories";
+export * from "./schema/waitlist";
