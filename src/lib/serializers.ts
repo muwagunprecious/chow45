@@ -136,6 +136,7 @@ function toAddon(extra: MenuExtra): ClientAddon {
 export type ClientStore = {
   id: string;
   name: string;
+  locationOfOperation: string;
   slug: string;
   description: string;
   status: string;
@@ -168,6 +169,7 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
   return {
     id: vendor.storeId,
     name: vendor.businessName,
+    locationOfOperation: (vendor as any).locationOfOperation ?? "",
     slug: vendor.slug,
     description: vendor.description ?? "",
     status: vendor.status,
@@ -238,6 +240,7 @@ export function serializeRider(rider: Rider) {
     name: rider.name,
     phone: rider.phone ?? "",
     vehicle: rider.vehicle ?? "",
+    location: rider.location ?? "",
     rating: rider.rating,
     tripsCount: rider.tripsCount,
     avatar: rider.avatar,

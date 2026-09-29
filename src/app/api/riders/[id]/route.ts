@@ -54,6 +54,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/riders/[id
     // that only ever moves one direction is a footgun: let them set it either way.
     if (body.isOnline !== undefined) patch.isOnline = body.isOnline === true;
     if (body.isAvailable !== undefined) patch.isAvailable = body.isAvailable === true;
+    if (body.location !== undefined) patch.location = String(body.location).toLowerCase().trim();
 
     const lat = body.lat !== undefined ? toLat(body.lat) : body.currentLat !== undefined ? toLat(body.currentLat) : null;
     const lng = body.lng !== undefined ? toCoord(body.lng) : body.currentLng !== undefined ? toCoord(body.currentLng) : null;
