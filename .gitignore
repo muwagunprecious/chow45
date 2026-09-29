@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Deliberately withheld local shells
+/src/app/app/
+/src/app/rider/
+/scratch/
+dev.log
+.kilo/
+waitlist_backup.json
+update_html.js

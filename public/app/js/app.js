@@ -59,6 +59,29 @@ const Chow45App = {
     if (typeof VendorOnboarding !== 'undefined') {
       VendorOnboarding.init();
     }
+
+    // Pull real vendor stores and menu items from Postgres database
+    this.syncFromServer();
+  },
+
+  async syncFromServer() {
+    try {
+      const res = await fetch('/api/bootstrap');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.stores)) {
+        window.chowStore.state.restaurants = data.stores;
+        window.chowStore.save();
+        if (typeof CustomerController !== 'undefined' && CustomerController.render) {
+          CustomerController.render();
+        }
+        if (typeof VendorController !== 'undefined' && VendorController.render) {
+          VendorController.render();
+        }
+      }
+    } catch (err) {
+      console.warn('[chow45] could not sync from bootstrap:', err);
+    }
   },
 
   bindGlobalEvents() {
