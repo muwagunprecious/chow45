@@ -1,7 +1,7 @@
 import { db, menuItems, vendors } from "@/db";
 import { requireUser } from "@/lib/guards";
 import { NextResponse } from "next/server";
-import { eq, and, inArray  } from "drizzle-orm";
+import { eq, and, inArray,ilike  } from "drizzle-orm";
 
 const VALID_LOCATIONS = ["ibogun", "sagamu"] as const;
 type Location = typeof VALID_LOCATIONS[number];
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
             where: and(
                 eq(vendors.status, "approved"),
                 eq(vendors.isOpen, true),
-                eq(vendors.locationOfOperation, `%${locationParam}%`)
+                ilike(vendors.locationOfOperation, `%${locationParam}%`)
  ),
         });
 

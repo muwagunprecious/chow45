@@ -71,3 +71,27 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/riders/[id
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }
 }
+
+
+export async function GET(request: Request, ctx: RouteContext<"/api/riders/[id]"> ){
+  const userId = await currentUserId(request);
+  if (userId === null) {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const riderId = String(id);
+
+  const found = await db.select().from(riders).where(eq(riders.id, riderId)).limit(1);
+  const rider = found[0];
+
+  if(!rider){
+    return NextResponse.json({
+      error: "Rider not found."
+    })
+  };
+ 
+return NextResponse.json({
+  rider: serializeRider(rider)
+});
+}
