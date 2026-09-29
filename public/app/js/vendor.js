@@ -1401,8 +1401,12 @@ const VendorController = {
   // item, and blocking the success screen on a network error would lose
   // the vendor's work.
   async _syncMenuItemToServer(payload, existingDishId) {
+    const store = this.getStore();
     const body = {
       id: existingDishId || undefined,
+      storeId: (store && store.id) || undefined,
+      vendorId: (store && store.numericId) || undefined,
+      vendorName: (store && store.name) || undefined,
       name: payload.name,
       category: payload.category,
       description: payload.desc,

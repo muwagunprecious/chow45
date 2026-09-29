@@ -104,7 +104,7 @@ export function serializeMenuItem(
     id: item.id,
     name: item.name,
     desc: item.description ?? "",
-    price: item.price,
+    price: item.price > 0 ? item.price : (item.platePrice || item.scoopPrice || item.piecePrice || 0),
     priceType: item.priceType,
     scoopPrice: item.scoopPrice ?? 0,
     platePrice: item.platePrice ?? 0,
@@ -117,8 +117,10 @@ export function serializeMenuItem(
     addonGroups,
     img: item.imageUrl,
     category: item.category ?? "rice",
-    status: item.status,
-    inStock: item.status === "AVAILABLE" || item.status === "PREORDER",
+    status: (item.status || "available").toLowerCase(),
+    inStock:
+      (item.status || "").toLowerCase() === "available" ||
+      (item.status || "").toLowerCase() === "preorder",
     isPublished: item.isPublished,
     preorderEnabled: item.preorderEnabled,
     preorderDate: item.preorderDate ?? "",

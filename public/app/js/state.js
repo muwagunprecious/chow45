@@ -68,11 +68,16 @@ class Chow45Store {
             };
           }
 
-          // Ensure new restaurants (like rest-iya-moria) exist
-          if (!parsed.restaurants.some(r => r.id === 'rest-iya-moria')) {
-            const iyaMoria = (typeof CHOW45_RESTAURANTS !== 'undefined') ? CHOW45_RESTAURANTS.find(r => r.id === 'rest-iya-moria') : null;
-            if (iyaMoria) parsed.restaurants.unshift(JSON.parse(JSON.stringify(iyaMoria)));
-          }
+          // Purge demo restaurants from cached localStorage so /app only shows real vendor foods
+          parsed.restaurants = (parsed.restaurants || []).filter(r =>
+            r.id !== 'rest-iya-moria' &&
+            r.id !== 'rest-mama-t' &&
+            r.id !== 'rest-suya-hub' &&
+            r.id !== 'rest-bukka-hut' &&
+            r.id !== 'rest-tastee-shawarma' &&
+            r.id !== 'rest-campus-pocket' &&
+            !String(r.id || '').startsWith('demo-')
+          );
 
           // Reconcile dish pricing models and extras
           (parsed.restaurants || []).forEach(store => {
@@ -148,8 +153,8 @@ class Chow45Store {
         phone: '+234 812 450 4500',
         savedAddresses: [],
         favorites: {
-          foods: ['dish-mt-1', 'dish-suya-1'],
-          stores: ['rest-mama-t']
+          foods: [],
+          stores: []
         }
       },
       cart: {
