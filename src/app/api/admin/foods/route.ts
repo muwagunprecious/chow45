@@ -74,9 +74,16 @@ export async function GET() {
     // 4. Calculate stats
     const totalItems = enrichedItems.length;
     const vendorSet = new Set(enrichedItems.map((i) => i.vendorId).filter(Boolean));
-    const availableItems = enrichedItems.filter(
-      (i) => (i.status || '').toLowerCase() === 'available'
+    const pendingItems = enrichedItems.filter(
+      (i) => (i.status || '').toLowerCase() === 'pending_verification' || !i.isPublished
     ).length;
+    const approvedItems = enrichedItems.filter(
+      (i) => (i.status || '').toLowerCase() === 'available' && i.isPublished
+    ).length;
+    const rejectedItems = enrichedItems.filter(
+      (i) => (i.status || '').toLowerCase() === 'rejected'
+    ).length;
+    const availableItems = approvedItems;
     const outOfStockItems = enrichedItems.filter(
       (i) => (i.status || '').toLowerCase().includes('out_of_stock')
     ).length;
@@ -86,6 +93,9 @@ export async function GET() {
       activeVendorsWithItems: vendorSet.size,
       totalRegisteredVendors: allVendors.length,
       availableItems,
+      pendingItems,
+      approvedItems,
+      rejectedItems,
       outOfStockItems,
     };
 
@@ -99,6 +109,70 @@ export async function GET() {
     console.error('Failed to fetch admin food items:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to fetch food items' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, action, status, isPublished } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Food item ID is required' },
+        { status: 400 }
+      );
+    }
+
+    let nextStatus = status;
+    let nextPublished = typeof isPublished === 'boolean' ? isPublished : undefined;
+
+    if (action === 'approve') {
+      nextStatus = 'available';
+      nextPublished = true;
+    } else if (action === 'reject') {
+      nextStatus = 'rejected';
+      nextPublished = false;
+    } else if (action === 'pending') {
+      nextStatus = 'pending_verification';
+      nextPublished = false;
+    }
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    if (nextStatus !== undefined) updateData.status = nextStatus;
+    if (nextPublished !== undefined) updateData.isPublished = nextPublished;
+
+    const updated = await db
+      .update(menuItems)
+      .set(updateData)
+      .where(eq(menuItems.id, id))
+      .returning();
+
+    if (!updated.length) {
+      return NextResponse.json(
+        { success: false, error: 'Food item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      item: updated[0],
+      message:
+        action === 'approve'
+          ? 'Food item approved and published to marketplace'
+          : action === 'reject'
+          ? 'Food item rejected'
+          : 'Food item marked as pending verification',
+    });
+  } catch (error: any) {
+    console.error('Failed to update food status:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update food item' },
       { status: 500 }
     );
   }

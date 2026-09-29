@@ -156,7 +156,7 @@ export default function AddFoodPage() {
         throw new Error(data.error || 'Failed to save food item');
       }
 
-      alert('Food item uploaded successfully! It is now visible on the Admin page.');
+      alert('Food item submitted successfully! It is now pending admin verification and will appear in the marketplace once approved.');
       router.push('/admin');
     } catch (err: any) {
       setSubmitError(err.message || 'Error saving food item');
@@ -186,12 +186,23 @@ export default function AddFoodPage() {
             </Link>
             <div>
               <h1 className="font-display font-extrabold text-2xl text-[#111111]">Upload Vendor Food</h1>
-              <p className="text-xs text-[#6E6D66]">Publish real dishes to Chow45 marketplace and Admin dashboard</p>
+              <p className="text-xs text-[#6E6D66]">Submits real dishes for admin verification before going live on Chow45</p>
             </div>
           </div>
           <Link href="/admin" className="text-xs font-semibold text-[#0C513F] hover:underline">
             View Admin Portal →
           </Link>
+        </div>
+
+        {/* Verification notice */}
+        <div className="mb-6 p-4 rounded-2xl bg-[#FFF9E6] border border-[#FFC928]/40 flex items-start gap-3">
+          <span className="text-xl leading-none">⏳</span>
+          <div>
+            <h4 className="text-xs font-extrabold text-[#7A5B00]">Pending Admin Verification</h4>
+            <p className="text-xs text-[#8A6700] mt-0.5 leading-relaxed">
+              Dishes uploaded by vendors are held in a pending verification queue and will not be visible to customers in the marketplace until approved by the admin.
+            </p>
+          </div>
         </div>
 
         {submitError && (

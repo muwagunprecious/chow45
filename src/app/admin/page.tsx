@@ -53,6 +53,9 @@ interface FoodStats {
   activeVendorsWithItems: number;
   totalRegisteredVendors: number;
   availableItems: number;
+  pendingItems?: number;
+  approvedItems?: number;
+  rejectedItems?: number;
   outOfStockItems: number;
 }
 
@@ -90,14 +93,22 @@ export default function AdminDashboardPage() {
     activeVendorsWithItems: 0,
     totalRegisteredVendors: 0,
     availableItems: 0,
+    pendingItems: 0,
+    approvedItems: 0,
+    rejectedItems: 0,
     outOfStockItems: 0,
   });
   const [foodLoading, setFoodLoading] = useState(false);
   const [foodSearch, setFoodSearch] = useState('');
   const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [foodViewMode, setFoodViewMode] = useState<'grid' | 'table'>('grid');
+
+  // Food Preview Modal & Action States
+  const [previewFoodItem, setPreviewFoodItem] = useState<FoodItem | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Check existing session on mount
   useEffect(() => {
@@ -163,6 +174,49 @@ export default function AdminDashboardPage() {
       console.error('Failed to load food items:', err);
     } finally {
       setFoodLoading(false);
+    }
+  };
+
+  const handleFoodAction = async (itemId: string, action: 'approve' | 'reject' | 'pending') => {
+    setActionLoadingId(itemId);
+    try {
+      const res = await fetch('/api/admin/foods', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: itemId, action })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFoodItems(prev => prev.map(item => {
+          if (item.id === itemId) {
+            const nextStatus = action === 'approve' ? 'available' : action === 'reject' ? 'rejected' : 'pending_verification';
+            const nextPublished = action === 'approve';
+            return { ...item, status: nextStatus, isPublished: nextPublished };
+          }
+          return item;
+        }));
+
+        if (previewFoodItem && previewFoodItem.id === itemId) {
+          const nextStatus = action === 'approve' ? 'available' : action === 'reject' ? 'rejected' : 'pending_verification';
+          const nextPublished = action === 'approve';
+          setPreviewFoodItem(prev => prev ? { ...prev, status: nextStatus, isPublished: nextPublished } : null);
+        }
+
+        const msg = action === 'approve'
+          ? '✓ Food approved and published to the marketplace!'
+          : action === 'reject'
+          ? '✕ Food rejected and hidden from marketplace'
+          : 'Food marked as pending verification';
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+        loadFoods();
+      } else {
+        alert(data.error || 'Failed to update food item');
+      }
+    } catch (err: any) {
+      alert('Error updating food item: ' + (err.message || err));
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -235,8 +289,14 @@ export default function AdminDashboardPage() {
       }
       if (selectedStatusFilter !== 'all') {
         const itemStatus = (item.status || '').toLowerCase();
-        if (selectedStatusFilter === 'available' && itemStatus !== 'available') return false;
-        if (selectedStatusFilter === 'out_of_stock' && !itemStatus.includes('out_of_stock')) return false;
+        const isPub = Boolean(item.isPublished);
+        if (selectedStatusFilter === 'pending') {
+          if (itemStatus !== 'pending_verification' && isPub) return false;
+        } else if (selectedStatusFilter === 'approved') {
+          if (itemStatus !== 'available' || !isPub) return false;
+        } else if (selectedStatusFilter === 'rejected') {
+          if (itemStatus !== 'rejected') return false;
+        }
       }
       if (term) {
         const matchName = (item.name || '').toLowerCase().includes(term);
@@ -795,14 +855,53 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Bento Statistics Cards for Food */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
               <div className="bg-white border border-[#0C513F]/10 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6D66] block">Total Dishes</span>
                 <span className="text-3xl font-black text-[#111111] mt-1 block">
                   {foodStats.totalItems}
                 </span>
                 <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-extrabold bg-[#FAF6EB] text-[#0C513F] rounded-full border border-[#0C513F]/10">
-                  Real Uploaded Dishes
+                  Uploaded Dishes
+                </span>
+              </div>
+
+              <div 
+                onClick={() => setSelectedStatusFilter('pending')}
+                className="bg-white border border-[#FFC928]/40 hover:border-[#FFC928] rounded-2xl p-5 shadow-[0_4px_20px_rgba(255,201,40,0.08)] cursor-pointer transition-all"
+              >
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#7A5B00] block">Pending Verification</span>
+                <span className="text-3xl font-black text-[#7A5B00] mt-1 block">
+                  {foodStats.pendingItems ?? 0}
+                </span>
+                <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-black bg-[#FFF9E6] text-[#7A5B00] border border-[#FFC928]/40 rounded-full">
+                  Needs Review ⏳
+                </span>
+              </div>
+
+              <div 
+                onClick={() => setSelectedStatusFilter('approved')}
+                className="bg-white border border-[#00B978]/30 hover:border-[#00B978] rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,185,120,0.06)] cursor-pointer transition-all"
+              >
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0C513F] block">Live in Market</span>
+                <span className="text-3xl font-black text-[#0C513F] mt-1 block">
+                  {foodStats.approvedItems ?? foodStats.availableItems ?? 0}
+                </span>
+                <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-black bg-[#E4F7EC] text-[#0C513F] rounded-full">
+                  Approved & Live ✓
+                </span>
+              </div>
+
+              <div 
+                onClick={() => setSelectedStatusFilter('rejected')}
+                className="bg-white border border-rose-200 hover:border-rose-400 rounded-2xl p-5 shadow-[0_4px_20px_rgba(244,63,94,0.05)] cursor-pointer transition-all"
+              >
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-600 block">Rejected</span>
+                <span className="text-3xl font-black text-rose-700 mt-1 block">
+                  {foodStats.rejectedItems ?? 0}
+                </span>
+                <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-extrabold bg-rose-50 text-rose-700 rounded-full">
+                  Declined ✕
                 </span>
               </div>
 
@@ -815,26 +914,59 @@ export default function AdminDashboardPage() {
                   Campus Vendors
                 </span>
               </div>
+            </div>
 
-              <div className="bg-white border border-[#0C513F]/10 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 block">Available</span>
-                <span className="text-3xl font-black text-[#111111] mt-1 block">
-                  {foodStats.availableItems}
+            {/* Verification Status Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setSelectedStatusFilter('all')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                  selectedStatusFilter === 'all'
+                    ? 'bg-[#0C513F] text-white shadow-sm'
+                    : 'bg-white text-[#6E6D66] border border-gray-200/80 hover:border-gray-300'
+                }`}
+              >
+                All Foods ({foodStats.totalItems})
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter('pending')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  selectedStatusFilter === 'pending'
+                    ? 'bg-[#FFC928] text-[#111111] shadow-sm font-extrabold ring-2 ring-[#FFC928]/40'
+                    : 'bg-white text-[#7A5B00] border border-[#FFC928]/40 hover:bg-[#FFF9E6]'
+                }`}
+              >
+                <span>⏳ Pending Verification</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#7A5B00] text-white">
+                  {foodStats.pendingItems ?? 0}
                 </span>
-                <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-extrabold bg-[#D5E7FD] text-[#1D4ED8] rounded-full">
-                  Ready to Order
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter('approved')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  selectedStatusFilter === 'approved'
+                    ? 'bg-[#00B978] text-white shadow-sm'
+                    : 'bg-white text-[#0C513F] border border-[#0C513F]/20 hover:bg-[#E4F7EC]'
+                }`}
+              >
+                <span>✓ Approved & Live</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#0C513F] text-white">
+                  {foodStats.approvedItems ?? foodStats.availableItems ?? 0}
                 </span>
-              </div>
-
-              <div className="bg-white border border-[#0C513F]/10 rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 block">Out of Stock</span>
-                <span className="text-3xl font-black text-[#111111] mt-1 block">
-                  {foodStats.outOfStockItems}
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter('rejected')}
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  selectedStatusFilter === 'rejected'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+                }`}
+              >
+                <span>✕ Rejected</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
+                  {foodStats.rejectedItems ?? 0}
                 </span>
-                <span className="inline-block mt-2 px-2.5 py-0.5 text-[10px] font-extrabold bg-rose-50 text-rose-700 rounded-full">
-                  Unavailable
-                </span>
-              </div>
+              </button>
             </div>
 
             {/* Filter Toolbar */}
@@ -889,17 +1021,6 @@ export default function AdminDashboardPage() {
                   ))}
                 </select>
 
-                {/* Status Filter */}
-                <select
-                  value={selectedStatusFilter}
-                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="bg-[#FAF6EB] border border-gray-200 text-[#111111] text-xs font-bold rounded-full px-3.5 py-2 focus:outline-none focus:border-[#0C513F]"
-                >
-                  <option value="all">All Status</option>
-                  <option value="available">Available</option>
-                  <option value="out_of_stock">Out of Stock</option>
-                </select>
-
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-[#FAF6EB] border border-gray-200 rounded-full p-1 ml-auto md:ml-0">
                   <button
@@ -933,16 +1054,22 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             ) : filteredFoods.length === 0 ? (
-              /* Chowdeck-style clean Empty State */
+              /* Empty State */
               <div className="bg-white border border-[#0C513F]/15 rounded-3xl p-12 md:p-16 text-center shadow-sm max-w-2xl mx-auto">
                 <div className="w-16 h-16 rounded-full bg-[#E4F7EC] flex items-center justify-center text-3xl mx-auto mb-4">
                   🍲
                 </div>
                 <h3 className="text-xl font-extrabold text-[#111111] mb-2">
-                  No Vendor Foods Uploaded Yet
+                  No Food Items Found
                 </h3>
                 <p className="text-xs text-[#6E6D66] max-w-md mx-auto leading-relaxed mb-6">
-                  All demo seed foods have been removed. Any real food uploaded by vendors from their dashboard or the food upload portal will appear here immediately.
+                  {selectedStatusFilter === 'pending'
+                    ? 'No food items are currently pending verification. All submitted dishes have been reviewed.'
+                    : selectedStatusFilter === 'approved'
+                    ? 'No approved food items are currently live in the marketplace.'
+                    : selectedStatusFilter === 'rejected'
+                    ? 'No food items have been rejected.'
+                    : 'Any real food uploaded by vendors from their dashboard will appear here for verification.'}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Link
@@ -963,7 +1090,11 @@ export default function AdminDashboardPage() {
               /* GRID VIEW */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredFoods.map((item) => {
-                  const isAvailable = (item.status || '').toLowerCase() === 'available';
+                  const itemStatus = (item.status || '').toLowerCase();
+                  const isPending = itemStatus === 'pending_verification' || !item.isPublished;
+                  const isRejected = itemStatus === 'rejected';
+                  const isApproved = itemStatus === 'available' && item.isPublished;
+                  const isBusy = actionLoadingId === item.id;
 
                   // Determine price label
                   let priceLabel = `₦${formatPrice(item.price)}`;
@@ -980,47 +1111,56 @@ export default function AdminDashboardPage() {
                   return (
                     <div
                       key={item.id}
-                      className="bg-white border border-gray-200/80 hover:border-[#0C513F]/40 rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col transition-all group"
+                      className={`bg-white border rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all group ${
+                        isPending
+                          ? 'border-[#FFC928]/60 hover:border-[#FFC928]'
+                          : isRejected
+                          ? 'border-rose-200/80 hover:border-rose-400'
+                          : 'border-gray-200/80 hover:border-[#0C513F]/40'
+                      }`}
                     >
-                      {/* Food Image */}
-                      <div className="h-48 bg-[#FAF6EB] relative overflow-hidden flex items-center justify-center">
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                          />
-                        ) : (
-                          <span className="text-4xl">🍲</span>
-                        )}
+                      {/* Top Part: Image & Content */}
+                      <div>
+                        {/* Food Image */}
+                        <div className="h-48 bg-[#FAF6EB] relative overflow-hidden flex items-center justify-center">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <span className="text-4xl">🍲</span>
+                          )}
 
-                        {/* Status Badge */}
-                        <div className="absolute top-3 right-3">
-                          <span
-                            className={`px-3 py-1 text-[11px] font-extrabold rounded-full backdrop-blur-md shadow-sm border ${
-                              isAvailable
-                                ? 'bg-[#E4F7EC] text-[#0C513F] border-[#0C513F]/20'
-                                : 'bg-rose-50 text-rose-700 border-rose-200'
-                            }`}
-                          >
-                            {isAvailable ? '● Available' : '○ Out of stock'}
-                          </span>
+                          {/* Status Badge */}
+                          <div className="absolute top-3 right-3">
+                            <span
+                              className={`px-3 py-1 text-[11px] font-black rounded-full backdrop-blur-md shadow-sm border flex items-center gap-1 ${
+                                isPending
+                                  ? 'bg-[#FFF9E6]/95 text-[#7A5B00] border-[#FFC928]/60'
+                                  : isRejected
+                                  ? 'bg-rose-50/95 text-rose-700 border-rose-200'
+                                  : 'bg-[#E4F7EC]/95 text-[#0C513F] border-[#0C513F]/20'
+                              }`}
+                            >
+                              {isPending ? '⏳ Pending Verification' : isRejected ? '✕ Rejected' : '✓ Live in Marketplace'}
+                            </span>
+                          </div>
+
+                          {/* Category Pill */}
+                          <div className="absolute bottom-3 left-3">
+                            <span className="px-2.5 py-1 text-[10px] font-black bg-white/95 text-[#111111] rounded-full shadow-sm uppercase tracking-wider">
+                              {item.category || 'General'}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* Category Pill */}
-                        <div className="absolute bottom-3 left-3">
-                          <span className="px-2.5 py-1 text-[10px] font-black bg-white/90 text-[#111111] rounded-full shadow-sm uppercase tracking-wider">
-                            {item.category || 'General'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 flex-1 flex flex-col justify-between">
-                        <div>
+                        {/* Content */}
+                        <div className="p-5">
                           {/* Vendor Name */}
                           <div className="flex items-center gap-1.5 text-xs text-[#0C513F] font-black uppercase tracking-wider mb-1">
                             <span>🏪</span>
@@ -1028,7 +1168,10 @@ export default function AdminDashboardPage() {
                           </div>
 
                           {/* Food Name */}
-                          <h3 className="text-base font-extrabold text-[#111111] group-hover:text-[#0C513F] transition-colors line-clamp-1">
+                          <h3 
+                            onClick={() => setPreviewFoodItem(item)}
+                            className="text-base font-extrabold text-[#111111] group-hover:text-[#0C513F] transition-colors line-clamp-1 cursor-pointer"
+                          >
                             {item.name}
                           </h3>
 
@@ -1038,28 +1181,78 @@ export default function AdminDashboardPage() {
                               {item.description}
                             </p>
                           )}
-                        </div>
 
-                        {/* Price & Variants Footnote */}
-                        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6E6D66] block">Price</span>
-                            <span className="text-base font-black text-[#111111]">
-                              {priceLabel}
-                            </span>
-                          </div>
-
-                          {/* Sizes / Extras Pill */}
-                          {(item.sizes?.length > 0 || item.extras?.length > 0) && (
-                            <div className="text-right">
-                              <span className="text-[10px] font-bold text-[#0C513F] bg-[#FAF6EB] px-2.5 py-1 rounded-full border border-[#0C513F]/10">
-                                {item.sizes?.length > 0 ? `${item.sizes.length} sizes` : ''}
-                                {item.sizes?.length > 0 && item.extras?.length > 0 ? ' · ' : ''}
-                                {item.extras?.length > 0 ? `${item.extras.length} extras` : ''}
+                          {/* Price & Variants Footnote */}
+                          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#6E6D66] block">Price</span>
+                              <span className="text-base font-black text-[#111111]">
+                                {priceLabel}
                               </span>
                             </div>
-                          )}
+
+                            {/* Sizes / Extras Pill */}
+                            {(item.sizes?.length > 0 || item.extras?.length > 0) && (
+                              <div className="text-right">
+                                <span className="text-[10px] font-bold text-[#0C513F] bg-[#FAF6EB] px-2.5 py-1 rounded-full border border-[#0C513F]/10">
+                                  {item.sizes?.length > 0 ? `${item.sizes.length} sizes` : ''}
+                                  {item.sizes?.length > 0 && item.extras?.length > 0 ? ' · ' : ''}
+                                  {item.extras?.length > 0 ? `${item.extras.length} extras` : ''}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
+                      </div>
+
+                      {/* Verification Actions Bar */}
+                      <div className="p-4 bg-[#FAF6EB]/50 border-t border-gray-100 flex items-center gap-2">
+                        <button
+                          onClick={() => setPreviewFoodItem(item)}
+                          className="flex-1 py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200/90 text-[#111111] font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5 text-[#0C513F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Preview
+                        </button>
+
+                        {isPending ? (
+                          <>
+                            <button
+                              disabled={isBusy}
+                              onClick={() => handleFoodAction(item.id, 'approve')}
+                              className="py-2 px-3.5 bg-[#00B978] hover:bg-[#009661] text-white font-extrabold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1 disabled:opacity-50"
+                            >
+                              {isBusy ? '...' : '✓ Approve'}
+                            </button>
+                            <button
+                              disabled={isBusy}
+                              onClick={() => handleFoodAction(item.id, 'reject')}
+                              className="py-2 px-2.5 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 font-extrabold text-xs rounded-xl transition-all disabled:opacity-50"
+                              title="Reject dish"
+                            >
+                              ✕
+                            </button>
+                          </>
+                        ) : isApproved ? (
+                          <button
+                            disabled={isBusy}
+                            onClick={() => handleFoodAction(item.id, 'reject')}
+                            className="py-2 px-3 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+                          >
+                            {isBusy ? '...' : 'Reject / Hide'}
+                          </button>
+                        ) : (
+                          <button
+                            disabled={isBusy}
+                            onClick={() => handleFoodAction(item.id, 'approve')}
+                            className="py-2 px-3 bg-[#0C513F] hover:bg-[#073B2E] text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+                          >
+                            {isBusy ? '...' : 'Re-Approve'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1077,14 +1270,19 @@ export default function AdminDashboardPage() {
                         <th className="py-4 px-5">Category</th>
                         <th className="py-4 px-5">Price</th>
                         <th className="py-4 px-5">Price Model</th>
-                        <th className="py-4 px-5">Status</th>
-                        <th className="py-4 px-5">Variants / Extras</th>
+                        <th className="py-4 px-5">Verification Status</th>
                         <th className="py-4 px-5">Uploaded Date</th>
+                        <th className="py-4 px-5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredFoods.map((item) => {
-                        const isAvailable = (item.status || '').toLowerCase() === 'available';
+                        const itemStatus = (item.status || '').toLowerCase();
+                        const isPending = itemStatus === 'pending_verification' || !item.isPublished;
+                        const isRejected = itemStatus === 'rejected';
+                        const isApproved = itemStatus === 'available' && item.isPublished;
+                        const isBusy = actionLoadingId === item.id;
+
                         return (
                           <tr key={item.id} className="hover:bg-[#FAF6EB]/40 transition-colors">
                             <td className="py-3.5 px-5">
@@ -1093,15 +1291,24 @@ export default function AdminDashboardPage() {
                                   <img
                                     src={item.imageUrl}
                                     alt={item.name}
-                                    className="w-10 h-10 rounded-xl object-cover bg-gray-100 border border-gray-200 flex-shrink-0"
+                                    className="w-10 h-10 rounded-xl object-cover bg-gray-100 border border-gray-200 flex-shrink-0 cursor-pointer"
+                                    onClick={() => setPreviewFoodItem(item)}
                                   />
                                 ) : (
-                                  <div className="w-10 h-10 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/15 flex items-center justify-center text-lg flex-shrink-0">
+                                  <div 
+                                    onClick={() => setPreviewFoodItem(item)}
+                                    className="w-10 h-10 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/15 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer"
+                                  >
                                     🍲
                                   </div>
                                 )}
                                 <div>
-                                  <span className="font-bold text-[#111111] block">{item.name}</span>
+                                  <span 
+                                    onClick={() => setPreviewFoodItem(item)}
+                                    className="font-bold text-[#111111] block cursor-pointer hover:text-[#0C513F] transition-colors"
+                                  >
+                                    {item.name}
+                                  </span>
                                   {item.description && (
                                     <span className="text-xs text-[#6E6D66] line-clamp-1 max-w-xs">
                                       {item.description}
@@ -1126,23 +1333,63 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="py-3.5 px-5">
                               <span
-                                className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full ${
-                                  isAvailable
-                                    ? 'bg-[#E4F7EC] text-[#0C513F]'
-                                    : 'bg-rose-50 text-rose-700'
+                                className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full ${
+                                  isPending
+                                    ? 'bg-[#FFF9E6] text-[#7A5B00] border border-[#FFC928]/40'
+                                    : isRejected
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-[#E4F7EC] text-[#0C513F] border border-[#0C513F]/20'
                                 }`}
                               >
-                                {isAvailable ? 'Available' : 'Out of stock'}
+                                {isPending ? '⏳ Pending Verification' : isRejected ? '✕ Rejected' : '✓ Live in Market'}
                               </span>
-                            </td>
-                            <td className="py-3.5 px-5 text-xs text-[#6E6D66]">
-                              {item.sizes?.length > 0 && `${item.sizes.length} sizes`}
-                              {item.sizes?.length > 0 && item.extras?.length > 0 && ' · '}
-                              {item.extras?.length > 0 && `${item.extras.length} extras`}
-                              {!item.sizes?.length && !item.extras?.length && <span className="text-gray-300">—</span>}
                             </td>
                             <td className="py-3.5 px-5 text-xs text-[#6E6D66] whitespace-nowrap">
                               {formatDate(item.createdAt)}
+                            </td>
+                            <td className="py-3.5 px-5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setPreviewFoodItem(item)}
+                                  className="px-2.5 py-1.5 text-xs font-bold bg-[#FAF6EB] hover:bg-gray-100 text-[#0C513F] border border-[#0C513F]/20 rounded-lg transition-colors"
+                                >
+                                  Preview
+                                </button>
+                                {isPending ? (
+                                  <>
+                                    <button
+                                      disabled={isBusy}
+                                      onClick={() => handleFoodAction(item.id, 'approve')}
+                                      className="px-2.5 py-1.5 text-xs font-extrabold bg-[#00B978] hover:bg-[#009661] text-white rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                      {isBusy ? '...' : 'Approve'}
+                                    </button>
+                                    <button
+                                      disabled={isBusy}
+                                      onClick={() => handleFoodAction(item.id, 'reject')}
+                                      className="px-2 py-1.5 text-xs font-bold bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                ) : isApproved ? (
+                                  <button
+                                    disabled={isBusy}
+                                    onClick={() => handleFoodAction(item.id, 'reject')}
+                                    className="px-2.5 py-1.5 text-xs font-bold bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg transition-colors disabled:opacity-50"
+                                  >
+                                    Reject
+                                  </button>
+                                ) : (
+                                  <button
+                                    disabled={isBusy}
+                                    onClick={() => handleFoodAction(item.id, 'approve')}
+                                    className="px-2.5 py-1.5 text-xs font-bold bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-lg transition-colors disabled:opacity-50"
+                                  >
+                                    Approve
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1155,6 +1402,291 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </main>
+
+      {/* ------------------------------------------------------------- */}
+      {/* RICH FOOD PREVIEW & VERIFICATION MODAL                        */}
+      {/* ------------------------------------------------------------- */}
+      {previewFoodItem && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setPreviewFoodItem(null)}
+        >
+          <div 
+            className="bg-white border border-[#0C513F]/15 rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 md:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-6">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 text-xs font-black bg-[#FAF6EB] text-[#0C513F] rounded-full border border-[#0C513F]/15 uppercase tracking-wider">
+                  {previewFoodItem.category || 'Food Item'}
+                </span>
+                <span className="text-xs font-bold text-[#6E6D66]">
+                  ID: <span className="font-mono">{previewFoodItem.id.slice(0, 8)}...</span>
+                </span>
+              </div>
+              <button 
+                onClick={() => setPreviewFoodItem(null)}
+                className="w-9 h-9 rounded-full bg-[#FAF6EB] hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Marketplace Status Banner */}
+            {(() => {
+              const status = (previewFoodItem.status || '').toLowerCase();
+              const isPending = status === 'pending_verification' || !previewFoodItem.isPublished;
+              const isRejected = status === 'rejected';
+
+              if (isPending) {
+                return (
+                  <div className="mb-6 p-4 rounded-2xl bg-[#FFF9E6] border border-[#FFC928]/60 flex items-start gap-3">
+                    <span className="text-2xl leading-none">⏳</span>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-[#7A5B00]">Pending Admin Verification</h4>
+                      <p className="text-xs text-[#8A6700] mt-0.5 leading-relaxed">
+                        This food item is currently <strong>hidden from customers</strong> in the marketplace. Click <strong>Approve & Publish Live</strong> below to make it immediately available for ordering.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              if (isRejected) {
+                return (
+                  <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3">
+                    <span className="text-2xl leading-none">🚫</span>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-rose-800">Food Item Rejected</h4>
+                      <p className="text-xs text-rose-700 mt-0.5 leading-relaxed">
+                        This food item was rejected and is not visible to customers. You can re-approve it at any time.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="mb-6 p-4 rounded-2xl bg-[#E4F7EC] border border-[#0C513F]/20 flex items-start gap-3">
+                  <span className="text-2xl leading-none">✅</span>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-[#0C513F]">Live in Marketplace</h4>
+                    <p className="text-xs text-[#073B2E] mt-0.5 leading-relaxed">
+                      This food item is approved and actively visible to students and customers on the Chow45 marketplace.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Food Image & Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Image Preview */}
+              <div className="h-60 rounded-2xl bg-[#FAF6EB] border border-gray-200 overflow-hidden flex items-center justify-center relative">
+                {previewFoodItem.imageUrl ? (
+                  <img 
+                    src={previewFoodItem.imageUrl} 
+                    alt={previewFoodItem.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="text-center p-6">
+                    <span className="text-5xl block mb-2">🍲</span>
+                    <span className="text-xs font-bold text-[#6E6D66]">No Photo Uploaded</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Vendor & Details */}
+              <div className="flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs text-[#0C513F] font-black uppercase tracking-wider mb-1">
+                    <span>🏪</span>
+                    <span>{previewFoodItem.vendorName || `Vendor #${previewFoodItem.vendorId}`}</span>
+                  </div>
+                  <h2 className="text-xl font-extrabold text-[#111111] leading-tight">
+                    {previewFoodItem.name}
+                  </h2>
+                  {previewFoodItem.description && (
+                    <p className="text-xs text-[#6E6D66] mt-2 leading-relaxed">
+                      {previewFoodItem.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Vendor Contact Box */}
+                <div className="p-3.5 bg-[#FAF6EB] rounded-2xl border border-[#0C513F]/10 space-y-1.5 text-xs">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0C513F] block">
+                    Vendor Contact
+                  </span>
+                  {previewFoodItem.vendorPhone ? (
+                    <div className="flex items-center gap-2 text-[#111111] font-semibold">
+                      <span>📞</span>
+                      <a href={`tel:${previewFoodItem.vendorPhone}`} className="hover:underline text-[#0C513F]">
+                        {previewFoodItem.vendorPhone}
+                      </a>
+                    </div>
+                  ) : null}
+                  {previewFoodItem.vendorEmail ? (
+                    <div className="flex items-center gap-2 text-[#6E6D66]">
+                      <span>✉️</span>
+                      <a href={`mailto:${previewFoodItem.vendorEmail}`} className="hover:underline">
+                        {previewFoodItem.vendorEmail}
+                      </a>
+                    </div>
+                  ) : null}
+                  <div className="text-[11px] text-[#8E8D86]">
+                    Submitted: {formatDate(previewFoodItem.createdAt)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing Model Section */}
+            <div className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200/80 mb-6">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#6E6D66] block mb-2">
+                Pricing Model ({previewFoodItem.priceType.toUpperCase()})
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {previewFoodItem.platePrice ? (
+                  <div className="p-3 bg-white rounded-xl border border-gray-200">
+                    <span className="text-[10px] font-bold text-[#6E6D66] uppercase block">Plate Price</span>
+                    <span className="text-base font-black text-[#111111]">₦{formatPrice(previewFoodItem.platePrice)}</span>
+                  </div>
+                ) : null}
+                {previewFoodItem.scoopPrice ? (
+                  <div className="p-3 bg-white rounded-xl border border-gray-200">
+                    <span className="text-[10px] font-bold text-[#6E6D66] uppercase block">Scoop Price</span>
+                    <span className="text-base font-black text-[#111111]">₦{formatPrice(previewFoodItem.scoopPrice)}</span>
+                  </div>
+                ) : null}
+                {previewFoodItem.piecePrice ? (
+                  <div className="p-3 bg-white rounded-xl border border-gray-200">
+                    <span className="text-[10px] font-bold text-[#6E6D66] uppercase block">Piece Price</span>
+                    <span className="text-base font-black text-[#111111]">₦{formatPrice(previewFoodItem.piecePrice)}</span>
+                  </div>
+                ) : null}
+                {!previewFoodItem.platePrice && !previewFoodItem.scoopPrice && !previewFoodItem.piecePrice && (
+                  <div className="p-3 bg-white rounded-xl border border-gray-200">
+                    <span className="text-[10px] font-bold text-[#6E6D66] uppercase block">Base Price</span>
+                    <span className="text-base font-black text-[#111111]">₦{formatPrice(previewFoodItem.price)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sizes Variants */}
+              {previewFoodItem.sizes && previewFoodItem.sizes.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6E6D66] block mb-1.5">
+                    Size Variants ({previewFoodItem.sizes.length})
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {previewFoodItem.sizes.map((s, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-[#111111]">
+                        {s.name}: <span className="text-[#0C513F] font-black">₦{formatPrice(s.price)}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Extras Section */}
+            {previewFoodItem.extras && previewFoodItem.extras.length > 0 && (
+              <div className="p-4 bg-[#FAF6EB]/60 rounded-2xl border border-[#0C513F]/10 mb-6">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0C513F] block mb-2">
+                  Menu Extras & Addons ({previewFoodItem.extras.length})
+                </span>
+                <div className="space-y-2">
+                  {previewFoodItem.extras.map((ex, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          ex.extraType === 'REQUIRED'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }`}>
+                          {ex.extraType === 'REQUIRED' ? 'Compulsory' : 'Optional'}
+                        </span>
+                        <span className="font-bold text-[#111111]">{ex.name}</span>
+                      </div>
+                      <span className="font-mono font-extrabold text-[#0C513F]">
+                        {ex.price > 0 ? `+₦${formatPrice(ex.price)}` : 'Free'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Action Footer */}
+            <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              <button
+                onClick={() => setPreviewFoodItem(null)}
+                className="w-full sm:w-auto px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-[#111111] font-bold text-xs rounded-full transition-colors"
+              >
+                Close
+              </button>
+
+              {(() => {
+                const status = (previewFoodItem.status || '').toLowerCase();
+                const isPending = status === 'pending_verification' || !previewFoodItem.isPublished;
+                const isRejected = status === 'rejected';
+                const isBusy = actionLoadingId === previewFoodItem.id;
+
+                if (isPending) {
+                  return (
+                    <>
+                      <button
+                        disabled={isBusy}
+                        onClick={() => handleFoodAction(previewFoodItem.id, 'reject')}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-rose-50 border border-rose-300 text-rose-600 font-extrabold text-xs rounded-full transition-all disabled:opacity-50"
+                      >
+                        ✕ Reject Food
+                      </button>
+                      <button
+                        disabled={isBusy}
+                        onClick={() => handleFoodAction(previewFoodItem.id, 'approve')}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-[#00B978] hover:bg-[#009661] text-white font-extrabold text-xs rounded-full transition-all shadow-[0_4px_14px_rgba(0,185,120,0.25)] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isBusy ? 'Processing...' : '✓ Approve & Publish Live'}
+                      </button>
+                    </>
+                  );
+                }
+
+                if (isRejected) {
+                  return (
+                    <button
+                      disabled={isBusy}
+                      onClick={() => handleFoodAction(previewFoodItem.id, 'approve')}
+                      className="w-full sm:w-auto px-6 py-2.5 bg-[#0C513F] hover:bg-[#073B2E] text-white font-extrabold text-xs rounded-full transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {isBusy ? 'Processing...' : '✓ Re-Approve Food'}
+                    </button>
+                  );
+                }
+
+                return (
+                  <button
+                    disabled={isBusy}
+                    onClick={() => handleFoodAction(previewFoodItem.id, 'reject')}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs rounded-full transition-all disabled:opacity-50"
+                  >
+                    {isBusy ? 'Processing...' : '✕ Revoke / Reject Food'}
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0C513F] text-white font-extrabold text-xs px-5 py-3.5 rounded-2xl shadow-xl border border-[#FFC928]/30 flex items-center gap-2 animate-bounce-in">
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
