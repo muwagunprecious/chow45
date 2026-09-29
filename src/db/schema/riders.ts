@@ -13,7 +13,7 @@ export const riders = pgTable("riders", {
   userId: bigint("user_id", { mode: "number" })
     .unique()
     .references(() => users.id, { onDelete: "set null" }),
-  publicId: varchar("public_id", { length: 21 }).notNull().unique().$defaultFn(() => nanoid()),
+  publicId: varchar("public_id", { length: 21 }).notNull().unique(),
 
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),

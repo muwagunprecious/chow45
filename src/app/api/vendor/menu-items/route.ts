@@ -123,6 +123,10 @@ function parseExtras(raw: unknown, menuItemId: string, extraType: "REQUIRED" | "
 
 export async function GET(request: Request) {
   let vendorId = await resolveVendorId(request);
+  if(!vendorId){
+    return NextResponse.json({ error: "Unauthorized: Vendor login required" }, { status: 401 });
+  };
+
   if (vendorId === null) {
     const url = new URL(request.url);
     const paramId = url.searchParams.get("vendorId");
