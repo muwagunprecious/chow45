@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { MARKETPLACE_SHELL_HTML } from '@/lib/marketplace-html';
+import VendorSkeletonLoader from '@/components/vendor/vendor-skeleton-loader';
 
 interface MarketplaceViewProps {
   initialRole?: 'customer' | 'vendor' | 'rider' | 'admin';
@@ -37,10 +38,10 @@ const SCRIPTS_TO_LOAD = [
   '/app/js/mapbox-service.js?v=20260928c',
   '/app/js/location-picker.js?v=20260930d',
   '/app/js/customer.js?v=20260928a',
-  '/app/js/vendor.js?v=20260928b',
+  '/app/js/vendor.js?v=20261001a',
   '/app/js/rider.js',
   '/app/js/admin.js',
-  '/app/js/auth.js?v=20260930c',
+  '/app/js/auth.js?v=20261001a',
   // Must be ready before app.js boots, because app.js starts the gate.
   '/app/js/vendor-onboarding.js?v=20260928a',
   '/app/js/app.js?v=20260928b',
@@ -157,6 +158,7 @@ export function MarketplaceView({
 }: MarketplaceViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [isVendorLoading, setIsVendorLoading] = useState(initialRole === 'vendor');
 
   useEffect(() => {
     setMounted(true);
@@ -196,6 +198,13 @@ export function MarketplaceView({
           ) {
             window.VendorController.switchSubTab(initialTab);
           }
+
+          if (initialRole === 'vendor') {
+            // Smoothly remove skeleton loader once vendor view has booted
+            setTimeout(() => {
+              if (!cancelled) setIsVendorLoading(false);
+            }, 150);
+          }
           return;
         } catch (err) {
           console.error('[chow45] marketplace boot failed', err);
@@ -213,7 +222,7 @@ export function MarketplaceView({
   }, [initialRole, initialTab]);
 
   return (
-    <div className="chow45-marketplace-wrapper min-h-screen">
+    <div className="chow45-marketplace-wrapper min-h-screen relative">
       {/* Stylesheets for the marketplace shell */}
       <link
         rel="stylesheet"
@@ -227,6 +236,19 @@ export function MarketplaceView({
       <link rel="stylesheet" href="/app/css/vendor.css?v=20260928a" />
       <link rel="stylesheet" href="/app/css/rider.css" />
       <link rel="stylesheet" href="/app/css/admin.css" />
+
+      {/* When entering directly as vendor, prevent customer marketplace UI from flashing */}
+      {initialRole === 'vendor' && (
+        <style>{`
+          #view-customer { display: none !important; }
+          #view-vendor { display: block !important; }
+        `}</style>
+      )}
+
+      {/* Dedicated Vendor Skeleton Loader while booting */}
+      {initialRole === 'vendor' && isVendorLoading && (
+        <VendorSkeletonLoader />
+      )}
 
       {/* Injected marketplace DOM shell */}
       <div

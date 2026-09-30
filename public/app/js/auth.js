@@ -274,8 +274,13 @@ const Chow45Auth = {
 
     this.bindEmailInputs();
 
+    const lastEmail = localStorage.getItem('chow45_last_auth_email');
+    const inp = document.getElementById('auth-step1-email');
+    if (inp && !inp.value && lastEmail) {
+      inp.value = lastEmail;
+    }
+
     setTimeout(() => {
-      const inp = document.getElementById('auth-step1-email');
       if (inp) inp.focus();
     }, 60);
   },
@@ -350,6 +355,50 @@ const Chow45Auth = {
     this.showCustomerStep(email);
   },
 
+  saveCredentials(email, password, role) {
+    if (!email) return;
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const existing = JSON.parse(localStorage.getItem('chow45_saved_credentials') || '{}');
+      existing[cleanEmail] = {
+        password: password || '',
+        role: role || 'USER',
+        savedAt: Date.now()
+      };
+      localStorage.setItem('chow45_saved_credentials', JSON.stringify(existing));
+      localStorage.setItem('chow45_last_auth_email', cleanEmail);
+    } catch (e) {
+      console.warn('[auth] Could not save credentials:', e);
+    }
+  },
+
+  getSavedPasswordFor(email) {
+    if (!email) return '';
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const existing = JSON.parse(localStorage.getItem('chow45_saved_credentials') || '{}');
+      return existing[cleanEmail]?.password || '';
+    } catch {
+      return '';
+    }
+  },
+
+  _showAutofillHint(show) {
+    let hint = document.getElementById('auth-pw-autofill-hint');
+    if (!hint) {
+      const pwInput = document.getElementById('auth-password');
+      const pwWrap = pwInput?.closest('.auth-input-wrap');
+      if (pwWrap && pwWrap.parentNode) {
+        hint = document.createElement('div');
+        hint.id = 'auth-pw-autofill-hint';
+        hint.style.cssText = 'color: #0C513F; font-size: 0.76rem; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 4px;';
+        hint.innerHTML = '<span>✓</span> Password auto-filled from your saved login';
+        pwWrap.parentNode.insertBefore(hint, pwWrap.nextSibling);
+      }
+    }
+    if (hint) hint.style.display = show ? 'flex' : 'none';
+  },
+
   /**
    * Shows the password step for an account that already exists.
    *
@@ -382,7 +431,29 @@ const Chow45Auth = {
 
     if (emailField) emailField.value = email || '';
     if (emailDisplay) emailDisplay.textContent = email || '';
-    if (pwField) pwField.value = '';
+
+    // Check for saved password for this account and auto-fill immediately
+    const savedPassword = this.getSavedPasswordFor(email);
+    if (pwField) {
+      if (savedPassword) {
+        pwField.value = savedPassword;
+        this._showAutofillHint(true);
+      } else {
+        pwField.value = '';
+        this._showAutofillHint(false);
+      }
+
+      // Track password changes and save them automatically
+      if (!pwField.dataset.saveBound) {
+        pwField.dataset.saveBound = 'true';
+        pwField.addEventListener('input', () => {
+          const currentEmail = document.getElementById('auth-password-email')?.value || email;
+          if (currentEmail && pwField.value) {
+            this.saveCredentials(currentEmail, pwField.value, this.pendingRole);
+          }
+        });
+      }
+    }
 
     if (heading) {
       heading.textContent = this.pendingRole === 'VENDOR' ? 'Welcome back, Vendor' : 'Welcome back';
@@ -443,6 +514,9 @@ const Chow45Auth = {
         this.showAlert('password', message, { inlineOnly: true });
         return;
       }
+
+      // Save credentials for instant auto-fill next time
+      this.saveCredentials(email, password, role);
 
       // Reflect the signed-in user locally so the shell renders correctly if
       // the destination page is ever loaded without a full reload.

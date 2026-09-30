@@ -34,6 +34,70 @@ export default function AddFoodPage() {
   // Form State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [draftSavedText, setDraftSavedText] = useState('');
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('chow45_vendor_add_food_page_draft');
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.name) setName(d.name);
+        if (d.description) setDescription(d.description);
+        if (d.category) setCategory(d.category);
+        if (d.priceType) setPriceType(d.priceType);
+        if (d.singlePrice) setSinglePrice(d.singlePrice);
+        if (Array.isArray(d.scoops) && d.scoops.length) setScoops(d.scoops);
+        if (Array.isArray(d.compulsoryGroups)) setCompulsoryGroups(d.compulsoryGroups);
+        if (Array.isArray(d.optionalExtras)) setOptionalExtras(d.optionalExtras);
+        if (d.photoUrl) setPhotoUrl(d.photoUrl);
+        if (typeof d.isPreorder === 'boolean') setIsPreorder(d.isPreorder);
+        if (d.preorderNote) setPreorderNote(d.preorderNote);
+        if (typeof d.isAvailable === 'boolean') setIsAvailable(d.isAvailable);
+        setDraftSavedText('✓ Progress restored from your auto-saved draft');
+      }
+    } catch {}
+  }, []);
+
+  // Auto-save draft on changes
+  useEffect(() => {
+    if (!name && !description && !singlePrice && !photoUrl) return;
+    const timer = setTimeout(() => {
+      try {
+        const payload = {
+          name,
+          description,
+          category,
+          priceType,
+          singlePrice,
+          scoops,
+          compulsoryGroups,
+          optionalExtras,
+          photoUrl,
+          isPreorder,
+          preorderNote,
+          isAvailable,
+          savedAt: Date.now()
+        };
+        localStorage.setItem('chow45_vendor_add_food_page_draft', JSON.stringify(payload));
+        // Also sync with marketplace vendor draft so both flows share draft
+        localStorage.setItem('chow45_vendor_food_draft', JSON.stringify({
+          dishId: null,
+          name,
+          category,
+          image: photoUrl,
+          desc: description,
+          priceType: priceType.toUpperCase(),
+          platePrice: singlePrice,
+          scoopPrice: scoops[0]?.price || '',
+          piecePrice: singlePrice,
+          lastSaved: Date.now()
+        }));
+        setDraftSavedText('✓ All progress auto-saved to draft');
+      } catch {}
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [name, description, category, priceType, singlePrice, scoops, compulsoryGroups, optionalExtras, photoUrl, isPreorder, preorderNote, isAvailable]);
 
   // Fetch real vendors on load
   useEffect(() => {
@@ -156,8 +220,10 @@ export default function AddFoodPage() {
         throw new Error(data.error || 'Failed to save food item');
       }
 
-      alert('Food item submitted successfully! It is now pending admin verification and will appear in the marketplace once approved.');
-      router.push('/admin');
+      alert('Food item submitted successfully! It is now live on your Chow45 vendor menu.');
+      localStorage.removeItem('chow45_vendor_add_food_page_draft');
+      localStorage.removeItem('chow45_vendor_food_draft');
+      router.push('/vendor');
     } catch (err: any) {
       setSubmitError(err.message || 'Error saving food item');
     } finally {
@@ -181,18 +247,43 @@ export default function AddFoodPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
+            <Link href="/vendor" className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
             <div>
               <h1 className="font-display font-extrabold text-2xl text-[#111111]">Upload Vendor Food</h1>
-              <p className="text-xs text-[#6E6D66]">Submits real dishes for admin verification before going live on Chow45</p>
+              <p className="text-xs text-[#6E6D66]">Submits dishes directly to your Chow45 vendor menu</p>
             </div>
           </div>
-          <Link href="/admin" className="text-xs font-semibold text-[#0C513F] hover:underline">
-            View Admin Portal →
+          <Link href="/vendor" className="text-xs font-semibold text-[#0C513F] hover:underline">
+            Vendor Dashboard →
           </Link>
         </div>
+
+        {/* Auto-saved draft indicator */}
+        {draftSavedText && (
+          <div className="mb-6 px-4 py-3 rounded-2xl bg-[#E8F6F0] border border-[#0C513F]/20 flex items-center justify-between gap-3 text-xs text-[#0C513F] font-semibold">
+            <div className="flex items-center gap-2">
+              <span>🟢</span>
+              <span>{draftSavedText}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('chow45_vendor_add_food_page_draft');
+                localStorage.removeItem('chow45_vendor_food_draft');
+                setName('');
+                setDescription('');
+                setSinglePrice('');
+                setPhotoUrl(null);
+                setDraftSavedText('Draft cleared');
+              }}
+              className="text-xs text-red-600 hover:underline cursor-pointer"
+            >
+              Clear Draft
+            </button>
+          </div>
+        )}
 
         {/* Verification notice */}
         <div className="mb-6 p-4 rounded-2xl bg-[#FFF9E6] border border-[#FFC928]/40 flex items-start gap-3">

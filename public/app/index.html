@@ -69,6 +69,19 @@
       </div>
     </header>
 
+    <!-- Prevent flash of customer marketplace UI on /vendor path -->
+    <script>
+      (function() {
+        if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/vendor') || window.location.search.includes('role=vendor'))) {
+          document.documentElement.classList.add('on-vendor-path');
+        }
+      })();
+    </script>
+    <style>
+      html.on-vendor-path #view-customer { display: none !important; }
+      html.on-vendor-path #view-vendor { display: block !important; }
+    </style>
+
     <!-- =========================================================
          MAIN VIEWPORT
          ========================================================= -->
@@ -265,6 +278,9 @@
                 <button class="vnd-cat-chip" data-cat="snacks" onclick="VendorController.filterCategory('snacks')">Snacks</button>
                 <button class="vnd-cat-chip" data-cat="grills" onclick="VendorController.filterCategory('grills')">Grills</button>
               </div>
+
+              <!-- Auto-saved Vendor Drafts Section -->
+              <div id="vnd-drafts-section" class="vnd-drafts-section" style="display: none; margin-bottom: 20px;"></div>
 
               <!-- Main Three Sections: Available & Out of Stock (Point 2) -->
               <div id="vnd-food-sections-wrap">
@@ -1181,7 +1197,12 @@
             </button>
             <div>
               <div class="modal-title" id="vnd-flow-modal-title">Add Food</div>
-              <div class="vnd-flow-step-tag" id="vnd-flow-step-tag">Step 1 of 6 · Food Details</div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div class="vnd-flow-step-tag" id="vnd-flow-step-tag">Step 1 of 6 · Food Details</div>
+                <div id="vnd-draft-status-pill" style="display: none; align-items: center; gap: 4px; font-size: 0.72rem; color: #0C513F; background: #E8F6F0; padding: 2px 8px; border-radius: 999px; font-weight: 700;">
+                  <span style="font-size: 0.65rem;">🟢</span> Draft auto-saved
+                </div>
+              </div>
             </div>
           </div>
           <button class="modal-close-btn" onclick="VendorController.closeFoodFlow()">✕</button>
