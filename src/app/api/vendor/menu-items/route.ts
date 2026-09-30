@@ -264,6 +264,9 @@ export async function POST(request: Request) {
     }
   }
 
+  // Compute effective price for the generic `price` column used for display/sorting
+  const effectivePrice = isPiece ? piecePrice : (priceType === 'SCOOP' ? scoopPrice : platePrice) || 0;
+
   const [saved] = await db
     .insert(menuItems)
     .values({
@@ -274,6 +277,7 @@ export async function POST(request: Request) {
       description: String(body.description ?? "").trim() || null,
       imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : null,
       priceType,
+      price: effectivePrice,
       scoopPrice: isPiece ? null : scoopPrice || null,
       platePrice: isPiece ? null : platePrice || null,
       piecePrice: isPiece ? piecePrice : null,
@@ -292,6 +296,7 @@ export async function POST(request: Request) {
         description: String(body.description ?? "").trim() || null,
         imageUrl: typeof body.imageUrl === "string" ? body.imageUrl : null,
         priceType,
+        price: effectivePrice,
         scoopPrice: isPiece ? null : scoopPrice || null,
         platePrice: isPiece ? null : platePrice || null,
         piecePrice: isPiece ? piecePrice : null,

@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { menuItems } from '@/db/schema/menu-items';
 import { menuItemSizes } from '@/db/schema/menu-item-sizes';
 import { menuExtras } from '@/db/schema/menu-extras';
 import { vendors } from '@/db/schema/vendors';
+import { users } from '@/db/schema/users';
 
 export async function GET() {
   try {
-    // 1. Fetch all menu items joined with vendor business name & vendor details
+    // 1. Fetch ALL menu items joined with vendor business name & vendor details
     const items = await db
       .select({
         id: menuItems.id,
@@ -61,17 +62,90 @@ export async function GET() {
       extras: extras.filter((e) => e.menuItemId === item.id),
     }));
 
-    // 3. Fetch all vendors for the filter dropdown
-    const allVendors = await db
+    // 3. Fetch ALL vendors from vendors table (regardless of food uploads)
+    const vendorRows = await db
       .select({
         id: vendors.id,
         businessName: vendors.businessName,
+        contactEmail: vendors.contactEmail,
+        ownerPhone: vendors.ownerPhone,
+        ownerName: vendors.ownerName,
         status: vendors.status,
+        storeId: vendors.storeId,
+        userId: vendors.userId,
+        source: vendors.source,
+        image: vendors.image,
+        address: vendors.address,
+        createdAt: vendors.createdAt,
       })
       .from(vendors)
       .orderBy(vendors.businessName);
 
-    // 4. Calculate stats
+    // 4. Fetch ALL users with VENDOR role who may not have a vendors row yet
+    const vendorUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        emailVerified: users.emailVerified,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(sql`LOWER(${users.role}) = 'vendor'`)
+      .orderBy(users.createdAt);
+
+    // 5. Build a merged vendor list:
+    //    - Start with all vendors rows
+    //    - Add any VENDOR-role users who don't have a vendors row (userId not in vendors)
+    const linkedUserIds = new Set(vendorRows.map((v) => v.userId).filter(Boolean));
+
+    const orphanVendorUsers = vendorUsers
+      .filter((u) => !linkedUserIds.has(u.id))
+      .map((u) => ({
+        id: null as number | null,
+        businessName: u.name || u.email.split('@')[0],
+        contactEmail: u.email,
+        ownerPhone: null,
+        ownerName: u.name,
+        status: 'no_profile' as string,
+        storeId: null,
+        userId: u.id,
+        source: 'user_signup',
+        image: null,
+        address: null,
+        createdAt: u.createdAt,
+        _isUserOnly: true,
+      }));
+
+    // Merge: real vendor rows + orphan vendor users
+    const allVendorsList = [
+      ...vendorRows.map((v) => ({
+        ...v,
+        _isUserOnly: false,
+        // Attach the linked user's email if the vendor has a userId but no contactEmail
+        contactEmail: v.contactEmail || vendorUsers.find((u) => u.id === v.userId)?.email || null,
+      })),
+      ...orphanVendorUsers,
+    ];
+
+    // For the filter dropdown in the admin page (keeps backward compat)
+    const allVendorsForFilter = allVendorsList.map((v) => ({
+      id: v.id ?? -1,
+      businessName: v.businessName || 'Unknown Vendor',
+      contactEmail: v.contactEmail,
+      ownerPhone: v.ownerPhone || null,
+      ownerName: v.ownerName || null,
+      status: v.status,
+      storeId: v.storeId || null,
+      userId: v.userId || null,
+      image: v.image || null,
+      address: v.address || null,
+      createdAt: v.createdAt,
+      _isUserOnly: v._isUserOnly,
+    }));
+
+    // 6. Calculate stats
     const totalItems = enrichedItems.length;
     const vendorSet = new Set(enrichedItems.map((i) => i.vendorId).filter(Boolean));
     const pendingItems = enrichedItems.filter(
@@ -83,7 +157,6 @@ export async function GET() {
     const rejectedItems = enrichedItems.filter(
       (i) => (i.status || '').toLowerCase() === 'rejected'
     ).length;
-    const availableItems = approvedItems;
     const outOfStockItems = enrichedItems.filter(
       (i) => (i.status || '').toLowerCase().includes('out_of_stock')
     ).length;
@@ -91,8 +164,8 @@ export async function GET() {
     const stats = {
       totalItems,
       activeVendorsWithItems: vendorSet.size,
-      totalRegisteredVendors: allVendors.length,
-      availableItems,
+      totalRegisteredVendors: allVendorsList.length,
+      availableItems: approvedItems,
       pendingItems,
       approvedItems,
       rejectedItems,
@@ -102,7 +175,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       items: enrichedItems,
-      vendors: allVendors,
+      vendors: allVendorsForFilter,
       stats,
     });
   } catch (error: any) {

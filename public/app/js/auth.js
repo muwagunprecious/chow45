@@ -906,6 +906,27 @@ const Chow45Auth = {
     try {
       const displayName = name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
+      // Register with the server to create user and persist credentials
+      try {
+        const regRes = await fetch('/api/auth/customer/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password: password || 'Chow45User!2026',
+            name: displayName,
+            phone,
+            address
+          })
+        });
+        if (!regRes.ok) {
+          const errData = await regRes.json().catch(() => ({}));
+          console.warn('[auth] Customer server registration warning:', errData.error);
+        }
+      } catch (srvErr) {
+        console.warn('[auth] Customer registration network warning:', srvErr);
+      }
+
       const userData = {
         name: displayName,
         email,
@@ -992,17 +1013,45 @@ const Chow45Auth = {
     }
 
     try {
-      const storeId = 'rest-' + storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) + '-' + Date.now().toString().slice(-4);
       const photo = this.uploadedPhotoDataUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80';
+
+      // Register with the server endpoint to create user, hash password, and create vendor row
+      let serverVendor = null;
+      try {
+        const regRes = await fetch('/api/auth/vendor/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password: password || 'Chow45Vendor!2026',
+            storeName,
+            phone,
+            address,
+            storeType,
+            image: photo
+          })
+        });
+
+        if (regRes.ok) {
+          const regData = await regRes.json();
+          if (regData.vendor) {
+            serverVendor = regData.vendor;
+          }
+        } else {
+          const errData = await regRes.json().catch(() => ({}));
+          console.warn('[auth] Vendor server registration warning:', errData.error);
+        }
+      } catch (srvErr) {
+        console.warn('[auth] Vendor registration network warning:', srvErr);
+      }
+
+      const storeId = serverVendor?.storeId || ('rest-' + storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) + '-' + Date.now().toString().slice(-4));
 
       // The area picked in the onboarding gate becomes the store's zone.
       const zone = window.VendorOnboarding && window.VendorOnboarding.getZoneId
         ? window.VendorOnboarding.zoneInfo(window.VendorOnboarding.getZoneId())
         : null;
 
-      // A manually typed address is the source of truth. It is validated, then
-      // written onto the store object that goes to the server, so it is saved
-      // whether it was typed or filled in from the live location.
       const live = window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation;
       const liveCoords = live && live.type === 'current' && live.lat && live.lng
         ? { lat: live.lat, lng: live.lng }
@@ -1010,6 +1059,7 @@ const Chow45Auth = {
 
       const newStore = {
         id: storeId,
+        numericId: serverVendor?.id || undefined,
         name: storeName,
         storeType: storeType === 'physical' ? 'Physical Restaurant' : 'Online Kitchen',
         address: address,
@@ -1050,27 +1100,6 @@ const Chow45Auth = {
 
       this.completeLogin(userData);
       this.close();
-
-      // Persist the vendor profile to the server (Supabase). Fire and forget so
-      // the dashboard is not blocked, but stage the payload so a reload can
-      // retry it if the first request does not land.
-      const vndBody = {
-        businessName: storeName,
-        address: address,
-        image: photo,
-        latitude: newStore.latitude,
-        longitude: newStore.longitude
-      };
-      try {
-        sessionStorage.setItem('chow45_vendor_pending_profile', JSON.stringify(vndBody));
-      } catch (e) { /* non-fatal */ }
-      fetch('/api/vendor/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vndBody)
-      }).then(r => {
-        if (r && r.ok) sessionStorage.removeItem('chow45_vendor_pending_profile');
-      }).catch(() => {});
 
       if (window.chowApp && window.chowApp.toast) {
         window.chowApp.toast(`🎉 Store registered! Redirecting to Vendor Dashboard...`, 'success');

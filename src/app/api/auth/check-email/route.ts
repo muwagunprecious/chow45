@@ -108,7 +108,22 @@ export async function POST(request: Request) {
         isVendor = true;
     }
 
-    // 3. Fallback: check waitlist
+    // 3. Fallback: check vendor_applications
+    if (!exists) {
+        try {
+            const appMatches = await db
+                .select({ id: sql`id` })
+                .from(sql`vendor_applications`)
+                .where(sql`LOWER(owner_email) = ${normalised}`)
+                .limit(1);
+            if (appMatches.length > 0) {
+                exists = true;
+                isVendor = true;
+            }
+        } catch { /* table may not be queried */ }
+    }
+
+    // 4. Fallback: check waitlist
     if (!exists) {
         const waitlistMatches = await db
             .select({ id: waitlist.id, userType: waitlist.userType })
