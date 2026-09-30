@@ -35,9 +35,15 @@ class Chow45Store {
         if (parsed.restaurants && parsed.restaurants.length > 0 && parsed.userProfile) {
           // Reconcile newer fields onto older saved states.
           if (!parsed.deliveryConfig) parsed.deliveryConfig = Object.assign({}, DEFAULT_DELIVERY_FEE_CONFIG);
-          if (!parsed.serviceZones) parsed.serviceZones = JSON.parse(JSON.stringify(CHOW45_SERVICE_ZONES));
-          if (!parsed.vendorOnboarding) parsed.vendorOnboarding = { status: 'approved', storeId: 'rest-mama-t', applicationId: null };
-          if (!parsed.vendorWallet) parsed.vendorWallet = { available: 0, processing: 0 };
+          if (!parsed.vendorOnboarding || parsed.vendorOnboarding.storeId === 'rest-mama-t') {
+            parsed.vendorOnboarding = { status: 'none', storeId: null, applicationId: null, storeName: null, appliedAt: null, approvedAt: null };
+          }
+          if (Array.isArray(parsed.orders)) {
+            parsed.orders = parsed.orders.filter(o => o.storeId !== 'rest-mama-t' && o.id !== 'CH45281');
+          }
+          if (Array.isArray(parsed.pendingVendors)) {
+            parsed.pendingVendors = parsed.pendingVendors.filter(v => v.id !== 'pv-101' && !String(v.name || '').includes('Iya Moria'));
+          }
           if (!parsed.vendorWithdrawals) parsed.vendorWithdrawals = [];
           if (parsed.userProfile && Array.isArray(parsed.userProfile.savedAddresses)) {
             parsed.userProfile.savedAddresses = parsed.userProfile.savedAddresses.filter(a =>
@@ -163,59 +169,20 @@ class Chow45Store {
         items: [] // { dishId, name, price, qty, selectedAddons, itemTotal }
       },
       currentOrderId: null,
-      orders: [
-        {
-          id: 'CH45281',
-          storeId: 'rest-mama-t',
-          storeName: "Mama T's Kitchen",
-          customerName: 'Precious M.',
-          customerPhone: '+234 812 450 4500',
-          deliveryAddress: 'Home • 9 Goshen Ave, Idimu, Lagos',
-          status: 'DELIVERED',
-          items: [
-            { name: 'Jollof Rice', qty: 1, unitPrice: 3500, selectedAddons: [{ name: 'Peppered Chicken', price: 1500 }, { name: 'Fried Plantain (Dodo)', price: 700 }], itemTotal: 5200 }
-          ],
-          subtotal: 5200,
-          deliveryFee: 800,
-          serviceFee: 500,
-          total: 6500,
-          createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-          riderId: 'rider-david',
-          riderName: 'David Adeleke',
-          pin: '4528',
-          review: {
-            rating: 5,
-            comment: 'Food was steaming hot and delicious! Fast delivery to Idimu.'
-          }
-        }
-      ],
+      orders: [],
       restaurants: JSON.parse(JSON.stringify(CHOW45_RESTAURANTS)),
       riders: JSON.parse(JSON.stringify(CHOW45_RIDERS)),
       adminLedger: {
-        totalGmv: 6500,
-        totalServiceFees: 500,
-        completedDeliveries: 1
+        totalGmv: 0,
+        totalServiceFees: 0,
+        completedDeliveries: 0
       },
-      pendingVendors: [
-        {
-          id: 'pv-101',
-          name: 'Iya Moria Bukateria',
-          ownerName: 'Moria Alabi',
-          location: 'Shop 14, Council Market, Idimu, Lagos',
-          lga: 'Alimosho LGA',
-          phone: '+234 802 331 4492',
-          appliedAt: 'Today, 2:15 PM',
-          cuisine: 'Authentic Amala, Ewedu & Gbegiri',
-          status: 'pending',
-          coverImg: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
-          regNumber: 'BN-4920194'
-        }
-      ],
+      pendingVendors: [],
       vendorOnboarding: {
-        status: 'approved',          // 'none' | 'pending' | 'approved' | 'rejected'
-        storeId: 'rest-mama-t',      // restaurant granted once approved
+        status: 'none',
+        storeId: null,
         applicationId: null,
-        storeName: "Mama T's Kitchen",
+        storeName: null,
         appliedAt: null,
         approvedAt: null
       },

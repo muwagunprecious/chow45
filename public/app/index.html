@@ -197,7 +197,7 @@
               </div>
 
               <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--c-text-muted); margin-top: 10px;">
-                <span>Pickup: <strong id="track-store-name" style="color: var(--c-text-primary);">Mama T's Kitchen</strong></span>
+                <span>Pickup: <strong id="track-store-name" style="color: var(--c-text-primary);">Restaurant</strong></span>
                 <span>Dropoff: <strong id="track-dest-address" style="color: var(--c-text-primary);">9 Goshen Ave</strong></span>
               </div>
             </div>
@@ -1009,7 +1009,7 @@
             <h4 class="vnd-step-title">Step 2 · Your Store</h4>
             <div class="checkout-input-group">
               <label class="checkout-label">Store Name</label>
-              <input type="text" id="v-reg-store-name" class="checkout-input vnd-input" placeholder="e.g. Mama T's Kitchen" />
+              <input type="text" id="v-reg-store-name" class="checkout-input vnd-input" placeholder="e.g. Sagamu Special Kitchen" />
             </div>
             <div class="checkout-input-group">
               <label class="checkout-label">Cuisine Specialty</label>
@@ -1517,7 +1517,7 @@
             ⭐⭐⭐⭐⭐
           </div>
           <div class="checkout-input-group">
-            <textarea id="review-comment-input" class="checkout-textarea" rows="3" placeholder="Leave a short review for Mama T's Kitchen and rider David..."></textarea>
+            <textarea id="review-comment-input" class="checkout-textarea" rows="3" placeholder="Leave a short review for the restaurant and rider..."></textarea>
           </div>
           <button class="cta-primary-btn" onclick="CustomerController.submitReview()">
             Submit Rating
@@ -1661,7 +1661,7 @@
                 <label class="checkout-label" for="auth-step1-email">Email Address</label>
                 <div class="auth-input-wrap">
                   <span class="auth-input-icon">✉️</span>
-                  <input type="email" id="auth-step1-email" class="checkout-input auth-input" placeholder="e.g. name@student.oou.edu.ng" required autofocus autocomplete="email" onblur="Chow45Auth.checkStep1EmailInput()" />
+                  <input type="email" id="auth-step1-email" class="checkout-input auth-input" placeholder="e.g. name@student.oou.edu.ng" required autofocus autocomplete="email" onblur="Chow45Auth.checkStep1EmailInput(true)" />
                 </div>
               </div>
 
@@ -1679,20 +1679,26 @@
           <!-- ─── STEP 1B: PASSWORD (existing accounts only) ─── -->
           <div id="auth-step-password" class="auth-flow-step" style="display: none;">
             <div class="auth-panel-intro">
-              <h3 class="auth-heading">Welcome back</h3>
-              <p class="auth-subheading" id="auth-password-subheading">Enter your password to continue.</p>
+              <h3 class="auth-heading" id="auth-password-heading">Welcome back</h3>
+              <p class="auth-subheading" id="auth-password-subheading">Enter your password to sign in.</p>
             </div>
 
             <div id="auth-password-alert" class="auth-alert error" style="display: none;"></div>
 
-            <form onsubmit="event.preventDefault(); Chow45Auth.handlePasswordSubmit();">
-              <div class="checkout-input-group" style="margin-top: 14px;">
-                <label class="checkout-label" for="auth-password-email">Email Address</label>
-                <div class="auth-input-wrap">
-                  <span class="auth-input-icon">✉️</span>
-                  <input type="email" id="auth-password-email" class="checkout-input auth-input" required autocomplete="email" />
+            <!-- Email Banner with Change button -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 14px; border: 1px solid rgba(12,81,63,0.15);">
+              <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span style="font-size: 1rem;">✉️</span>
+                <div style="overflow: hidden;">
+                  <span style="font-size: 0.7rem; color: #6E6D66; display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Signing in as</span>
+                  <strong id="auth-password-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
                 </div>
               </div>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+            </div>
+
+            <form onsubmit="event.preventDefault(); Chow45Auth.handlePasswordSubmit();">
+              <input type="hidden" id="auth-password-email" />
 
               <div class="checkout-input-group">
                 <label class="checkout-label" for="auth-password">Password</label>
@@ -1707,25 +1713,47 @@
                 <span>Sign In →</span>
               </button>
             </form>
+
+            <div style="text-align: center; margin-top: 14px;">
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.8rem; color: #6E6D66; cursor: pointer; text-decoration: underline;">
+                ← Use a different email address
+              </button>
+            </div>
           </div>
 
           <!-- ─── STEP 2: CUSTOMER PROFILE (Email, Phone, Address) ─── -->
           <div id="auth-step-customer" class="auth-flow-step" style="display: none;">
             <div class="auth-panel-intro">
-              <h3 class="auth-heading">Complete your profile</h3>
-              <p class="auth-subheading">Add your phone number and delivery location to start ordering meals.</p>
+              <h3 class="auth-heading">Create your account</h3>
+              <p class="auth-subheading">Complete your details to start ordering delicious meals.</p>
+            </div>
+
+            <!-- Email banner with Change button -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
+              <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span style="font-size: 1rem;">✉️</span>
+                <div style="overflow: hidden;">
+                  <span style="font-size: 0.7rem; color: #6E6D66; display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">New account for</span>
+                  <strong id="auth-cust-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
+                </div>
+              </div>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+            </div>
+
+            <!-- Account Type Switcher: Customer vs Vendor -->
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #0C513F; color: #fff; border: 1px solid #0C513F; cursor: default;">
+                🛍️ Order Food
+              </button>
+              <button type="button" onclick="Chow45Auth.showVendorStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #FAF6EB; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
+                🍳 Sell Food (Vendor) →
+              </button>
             </div>
 
             <div id="auth-cust-alert" class="auth-alert error" style="display: none;"></div>
 
             <form onsubmit="event.preventDefault(); Chow45Auth.handleCustomerSubmit();">
-              <div class="checkout-input-group">
-                <label class="checkout-label" for="auth-cust-email">Email Address</label>
-                <div class="auth-input-wrap">
-                  <span class="auth-input-icon">✉️</span>
-                  <input type="email" id="auth-cust-email" class="checkout-input auth-input" placeholder="name@domain.com" required autocomplete="email" onblur="Chow45Auth.checkCustomerEmailInput()" />
-                </div>
-              </div>
+              <input type="hidden" id="auth-cust-email" />
 
               <div class="checkout-input-group">
                 <label class="checkout-label" for="auth-cust-phone">Phone Number</label>
@@ -1779,9 +1807,26 @@
               <p class="auth-subheading">Sell your food and reach students & campus customers.</p>
             </div>
 
-            <div class="auth-vendor-signin-callout" style="display: flex; align-items: center; justify-content: space-between; background: #E8F6F0; padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 14px; border: 1px solid #C4EBDD;">
-              <span style="font-size: 0.82rem; color: #0C513F; font-weight: 500;">Already registered as a vendor?</span>
-              <button type="button" style="background: #00B978; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;" onclick="Chow45Auth.showStep1()">Sign In Instead →</button>
+            <!-- Email banner with Change button -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
+              <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span style="font-size: 1rem;">✉️</span>
+                <div style="overflow: hidden;">
+                  <span style="font-size: 0.7rem; color: #6E6D66; display: block; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">New vendor store for</span>
+                  <strong id="auth-vnd-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
+                </div>
+              </div>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+            </div>
+
+            <!-- Account Type Switcher: Customer vs Vendor -->
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+              <button type="button" onclick="Chow45Auth.showCustomerStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #FAF6EB; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
+                🛍️ Order Food (Customer) ←
+              </button>
+              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #0C513F; color: #fff; border: 1px solid #0C513F; cursor: default;">
+                🍳 Sell Food (Vendor) ✓
+              </button>
             </div>
 
             <div id="auth-vnd-alert" class="auth-alert error" style="display: none;"></div>
@@ -1791,7 +1836,7 @@
                 <label class="checkout-label" for="auth-vnd-store-name">Store Name</label>
                 <div class="auth-input-wrap">
                   <span class="auth-input-icon">🏪</span>
-                  <input type="text" id="auth-vnd-store-name" class="checkout-input auth-input" placeholder="e.g. Mama T's Kitchen, Chef Dave Grills" required />
+                  <input type="text" id="auth-vnd-store-name" class="checkout-input auth-input" placeholder="e.g. Sagamu Special Kitchen, Chef Dave Grills" required />
                 </div>
               </div>
 
@@ -1838,21 +1883,13 @@
                 </div>
               </div>
 
-              <div class="auth-dual-grid">
-                <div class="checkout-input-group">
-                  <label class="checkout-label" for="auth-vnd-email">Email Address</label>
-                  <div class="auth-input-wrap">
-                    <span class="auth-input-icon">✉️</span>
-                    <input type="email" id="auth-vnd-email" class="checkout-input auth-input" placeholder="vendor@chow45.com" required autocomplete="email" onblur="Chow45Auth.checkVendorEmailInput()" />
-                  </div>
-                </div>
+              <input type="hidden" id="auth-vnd-email" />
 
-                <div class="checkout-input-group">
-                  <label class="checkout-label" for="auth-vnd-phone">Store Phone</label>
-                  <div class="auth-input-wrap">
-                    <span class="auth-input-icon">📱</span>
-                    <input type="tel" id="auth-vnd-phone" class="checkout-input auth-input" placeholder="e.g. 0803 123 4567" required autocomplete="tel" />
-                  </div>
+              <div class="checkout-input-group">
+                <label class="checkout-label" for="auth-vnd-phone">Store Phone Number</label>
+                <div class="auth-input-wrap">
+                  <span class="auth-input-icon">📱</span>
+                  <input type="tel" id="auth-vnd-phone" class="checkout-input auth-input" placeholder="e.g. 0803 123 4567" required autocomplete="tel" />
                 </div>
               </div>
 
@@ -1987,7 +2024,7 @@
   <script src="/app/js/vendor.js?v=20260928b"></script>
   <script src="/app/js/rider.js"></script>
   <script src="/app/js/admin.js"></script>
-<script src="/app/js/auth.js?v=20260928d"></script>
+<script src="/app/js/auth.js?v=20260930c"></script>
 <script src="/app/js/vendor-onboarding.js?v=20260928a"></script>
 <script src="/app/js/app.js?v=20260928b"></script>
 </body>

@@ -67,42 +67,79 @@ const Chow45Auth = {
     }
   },
 
-  async checkStep1EmailInput() {
+  async checkStep1EmailInput(isExplicitTrigger = false) {
     const input = document.getElementById('auth-step1-email');
     const email = (input?.value || '').trim();
     if (!email || !email.includes('@') || !email.includes('.')) return;
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) return;
 
-    const lookup = await this.checkEmailAccount(email);
-    if (lookup && lookup.exists) {
-      this.showPasswordStep(lookup.role || (this.intent === 'vendor' ? 'VENDOR' : 'USER'), email);
+    const btn = document.getElementById('auth-step1-btn');
+    if (btn) {
+      btn.disabled = true;
+      const span = btn.querySelector('span');
+      if (span) span.textContent = 'Checking...';
+    }
+
+    try {
+      const lookup = await this.checkEmailAccount(email);
+
+      // Pre-fill email across all downstream forms
+      const custEmail = document.getElementById('auth-cust-email');
+      const vndEmail = document.getElementById('auth-vnd-email');
+      const custDisp = document.getElementById('auth-cust-email-display');
+      const vndDisp = document.getElementById('auth-vnd-email-display');
+      if (custEmail) custEmail.value = email;
+      if (vndEmail) vndEmail.value = email;
+      if (custDisp) custDisp.textContent = email;
+      if (vndDisp) vndDisp.textContent = email;
+
+      if (lookup && lookup.exists) {
+        // Account exists -> Immediately prompt for password!
+        this.showPasswordStep(lookup.role || 'USER', email);
+        return;
+      }
+
+      if (lookup && !lookup.exists) {
+        // No account -> Immediately prompt for signup form!
+        if (this.intent === 'vendor') {
+          this.showVendorStep(email);
+        } else {
+          this.showCustomerStep(email);
+        }
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Continue →';
+      }
     }
   },
 
   _debounceTimer: null,
   bindEmailInputs() {
-    const attach = (id, checkFn) => {
-      const el = document.getElementById(id);
-      if (!el || el.dataset.boundEmailCheck === 'true') return;
-      el.dataset.boundEmailCheck = 'true';
+    const step1El = document.getElementById('auth-step1-email');
+    if (step1El && step1El.dataset.boundEmailCheck !== 'true') {
+      step1El.dataset.boundEmailCheck = 'true';
 
-      el.addEventListener('blur', () => {
-        checkFn.call(this);
-      });
-
-      el.addEventListener('input', () => {
+      step1El.addEventListener('input', () => {
         clearTimeout(this._debounceTimer);
-        const val = (el.value || '').trim();
-        if (val.includes('@') && val.includes('.') && val.length > 5) {
+        const val = (step1El.value || '').trim();
+        // Check when user has typed a valid email format e.g. name@domain.com
+        if (/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(val)) {
           this._debounceTimer = setTimeout(() => {
-            checkFn.call(this);
+            this.checkStep1EmailInput(false);
           }, 450);
         }
       });
-    };
 
-    attach('auth-step1-email', this.checkStep1EmailInput);
-    attach('auth-vnd-email', this.checkVendorEmailInput);
-    attach('auth-cust-email', this.checkCustomerEmailInput);
+      step1El.addEventListener('blur', () => {
+        const val = (step1El.value || '').trim();
+        if (/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(val)) {
+          this.checkStep1EmailInput(true);
+        }
+      });
+    }
   },
 
   restoreSession() {
@@ -300,18 +337,17 @@ const Chow45Auth = {
     if (vndEmail) vndEmail.value = email;
 
     if (lookup?.exists) {
-      this.showPasswordStep(lookup.role, email);
+      this.showPasswordStep(lookup.role || 'USER', email);
       return;
     }
 
-    // A visitor who arrived through the vendor gate is signing up to sell, so
-    // an unknown email belongs in vendor registration, not customer sign-up.
+    // Account does NOT exist -> Immediately prompt for Sign Up!
     if (this.intent === 'vendor') {
-      this.showVendorStep();
+      this.showVendorStep(email);
       return;
     }
 
-    this.showCustomerStep();
+    this.showCustomerStep(email);
   },
 
   /**
@@ -332,7 +368,9 @@ const Chow45Auth = {
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
     const emailField = document.getElementById('auth-password-email');
+    const emailDisplay = document.getElementById('auth-password-email-display');
     const pwField = document.getElementById('auth-password');
+    const heading = document.getElementById('auth-password-heading');
     const subheading = document.getElementById('auth-password-subheading');
 
     if (s1) s1.style.display = 'none';
@@ -343,11 +381,16 @@ const Chow45Auth = {
     if (tag) tag.textContent = this.pendingRole === 'VENDOR' ? 'Vendor Sign In' : 'Sign In';
 
     if (emailField) emailField.value = email || '';
+    if (emailDisplay) emailDisplay.textContent = email || '';
     if (pwField) pwField.value = '';
+
+    if (heading) {
+      heading.textContent = this.pendingRole === 'VENDOR' ? 'Welcome back, Vendor' : 'Welcome back';
+    }
     if (subheading) {
       subheading.textContent = this.pendingRole === 'VENDOR'
-        ? 'Account found! Enter your password to reach your vendor dashboard.'
-        : 'Welcome back! Enter your password to continue.';
+        ? 'Enter your password to reach your restaurant dashboard.'
+        : 'Enter your password to sign in.';
     }
 
     setTimeout(() => {
@@ -444,21 +487,29 @@ const Chow45Auth = {
     if (pw) pw.value = demo.password;
   },
 
-  showCustomerStep() {
+  showCustomerStep(emailParam) {
     this.currentStep = 'customer';
     this.clearAlerts();
 
+    const email = emailParam || document.getElementById('auth-step1-email')?.value?.trim() || '';
     const s1 = document.getElementById('auth-step-1');
+    const sp = document.getElementById('auth-step-password');
     const sc = document.getElementById('auth-step-customer');
     const sv = document.getElementById('auth-step-vendor');
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
+    const custEmailInp = document.getElementById('auth-cust-email');
+    const custEmailDisp = document.getElementById('auth-cust-email-display');
 
     if (s1) s1.style.display = 'none';
+    if (sp) sp.style.display = 'none';
     if (sc) sc.style.display = 'block';
     if (sv) sv.style.display = 'none';
     if (backBtn) backBtn.style.display = 'inline-flex';
-    if (tag) tag.textContent = 'Complete Profile';
+    if (tag) tag.textContent = 'Create Account';
+
+    if (custEmailInp) custEmailInp.value = email;
+    if (custEmailDisp) custEmailDisp.textContent = email;
 
     // Auto-fill delivery address from active selected location if empty
     const addrInput = document.getElementById('auth-cust-address');
@@ -469,32 +520,31 @@ const Chow45Auth = {
       }
     }
 
-    this.bindEmailInputs();
-
     setTimeout(() => {
       const phoneInp = document.getElementById('auth-cust-phone');
       if (phoneInp) phoneInp.focus();
     }, 60);
   },
 
-  showVendorStep() {
+  showVendorStep(emailParam) {
     this.currentStep = 'vendor';
     this.clearAlerts();
 
-    // Transfer any email entered in step 1 if present
-    const step1Email = document.getElementById('auth-step1-email')?.value?.trim();
+    const email = emailParam || document.getElementById('auth-step1-email')?.value?.trim() || '';
     const vndEmail = document.getElementById('auth-vnd-email');
-    if (vndEmail && step1Email) {
-      vndEmail.value = step1Email;
-    }
+    const vndEmailDisp = document.getElementById('auth-vnd-email-display');
+    if (vndEmail) vndEmail.value = email;
+    if (vndEmailDisp) vndEmailDisp.textContent = email;
 
     const s1 = document.getElementById('auth-step-1');
+    const sp = document.getElementById('auth-step-password');
     const sc = document.getElementById('auth-step-customer');
     const sv = document.getElementById('auth-step-vendor');
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
 
     if (s1) s1.style.display = 'none';
+    if (sp) sp.style.display = 'none';
     if (sc) sc.style.display = 'none';
     if (sv) sv.style.display = 'block';
     if (backBtn) backBtn.style.display = 'inline-flex';

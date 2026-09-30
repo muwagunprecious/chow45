@@ -40,7 +40,7 @@ const SCRIPTS_TO_LOAD = [
   '/app/js/vendor.js?v=20260928b',
   '/app/js/rider.js',
   '/app/js/admin.js',
-  '/app/js/auth.js?v=20260930b',
+  '/app/js/auth.js?v=20260930c',
   // Must be ready before app.js boots, because app.js starts the gate.
   '/app/js/vendor-onboarding.js?v=20260928a',
   '/app/js/app.js?v=20260928b',
