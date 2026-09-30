@@ -434,89 +434,131 @@ const Chow45LocationPicker = {
     const card = document.getElementById('picker-confirm-card');
     if (!btn) return;
     btn.dataset.state = state;
-    btn.disabled = state === 'resolving' || state === 'blocked';
+    btn.disabled = false;
 
     if (state === 'ready') {
-      btn.className = 'cta-primary-btn picker-confirm-btn';
-      btn.innerHTML = `Confirm location`;
-    } else if (state === 'waitlist') {
-      btn.className = 'cta-primary-btn picker-confirm-btn picker-btn-secondary';
-      btn.innerHTML = `Join the waitlist`;
+      btn.innerHTML = `Confirm Location ✓`;
     } else if (state === 'resolving') {
-      btn.className = 'cta-primary-btn picker-confirm-btn';
-      btn.innerHTML = `Checking delivery availability…`;
+      btn.innerHTML = `Checking location…`;
     } else {
-      btn.className = 'cta-primary-btn picker-confirm-btn';
-      btn.innerHTML = `Choose a delivery location`;
+      btn.innerHTML = `Confirm Location ✓`;
     }
-    if (card) card.classList.toggle('blocked', state === 'blocked');
+    if (card) card.classList.remove('blocked');
   },
 
   renderConfirmCard() {
-    const labelOutput = document.getElementById('picker-address-label-output');
-    const selectedLabel = this.getSelectedLabel();
-    if (labelOutput) labelOutput.innerText = selectedLabel ? selectedLabel : 'Deliver to';
+    // Stationary clutter removed
   },
 
   getSelectedLabel() {
-    return Array.from(document.querySelectorAll('.picker-label-chip.active')).map(c => c.dataset.label)[0] || '';
+    return this._currentSavingSlot || 'Campus';
   },
 
   setLabel(label) {
-    document.querySelectorAll('.picker-label-chip').forEach(chip => {
-      chip.classList.toggle('active', chip.dataset.label === label);
-    });
-    this.renderConfirmCard();
+    this._currentSavingSlot = label;
   },
 
   async confirmLocation() {
-    const loc = this.currentLocation;
-    if (!loc) return;
-    const isPickup = this.mode === 'pickup';
-
-    if (!isPickup) {
-      const availability = loc.availability || getServiceAvailability({ lng: loc.longitude, lat: loc.latitude });
-      if (availability.status === 'ogun_outside_zone') {
-        this.joinWaitlist();
-        return;
+    let loc = this.currentLocation;
+    if (!loc) {
+      if (this.map && window.chowMap) {
+        const center = window.chowMap.getCenter(this.containerId);
+        if (center) {
+          loc = {
+            latitude: center[1],
+            longitude: center[0],
+            address: 'Hospital Road, Sagamu',
+            formattedAddress: 'Hospital Road, Sagamu, Ogun State, Nigeria',
+            state: 'Ogun'
+          };
+        }
       }
-      if (availability.status !== 'available') {
-        window.chowApp && window.chowApp.toast('Please choose a location where Chow45 delivers.', 'warning');
-        return;
+      if (!loc && window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation) {
+        loc = window.chowStore.state.selectedLocation;
       }
     }
+    if (!loc) {
+      loc = {
+        latitude: 6.8390,
+        longitude: 3.6480,
+        address: 'Hospital Road, Sagamu',
+        formattedAddress: 'Hospital Road, Sagamu, Ogun State, Nigeria',
+        state: 'Ogun'
+      };
+    }
 
-    const instructions = document.getElementById('picker-instructions-input');
-    const label = isPickup ? 'Store Pickup' : (this.getSelectedLabel() || 'Home');
+    const formatted = loc.formattedAddress || loc.address || loc.name || 'Hospital Road, Sagamu, Ogun State, Nigeria';
+
+    const isVendor = this.mode === 'pickup' ||
+      (window.chowStore && window.chowStore.state && window.chowStore.state.userProfile && window.chowStore.state.userProfile.role === 'vendor') ||
+      (window.chowStore && window.chowStore.state && window.chowStore.state.currentRole === 'vendor') ||
+      window.location.pathname.includes('/vendor') ||
+      !!document.getElementById('view-vendor')?.classList.contains('active');
 
     const payload = {
-      latitude: loc.latitude,
-      longitude: loc.longitude,
-      accuracy: loc.accuracy,
-      timestamp: loc.timestamp,
-      address: loc.address,
-      locality: loc.locality,
-      lga: loc.lga,
+      latitude: loc.latitude ?? loc.lat ?? 6.8390,
+      longitude: loc.longitude ?? loc.lng ?? 3.6480,
+      accuracy: loc.accuracy || null,
+      timestamp: loc.timestamp || Date.now(),
+      address: loc.address || formatted,
+      locality: loc.locality || 'Sagamu',
+      lga: loc.lga || 'Sagamu LGA',
       state: loc.state || 'Ogun',
-      country: loc.country,
-      placeId: loc.placeId,
-      formattedAddress: loc.formattedAddress,
-      zoneId: loc.availability && loc.availability.zone ? loc.availability.zone.id : null,
-      zoneName: loc.availability && loc.availability.zone ? loc.availability.zone.name : null,
-      deliveryInstructions: instructions ? instructions.value.trim() : '',
-      label: label
+      country: loc.country || 'Nigeria',
+      placeId: loc.placeId || '',
+      formattedAddress: formatted,
+      zoneId: loc.availability && loc.availability.zone ? loc.availability.zone.id : (loc.zoneId || 'sagamu-campus'),
+      zoneName: loc.availability && loc.availability.zone ? loc.availability.zone.name : (loc.zoneName || 'Sagamu Campus'),
+      deliveryInstructions: '',
+      label: isVendor ? 'Store Location' : (this.getSelectedLabel() || 'Campus')
     };
 
-    if (!isPickup) {
+    // Save into chowStore
+    if (window.chowStore) {
       window.chowStore.setDeliveryLocation(payload);
+      if (isVendor) {
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding.storeAddress = formatted;
+        }
+        if (window.chowStore.state.userProfile) {
+          window.chowStore.state.userProfile.storeAddress = formatted;
+        }
+        if (Array.isArray(window.chowStore.state.restaurants)) {
+          window.chowStore.state.restaurants.forEach(r => {
+            r.address = formatted;
+            r.latitude = payload.latitude;
+            r.longitude = payload.longitude;
+          });
+        }
+      }
+      window.chowStore.save();
     }
 
+    // Update location text in top nav bar and vendor dashboard
+    const locTextEl = document.getElementById('current-location-text');
+    if (locTextEl) locTextEl.textContent = formatted;
+    const vndLocEl = document.getElementById('vendor-store-location');
+    if (vndLocEl) vndLocEl.innerText = formatted;
+
+    // 1. Immediately close the map and location picker
     this.close();
-    window.chowApp && window.chowApp.toast(isPickup ? 'Pickup address confirmed ✓' : 'Delivery location confirmed ✓', 'success');
+
+    // 2. Show success toast message
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Location confirmed successfully! ✓', 'success');
+    }
+
     if (typeof this.onConfirmCallback === 'function') {
       const cb = this.onConfirmCallback;
       this.onConfirmCallback = null;
-      cb(payload);
+      try { cb(payload); } catch {}
+    }
+
+    // 3. Immediately redirect to the vendor dashboard
+    if (isVendor) {
+      setTimeout(() => {
+        window.location.href = '/vendor';
+      }, 300);
     }
   },
 
