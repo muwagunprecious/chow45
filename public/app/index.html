@@ -902,7 +902,7 @@
       <div class="map-picker-shell">
         <!-- Header / Search -->
         <header class="picker-header">
-          <button id="picker-back-btn" class="picker-back-btn" aria-label="Back">
+          <button id="picker-back-btn" class="picker-back-btn" aria-label="Back" onclick="Chow45LocationPicker.close()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
           <div class="picker-title">Choose delivery location</div>
@@ -967,6 +967,80 @@
             <button id="picker-confirm-btn" class="cta-primary-btn picker-confirm-btn" data-state="resolving" disabled>Checking delivery availability…</button>
           </div>
         </footer>
+      </div>
+    </div>
+
+    <!-- Modal 4c: Input & Save Location Modal (Campus / Home / Work) -->
+    <div id="save-place-modal" class="modal-backdrop" style="z-index: 300;" onclick="if(event.target === this) Chow45LocationPicker.closeSavePlaceModal()">
+      <div class="modal-sheet" style="max-width: 480px; width: 92%; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+        <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--c-border-subtle, #EFECE6); background: #FAF9F5;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button type="button" class="modal-back-btn" onclick="Chow45LocationPicker.closeSavePlaceModal()" aria-label="Back" title="Back" style="border: none; background: #E8E5DD; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #111111; transition: background 0.15s ease;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <div>
+              <div class="modal-title" id="save-place-modal-title" style="font-size: 1.1rem; font-weight: 800; color: #111827;">Set Location Address</div>
+              <small id="save-place-modal-subtitle" style="font-size: 0.78rem; color: #6E6D66; font-weight: 600; display: block;">Save place for quick one-tap orders</small>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="Chow45LocationPicker.closeSavePlaceModal()" aria-label="Close" style="border: none; background: none; font-size: 1.2rem; cursor: pointer; color: #6E6D66; padding: 4px 8px;">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 22px;">
+          <!-- Slot Badge banner -->
+          <div id="save-place-slot-banner" style="display: flex; align-items: center; gap: 12px; background: #FAF6EB; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(12,81,63,0.18);">
+            <span id="save-place-slot-icon" style="font-size: 1.8rem;">🏫</span>
+            <div style="flex: 1; min-width: 0;">
+              <strong id="save-place-slot-name" style="display: block; font-size: 0.95rem; color: #0C513F;">Campus Address</strong>
+              <small id="save-place-slot-hint" style="font-size: 0.8rem; color: #6E6D66;">e.g. OOU Main Campus Gate, Ago-Iwoye</small>
+            </div>
+          </div>
+
+          <form onsubmit="event.preventDefault(); Chow45LocationPicker.confirmSavePlace();">
+            <!-- Address input -->
+            <div class="checkout-input-group" style="margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="checkout-label" for="save-place-address-input" style="font-weight: 700; font-size: 0.85rem; color: #1F2937;">Address / Campus Landmark</label>
+                <button type="button" onclick="Chow45LocationPicker.useCurrentLocationForSavePlace()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  📍 <span>Use GPS location</span>
+                </button>
+              </div>
+              <div class="auth-input-wrap">
+                <span class="auth-input-icon">📍</span>
+                <input type="text" id="save-place-address-input" class="checkout-input auth-input" placeholder="Type address or campus landmark..." required autocomplete="street-address" autofocus />
+              </div>
+            </div>
+
+            <!-- Quick Suggestions for One-Tap Fill -->
+            <div style="margin-bottom: 16px;">
+              <span style="font-size: 0.74rem; font-weight: 800; color: #6E6D66; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Popular Suggestions (Tap to fill)</span>
+              <div id="save-place-suggestions" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <!-- Injected dynamically based on slot -->
+              </div>
+            </div>
+
+            <!-- Optional Delivery Notes / Room / Office -->
+            <div class="checkout-input-group" style="margin-bottom: 20px;">
+              <label class="checkout-label" for="save-place-note-input" style="font-weight: 700; font-size: 0.85rem; color: #1F2937;">
+                Hostel / Room / Landmark Note <small style="color: #6E6D66; font-weight: 400;">(Optional)</small>
+              </label>
+              <div class="auth-input-wrap">
+                <span class="auth-input-icon">📝</span>
+                <input type="text" id="save-place-note-input" class="checkout-input auth-input" placeholder="e.g. Block B, Room 14 or beside Library" />
+              </div>
+            </div>
+
+            <!-- Action buttons: Cancel & Save -->
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button type="button" class="modal-cancel-btn" onclick="Chow45LocationPicker.closeSavePlaceModal()" style="flex: 1; padding: 13px 16px; border-radius: 12px; border: 1.5px solid #E6DEC8; background: #FAF6EB; color: #383834; font-weight: 700; font-size: 0.92rem; cursor: pointer; transition: background 0.15s ease;">
+                Cancel
+              </button>
+              <button type="submit" id="save-place-confirm-btn" class="cta-primary-btn" style="flex: 1.6; padding: 13px 18px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; cursor: pointer;">
+                Save Address ✓
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
@@ -2019,7 +2093,7 @@
 <script src="/app/js/data.js"></script>
   <script src="/app/js/state.js?v=20260928a"></script>
   <script src="/app/js/mapbox-service.js?v=20260928c"></script>
-  <script src="/app/js/location-picker.js?v=20260928c"></script>
+  <script src="/app/js/location-picker.js?v=20260930d"></script>
   <script src="/app/js/customer.js"></script>
   <script src="/app/js/vendor.js?v=20260928b"></script>
   <script src="/app/js/rider.js"></script>

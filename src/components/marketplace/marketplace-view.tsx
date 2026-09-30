@@ -35,7 +35,7 @@ const SCRIPTS_TO_LOAD = [
   '/app/js/data.js?v=20260927f',
   '/app/js/state.js?v=20260928a',
   '/app/js/mapbox-service.js?v=20260928c',
-  '/app/js/location-picker.js',
+  '/app/js/location-picker.js?v=20260930d',
   '/app/js/customer.js?v=20260928a',
   '/app/js/vendor.js?v=20260928b',
   '/app/js/rider.js',
