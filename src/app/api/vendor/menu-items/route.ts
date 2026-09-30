@@ -217,13 +217,16 @@ export async function POST(request: Request) {
     vendorId = first[0]?.id ?? null;
   }
   if (vendorId === null) {
+    const bName = String(body.storeName || body.vendorName || "My Restaurant");
+    const sId = String(body.storeId || `rest-${Date.now()}`);
     const [created] = await db
       .insert(vendors)
       .values({
-        businessName: String(body.storeName || body.vendorName || "My Restaurant"),
+        businessName: bName,
+        slug: `${bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}-${Date.now()}`,
         contactEmail: String(body.email || "vendor@chow45.com"),
         status: "approved",
-        storeId: String(body.storeId || `rest-${Date.now()}`),
+        storeId: sId,
         address: "Hospital Road, Sagamu, Ogun State",
       })
       .returning({ id: vendors.id });
