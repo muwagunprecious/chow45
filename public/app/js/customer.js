@@ -100,8 +100,8 @@ const CustomerController = {
       const q = searchQuery.toLowerCase();
       filteredStores = filteredStores.filter(r =>
         r.name.toLowerCase().includes(q) ||
-        r.tags.some(t => t.toLowerCase().includes(q)) ||
-        r.menu.some(m => m.name.toLowerCase().includes(q))
+        (Array.isArray(r.tags) ? r.tags : []).some(t => String(t || '').toLowerCase().includes(q)) ||
+        (Array.isArray(r.menu) ? r.menu : []).some(m => String(m.name || '').toLowerCase().includes(q))
       );
     }
 
@@ -239,7 +239,7 @@ const CustomerController = {
             <h3 class="store-title">${store.name}</h3>
             <span class="store-rating">★ ${store.rating}</span>
           </div>
-          <div class="store-tags">${store.tags.join(' • ')}</div>
+          <div class="store-tags">${(Array.isArray(store.tags) ? store.tags : (store.cuisine ? [store.cuisine] : ['Verified Store'])).join(' • ')}</div>
           <div class="store-meta-row">
             <span class="store-meta-item">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -319,7 +319,8 @@ const CustomerController = {
 
     document.getElementById('store-detail-banner').src = store.bannerImg;
     document.getElementById('store-detail-name').innerText = store.name;
-    document.getElementById('store-detail-tags').innerText = store.tags.join(' • ');
+    const storeDetailTags = Array.isArray(store.tags) ? store.tags : (store.cuisine ? [store.cuisine] : ['Verified Store']);
+    document.getElementById('store-detail-tags').innerText = storeDetailTags.join(' • ');
     document.getElementById('store-detail-meta').innerHTML = `
       <span>★ ${store.rating} (${store.reviewsCount} reviews)</span> • 
       <span>⏱ ${store.prepTime}</span> • 

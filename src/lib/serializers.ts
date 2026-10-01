@@ -161,12 +161,20 @@ export type ClientStore = {
   tags: string[];
   bannerImg: string | null;
   source: string;
+  numericId?: number;
+  userId?: number | null;
+  contactEmail?: string | null;
+  email?: string | null;
   menu: ClientMenuItem[];
 };
 
 export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): ClientStore {
   return {
     id: vendor.storeId,
+    numericId: vendor.id,
+    userId: vendor.userId,
+    contactEmail: vendor.contactEmail,
+    email: vendor.contactEmail,
     name: vendor.businessName,
     slug: vendor.slug,
     description: vendor.description ?? "",
@@ -190,7 +198,7 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
     isPopular: vendor.isPopular,
     isFast: vendor.isFast,
     category: vendor.category ?? "rice",
-    tags: vendor.tags ?? [],
+    tags: Array.isArray(vendor.tags) ? vendor.tags : (vendor.cuisine ? [vendor.cuisine] : ["Verified Store"]),
     bannerImg: vendor.bannerImage ?? vendor.image,
     source: vendor.source,
     menu,

@@ -987,6 +987,29 @@ const Chow45Auth = {
         }
       }
 
+      // Sync resolved store details into store state
+      if (window.chowStore?.state) {
+        if (window.chowStore.state.userProfile) {
+          window.chowStore.state.userProfile.storeId = profile.storeId;
+          window.chowStore.state.userProfile.vendorId = profile.id;
+          window.chowStore.state.userProfile.name = profile.businessName;
+          if (profile.contactEmail && !window.chowStore.state.userProfile.email) {
+            window.chowStore.state.userProfile.email = profile.contactEmail;
+          }
+        }
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding.storeId = profile.storeId;
+          window.chowStore.state.vendorOnboarding.status = 'approved';
+          window.chowStore.state.vendorOnboarding.storeName = profile.businessName;
+        }
+        window.chowStore.save();
+      }
+
+      // Refresh vendor dashboard views with verified store data
+      if (typeof VendorController !== 'undefined' && VendorController.render) {
+        VendorController.render();
+      }
+
       // Check one-time password and location setup for tolaniakin2022@gmail.com
       this.checkFirstTimeVendorSetup(profile, serverData);
     } else {
@@ -1511,7 +1534,13 @@ const Chow45Auth = {
 
   checkFirstTimeVendorSetup(profile, serverData) {
     const session = this.getSession();
-    const email = (session?.email || serverData?.userEmail || profile?.contactEmail || '').toLowerCase().trim();
+    const email = (
+      session?.email ||
+      serverData?.userEmail ||
+      profile?.contactEmail ||
+      window.chowStore?.state?.userProfile?.email ||
+      ''
+    ).toLowerCase().trim();
 
     // STRICT: Only for this email!
     if (email !== 'tolaniakin2022@gmail.com') return;

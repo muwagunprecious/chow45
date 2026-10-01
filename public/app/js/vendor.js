@@ -231,7 +231,18 @@ const VendorController = {
       if (found) return found;
     }
 
-    // 2. Try matching by vendor email
+    // 2. Try matching by numeric vendorId or userId
+    const targetUserId = userProfile?.id;
+    const targetVendorId = userProfile?.vendorId;
+    if (targetUserId || targetVendorId) {
+      const found = restaurants.find(r => 
+        (targetUserId && r.userId && String(r.userId) === String(targetUserId)) ||
+        (targetVendorId && r.numericId && String(r.numericId) === String(targetVendorId))
+      );
+      if (found) return found;
+    }
+
+    // 3. Try matching by vendor email
     const vendorEmail = userProfile?.email || ob?.email;
     if (vendorEmail) {
       const cleanEmail = vendorEmail.trim().toLowerCase();
@@ -241,8 +252,19 @@ const VendorController = {
         (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail)
       );
       if (found) return found;
+    }
 
-      // User is signed in as a vendor with their own email: synthesize their own store
+    // 4. Try matching by store name
+    const storeNameCandidate = userProfile?.name || ob?.storeName;
+    if (storeNameCandidate && typeof storeNameCandidate === 'string') {
+      const cleanName = storeNameCandidate.trim().toLowerCase();
+      const found = restaurants.find(r => r.name && r.name.trim().toLowerCase() === cleanName);
+      if (found) return found;
+    }
+
+    // 5. Fallback: synthesize their own store if signed in with vendor email
+    if (vendorEmail) {
+      const cleanEmail = vendorEmail.trim().toLowerCase();
       const storeId = userProfile?.storeId || ob?.storeId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
       const storeName = userProfile?.name || ob?.storeName || (cleanEmail.split('@')[0] + "'s Kitchen");
       const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
@@ -252,11 +274,13 @@ const VendorController = {
         name: storeName,
         address: storeAddr,
         email: cleanEmail,
+        contactEmail: cleanEmail,
         phone: userProfile?.phone || ob?.phone || '',
         bannerImg: '',
         openingTime: '08:00',
         closingTime: '21:00',
         isOpen: true,
+        tags: ['Store', 'Campus Delivery'],
         menu: []
       };
 
@@ -270,12 +294,6 @@ const VendorController = {
         window.chowStore.save();
       }
       return newStore;
-    }
-
-    // 3. Try matching by store name if userProfile.role === 'vendor'
-    if (userProfile?.role === 'vendor' && userProfile?.name) {
-      const found = restaurants.find(r => r.name && r.name.toLowerCase() === userProfile.name.toLowerCase());
-      if (found) return found;
     }
 
     // 4. If no user or store is resolved, return empty store — NEVER fallback to another vendor's store!

@@ -85,8 +85,11 @@ class Chow45Store {
             !String(r.id || '').startsWith('demo-')
           );
 
-          // Reconcile dish pricing models and extras
+          // Reconcile dish pricing models and extras, and ensure tags are always an array
           (parsed.restaurants || []).forEach(store => {
+            if (!Array.isArray(store.tags)) {
+              store.tags = store.tags ? [String(store.tags)] : (store.cuisine ? [store.cuisine] : ['Verified Store']);
+            }
             (store.menu || []).forEach(dish => {
               if (!dish.priceType) dish.priceType = 'BOTH';
               if (dish.scoopPrice == null) dish.scoopPrice = Math.round((dish.price || 2000) * 0.25);

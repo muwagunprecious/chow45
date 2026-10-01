@@ -22,18 +22,7 @@ const Chow45App = {
       Chow45Auth.init();
     }
 
-    // Pull the vendor's real profile from the server. Only on the vendor route
-    // and only once a session exists, so the onboarding gate stays on top for
-    // signed-out visitors.
-    if (window.location.pathname.startsWith('/vendor')
-        && typeof Chow45Auth !== 'undefined'
-        && (Chow45Auth.isLoggedIn() || sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true')) {
-      Chow45Auth.loadVendorProfile();
-    }
-
     this.bindGlobalEvents();
-    this.updateRoleUI(window.chowStore.state.currentRole);
-    this.updateLocationUI(window.chowStore.state.selectedLocation);
 
     // Check URL pathname or parameters for direct role jumping (e.g. /vendor/food or /app?role=vendor)
     const urlParams = new URLSearchParams(window.location.search);
@@ -43,6 +32,19 @@ const Chow45App = {
     if (pathname.startsWith('/vendor')) {
       initialRole = 'vendor';
     }
+
+    const isVendorContext = pathname.startsWith('/vendor') ||
+      initialRole === 'vendor' ||
+      window.chowStore?.state?.currentRole === 'vendor' ||
+      sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true';
+
+    // Pull the vendor's real profile from the server whenever in vendor context
+    if (isVendorContext && typeof Chow45Auth !== 'undefined') {
+      Chow45Auth.loadVendorProfile();
+    }
+
+    this.updateRoleUI(window.chowStore.state.currentRole);
+    this.updateLocationUI(window.chowStore.state.selectedLocation);
 
     if (initialRole && ['customer', 'vendor', 'rider', 'admin'].includes(initialRole)) {
       this.switchRole(initialRole);
@@ -109,6 +111,9 @@ const Chow45App = {
       window.chowStore.setRole(roleName);
     }
     this.updateRoleUI(roleName);
+    if (roleName === 'vendor' && typeof Chow45Auth !== 'undefined') {
+      Chow45Auth.loadVendorProfile();
+    }
   },
 
   updateRoleUI(role) {
