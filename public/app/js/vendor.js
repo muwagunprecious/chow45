@@ -235,11 +235,42 @@ const VendorController = {
     // 2. Try matching by vendor email
     const vendorEmail = userProfile?.email || ob?.email;
     if (vendorEmail) {
+      const cleanEmail = vendorEmail.trim().toLowerCase();
       const found = restaurants.find(r => 
-        (r.email && r.email.toLowerCase() === vendorEmail.toLowerCase()) ||
-        (r.ownerEmail && r.ownerEmail.toLowerCase() === vendorEmail.toLowerCase())
+        (r.email && r.email.toLowerCase() === cleanEmail) ||
+        (r.ownerEmail && r.ownerEmail.toLowerCase() === cleanEmail) ||
+        (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail)
       );
       if (found) return found;
+
+      // User is signed in as a vendor with their own email! Synthesize their own store
+      const storeId = userProfile?.storeId || ob?.storeId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
+      const storeName = userProfile?.name || ob?.storeName || (cleanEmail.split('@')[0] + "'s Kitchen");
+      const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
+      const newStore = {
+        id: storeId,
+        numericId: userProfile?.vendorId || undefined,
+        name: storeName,
+        address: storeAddr,
+        email: cleanEmail,
+        phone: userProfile?.phone || ob?.phone || '',
+        bannerImg: '',
+        openingTime: '08:00',
+        closingTime: '21:00',
+        isOpen: true,
+        menu: []
+      };
+
+      if (window.chowStore?.state) {
+        if (!window.chowStore.state.restaurants) window.chowStore.state.restaurants = [];
+        window.chowStore.state.restaurants.unshift(newStore);
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding.storeId = storeId;
+          window.chowStore.state.vendorOnboarding.status = 'approved';
+        }
+        window.chowStore.save();
+      }
+      return newStore;
     }
 
     // 3. Try matching by store name if userProfile.role === 'vendor'
@@ -248,7 +279,7 @@ const VendorController = {
       if (found) return found;
     }
 
-    // 4. If any restaurant exists in chowStore, and user is in vendor dashboard:
+    // 4. If any restaurant exists in chowStore, and no user email is set:
     if (restaurants.length > 0) {
       return restaurants[0];
     }
@@ -396,7 +427,8 @@ const VendorController = {
       const storeId = store.id || '';
 
       const res = await fetch(`/api/vendor/menu-items?storeId=${encodeURIComponent(storeId)}&email=${encodeURIComponent(email)}`, {
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
 
       if (!res.ok) return;
@@ -1795,11 +1827,17 @@ const VendorController = {
   // the vendor's work.
   async _syncMenuItemToServer(payload, existingDishId) {
     const store = this.getStore();
+    const userProfile = window.chowStore?.state?.userProfile;
+    const ob = this.getOnboarding();
+    const vendorEmail = (store && store.email) || userProfile?.email || ob?.email || undefined;
+
     const body = {
       id: existingDishId || undefined,
       storeId: (store && store.id) || undefined,
       vendorId: (store && store.numericId) || undefined,
       vendorName: (store && store.name) || undefined,
+      email: vendorEmail,
+      vendorEmail: vendorEmail,
       name: payload.name,
       category: payload.category,
       description: payload.desc,
@@ -1821,6 +1859,7 @@ const VendorController = {
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body)
       });
 

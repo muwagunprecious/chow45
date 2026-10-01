@@ -197,8 +197,9 @@ const Chow45Auth = {
     if (!modal) return;
 
     this.showStep1();
-    // Set after showStep1, which resets the intent.
-    this.intent = intent || null;
+    // Automatically detect vendor context if on /vendor or current role is vendor
+    const isVendorContext = intent === 'vendor' || window.location.pathname.startsWith('/vendor') || (window.chowStore?.state?.currentRole === 'vendor');
+    this.intent = isVendorContext ? 'vendor' : (intent || null);
     modal.classList.add('open');
   },
 
@@ -1121,11 +1122,6 @@ const Chow45Auth = {
       this.showAlert('vendor', 'Please enter your restaurant or store name.');
       return;
     }
-    if (!this.uploadedPhotoDataUrl) {
-      const typeText = storeType === 'physical' ? 'store picture' : 'food picture';
-      this.showAlert('vendor', `Please upload your ${typeText} to continue.`);
-      return;
-    }
     if (!address) {
       this.showAlert('vendor', 'Please provide your store pickup address.');
       return;
@@ -1141,10 +1137,12 @@ const Chow45Auth = {
 
       // Register with the server endpoint to create user, hash password, and create vendor row
       let serverVendor = null;
+      let serverUser = null;
       try {
         const regRes = await fetch('/api/auth/vendor/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             email,
             password: password || 'Chow45Vendor!2026',
@@ -1156,17 +1154,33 @@ const Chow45Auth = {
           })
         });
 
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          if (regData.vendor) {
-            serverVendor = regData.vendor;
-          }
+        const regData = await regRes.json().catch(() => ({}));
+        if (regRes.ok && regData.success) {
+          serverVendor = regData.vendor;
+          serverUser = regData.user;
+          // Auto-save credentials for smooth future logins
+          this.saveCredentials(email, password || 'Chow45Vendor!2026', 'VENDOR');
         } else {
-          const errData = await regRes.json().catch(() => ({}));
-          console.warn('[auth] Vendor server registration warning:', errData.error);
+          const errMsg = regData.error || 'Could not register store on server. Please try again.';
+          this.showAlert('vendor', errMsg);
+          if (window.chowApp && window.chowApp.toast) {
+            window.chowApp.toast(errMsg, 'error');
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Register Store & Start Selling ✓';
+          }
+          return;
         }
       } catch (srvErr) {
         console.warn('[auth] Vendor registration network warning:', srvErr);
+        const errMsg = 'Network error while registering store. Please check your connection.';
+        this.showAlert('vendor', errMsg);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Register Store & Start Selling ✓';
+        }
+        return;
       }
 
       const storeId = serverVendor?.storeId || ('rest-' + storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) + '-' + Date.now().toString().slice(-4));
@@ -1218,6 +1232,7 @@ const Chow45Auth = {
         email,
         phone,
         role: 'vendor',
+        vendorId: serverVendor?.id || undefined,
         storeId,
         storeType
       };

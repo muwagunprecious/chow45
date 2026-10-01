@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { menuItems } from "@/db/schema/menu-items";
@@ -132,8 +132,24 @@ export async function GET(request: Request) {
     if (paramId && Number.isFinite(Number(paramId))) {
       vendorId = Number(paramId);
     } else if (paramEmail) {
-      const match = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.contactEmail, paramEmail)).limit(1);
-      if (match[0]?.id) vendorId = match[0].id;
+      const cleanEmail = paramEmail.trim().toLowerCase();
+      const match = await db
+        .select({ id: vendors.id })
+        .from(vendors)
+        .where(sql`LOWER(${vendors.contactEmail}) = ${cleanEmail}`)
+        .limit(1);
+      if (match[0]?.id) {
+        vendorId = match[0].id;
+      } else {
+        // Also check if user with this email has a linked vendor
+        const userMatch = await db
+          .select({ id: vendors.id })
+          .from(vendors)
+          .innerJoin(users, eq(vendors.userId, users.id))
+          .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
+          .limit(1);
+        if (userMatch[0]?.id) vendorId = userMatch[0].id;
+      }
     } else if (paramStoreId) {
       const match = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.storeId, paramStoreId)).limit(1);
       if (match[0]?.id) vendorId = match[0].id;
@@ -197,25 +213,128 @@ export async function POST(request: Request) {
   }
 
   let vendorId = await resolveVendorId(request);
+  const emailCandidate = String(body.email || body.vendorEmail || "").trim().toLowerCase();
+
+  // 1. Explicit vendorId provided
   if (vendorId === null && body.vendorId && Number.isFinite(Number(body.vendorId))) {
-    vendorId = Number(body.vendorId);
+    const check = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.id, Number(body.vendorId))).limit(1);
+    if (check[0]?.id) vendorId = check[0].id;
   }
+
+  // 2. Email candidate provided (match by contactEmail or users.email)
+  if (vendorId === null && emailCandidate && emailCandidate.includes("@")) {
+    const matchedVendor = await db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(sql`LOWER(${vendors.contactEmail}) = ${emailCandidate}`)
+      .limit(1);
+
+    if (matchedVendor[0]?.id) {
+      vendorId = matchedVendor[0].id;
+    } else {
+      // Look up user by email
+      const matchedUser = await db
+        .select({ id: users.id, name: users.name, phone: users.phone })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${emailCandidate}`)
+        .limit(1);
+
+      if (matchedUser[0]?.id) {
+        // User exists, find or create their vendor profile
+        const userVendor = await db
+          .select({ id: vendors.id })
+          .from(vendors)
+          .where(eq(vendors.userId, matchedUser[0].id))
+          .limit(1);
+
+        if (userVendor[0]?.id) {
+          vendorId = userVendor[0].id;
+        } else {
+          const bName = String(body.vendorName || body.storeName || matchedUser[0].name || emailCandidate.split("@")[0]);
+          const baseSlug = bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30) || "store";
+          const sId = String(body.storeId || `rest-${baseSlug}-${Date.now().toString(36)}`);
+          const slug = `${baseSlug}-${Date.now().toString(36)}`;
+
+          const [newVnd] = await db
+            .insert(vendors)
+            .values({
+              businessName: bName,
+              slug,
+              contactEmail: emailCandidate,
+              ownerPhone: matchedUser[0].phone || null,
+              status: "approved",
+              storeId: sId,
+              userId: matchedUser[0].id,
+              address: "Hospital Road, Sagamu, Ogun State",
+            })
+            .returning({ id: vendors.id });
+          vendorId = newVnd.id;
+        }
+      }
+    }
+  }
+
+  // 3. Match by storeId
   if (vendorId === null && body.storeId) {
     const matched = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.storeId, String(body.storeId))).limit(1);
     if (matched[0]?.id) vendorId = matched[0].id;
   }
-  if (vendorId === null && body.email) {
-    const matched = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.contactEmail, String(body.email))).limit(1);
-    if (matched[0]?.id) vendorId = matched[0].id;
-  }
+
+  // 4. Match by vendorName
   if (vendorId === null && body.vendorName) {
-    const matched = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.businessName, String(body.vendorName))).limit(1);
+    const matched = await db
+      .select({ id: vendors.id })
+      .from(vendors)
+      .where(sql`LOWER(${vendors.businessName}) = ${String(body.vendorName).trim().toLowerCase()}`)
+      .limit(1);
     if (matched[0]?.id) vendorId = matched[0].id;
   }
+
+  // 5. If still null and email candidate exists, auto-create user and vendor
+  if (vendorId === null && emailCandidate && emailCandidate.includes("@")) {
+    const bName = String(body.storeName || body.vendorName || emailCandidate.split("@")[0]);
+    const baseSlug = bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30) || "store";
+    const sId = String(body.storeId || `rest-${baseSlug}-${Date.now().toString(36)}`);
+    const slug = `${baseSlug}-${Date.now().toString(36)}`;
+
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        email: emailCandidate,
+        name: bName,
+        username: (emailCandidate.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") + Math.random().toString(36).slice(2, 6)).slice(0, 45),
+        refCode: ("RF" + Date.now().toString(36).slice(-6)).toUpperCase(),
+        publicId: ("pub_" + Date.now().toString(36).slice(-8)),
+        role: "VENDOR",
+        emailVerified: true,
+      })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: { role: "VENDOR", emailVerified: true },
+      })
+      .returning({ id: users.id });
+
+    const [createdVendor] = await db
+      .insert(vendors)
+      .values({
+        businessName: bName,
+        slug,
+        contactEmail: emailCandidate,
+        status: "approved",
+        storeId: sId,
+        userId: createdUser?.id,
+        address: "Hospital Road, Sagamu, Ogun State",
+      })
+      .returning({ id: vendors.id });
+    vendorId = createdVendor.id;
+  }
+
+  // 6. Absolute fallback if no identifier provided at all
   if (vendorId === null) {
     const first = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.status, "approved")).limit(1);
     vendorId = first[0]?.id ?? null;
   }
+
   if (vendorId === null) {
     const bName = String(body.storeName || body.vendorName || "My Restaurant");
     const sId = String(body.storeId || `rest-${Date.now()}`);
@@ -224,7 +343,7 @@ export async function POST(request: Request) {
       .values({
         businessName: bName,
         slug: `${bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 40)}-${Date.now()}`,
-        contactEmail: String(body.email || "vendor@chow45.com"),
+        contactEmail: "vendor@chow45.com",
         status: "approved",
         storeId: sId,
         address: "Hospital Road, Sagamu, Ogun State",

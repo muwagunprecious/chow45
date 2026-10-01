@@ -347,11 +347,27 @@ export default function AdminDashboardPage() {
     return map;
   }, [foodItems]);
 
+  // Comprehensive dish count helper supporting ID and contactEmail matching
+  const getVendorDishCount = (v: VendorEntry) => {
+    let count = 0;
+    if (v.id && vendorFoodCountMap.has(v.id)) {
+      count = vendorFoodCountMap.get(v.id) || 0;
+    }
+    const cleanEmail = (v.contactEmail || '').trim().toLowerCase();
+    if (cleanEmail) {
+      const emailMatches = foodItems.filter(
+        (i) => i.vendorEmail && i.vendorEmail.trim().toLowerCase() === cleanEmail
+      ).length;
+      if (emailMatches > count) count = emailMatches;
+    }
+    return count;
+  };
+
   // Filtered vendors list
   const filteredVendors = useMemo(() => {
     const term = vendorSearch.toLowerCase().trim();
     return allVendors.filter((v) => {
-      const dishCount = vendorFoodCountMap.get(v.id) || 0;
+      const dishCount = getVendorDishCount(v);
       if (vendorFilter === 'with-food' && dishCount === 0) return false;
       if (vendorFilter === 'no-food' && dishCount > 0) return false;
 
@@ -366,11 +382,11 @@ export default function AdminDashboardPage() {
 
       return true;
     });
-  }, [allVendors, vendorSearch, vendorFilter, vendorFoodCountMap]);
+  }, [allVendors, vendorSearch, vendorFilter, vendorFoodCountMap, foodItems]);
 
   const vendorsWithFoodCount = useMemo(() => {
-    return allVendors.filter((v) => (vendorFoodCountMap.get(v.id) || 0) > 0).length;
-  }, [allVendors, vendorFoodCountMap]);
+    return allVendors.filter((v) => getVendorDishCount(v) > 0).length;
+  }, [allVendors, vendorFoodCountMap, foodItems]);
 
   const exportVendorsCsv = () => {
     const headers = ['ID', 'Business Name', 'Contact Email', 'Phone', 'Address', 'Dishes Count', 'Status', 'Registered Date'];
@@ -380,7 +396,7 @@ export default function AdminDashboardPage() {
       `"${(v.contactEmail || '').replace(/"/g, '""')}"`,
       `"${(v.ownerPhone || '').replace(/"/g, '""')}"`,
       `"${(v.address || '').replace(/"/g, '""')}"`,
-      vendorFoodCountMap.get(v.id) || 0,
+      getVendorDishCount(v),
       v.status || 'approved',
       v.createdAt ? new Date(v.createdAt).toISOString() : ''
     ]);
@@ -1093,7 +1109,7 @@ export default function AdminDashboardPage() {
                       </tr>
                     ) : (
                       filteredVendors.map((vendor, idx) => {
-                        const dishCount = vendorFoodCountMap.get(vendor.id) || 0;
+                        const dishCount = getVendorDishCount(vendor);
                         const initials = (vendor.businessName || '?')
                           .split(' ')
                           .map((p) => p[0])

@@ -101,13 +101,30 @@ export default function AddFoodPage() {
     return () => clearTimeout(timer);
   }, [name, description, category, priceType, singlePrice, scoops, compulsoryGroups, optionalExtras, photoUrl, isPreorder, preorderNote, isAvailable]);
 
-  // Fetch real vendors on load
+  // Fetch real vendors on load and auto-select matching logged-in vendor
   useEffect(() => {
     fetch('/api/admin/foods')
       .then((res) => res.json())
       .then((data) => {
         if (data.vendors && data.vendors.length > 0) {
           setVendorsList(data.vendors);
+
+          // Check if user is currently signed in
+          try {
+            const rawSession = localStorage.getItem('chow45_auth_session_v1');
+            if (rawSession) {
+              const sess = JSON.parse(rawSession);
+              const userEmail = sess?.user?.email?.toLowerCase();
+              if (userEmail) {
+                const match = data.vendors.find((v: any) => v.contactEmail?.toLowerCase() === userEmail);
+                if (match) {
+                  setSelectedVendorId(match.id);
+                  return;
+                }
+              }
+            }
+          } catch {}
+
           setSelectedVendorId(data.vendors[0].id);
         }
       })
@@ -270,9 +287,12 @@ export default function AddFoodPage() {
           price: Number(opt.price) || 0,
         }));
 
+      const selectedVendor = vendorsList.find((v) => v.id === selectedVendorId);
+
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
@@ -283,6 +303,9 @@ export default function AddFoodPage() {
           piecePrice: isPiece ? numPlatePrice : null,
           imageUrl: photoUrl || null,
           vendorId: selectedVendorId,
+          vendorName: selectedVendor?.businessName || undefined,
+          email: (selectedVendor as any)?.contactEmail || undefined,
+          vendorEmail: (selectedVendor as any)?.contactEmail || undefined,
           status: isAvailable ? 'available' : 'out_of_stock',
           preorderEnabled: isPreorder,
           preorderDate: isPreorder ? preorderNote : null,

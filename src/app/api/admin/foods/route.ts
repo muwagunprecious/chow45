@@ -81,57 +81,79 @@ export async function GET() {
       .from(vendors)
       .orderBy(vendors.businessName);
 
-    // 4. Fetch ALL users with VENDOR role who may not have a vendors row yet
-    const vendorUsers = await db
+    // 4. Fetch ALL users to link emails and find orphan vendors
+    const allUsers = await db
       .select({
         id: users.id,
         email: users.email,
         name: users.name,
         role: users.role,
+        phone: users.phone,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(sql`LOWER(${users.role}) = 'vendor'`)
       .orderBy(users.createdAt);
 
-    // 5. Build a merged vendor list:
-    //    - Start with all vendors rows
-    //    - Add any VENDOR-role users who don't have a vendors row (userId not in vendors)
-    const linkedUserIds = new Set(vendorRows.map((v) => v.userId).filter(Boolean));
+    // 5. Build a comprehensive vendor list:
+    //    - Start with all vendors rows with user emails attached
+    //    - Add users with VENDOR role or who have uploaded items
+    const seenEmails = new Set<string>();
+    const linkedUserIds = new Set<number>();
 
-    const orphanVendorUsers = vendorUsers
-      .filter((u) => !linkedUserIds.has(u.id))
-      .map((u) => ({
-        id: null as number | null,
-        businessName: u.name || u.email.split('@')[0],
-        contactEmail: u.email,
-        ownerPhone: null,
-        ownerName: u.name,
-        status: 'no_profile' as string,
-        storeId: null,
-        userId: u.id,
-        source: 'user_signup',
-        image: null,
-        address: null,
-        createdAt: u.createdAt,
-        _isUserOnly: true,
-      }));
+    const realVendorsList = vendorRows.map((v) => {
+      const linkedUser = allUsers.find(
+        (u) => u.id === v.userId || (v.contactEmail && u.email && u.email.toLowerCase() === v.contactEmail.toLowerCase())
+      );
+      if (v.userId) linkedUserIds.add(v.userId);
+      if (linkedUser?.id) linkedUserIds.add(linkedUser.id);
+
+      const resolvedEmail = (v.contactEmail || linkedUser?.email || null)?.trim().toLowerCase() || null;
+      if (resolvedEmail) seenEmails.add(resolvedEmail);
+
+      return {
+        ...v,
+        contactEmail: resolvedEmail,
+        ownerPhone: v.ownerPhone || linkedUser?.phone || null,
+        ownerName: v.ownerName || linkedUser?.name || null,
+        _isUserOnly: false,
+      };
+    });
+
+    // Find any users with VENDOR role or who aren't yet in seenEmails
+    const orphanVendorUsers = allUsers
+      .filter((u) => {
+        const emailLower = (u.email || '').trim().toLowerCase();
+        const isVendorRole = String(u.role || '').toLowerCase() === 'vendor';
+        const alreadyLinked = linkedUserIds.has(u.id) || (emailLower && seenEmails.has(emailLower));
+        return isVendorRole && !alreadyLinked;
+      })
+      .map((u) => {
+        const emailLower = (u.email || '').trim().toLowerCase();
+        seenEmails.add(emailLower);
+        return {
+          id: -u.id, // Stable negative ID for orphan user vendors
+          businessName: u.name || emailLower.split('@')[0],
+          contactEmail: emailLower,
+          ownerPhone: u.phone || null,
+          ownerName: u.name,
+          status: 'pending' as string,
+          storeId: `rest-${emailLower.split('@')[0].replace(/[^a-z0-9]/g, '-')}`,
+          userId: u.id,
+          source: 'user_signup',
+          image: null,
+          address: null,
+          createdAt: u.createdAt,
+          _isUserOnly: true,
+        };
+      });
 
     // Merge: real vendor rows + orphan vendor users
-    const allVendorsList = [
-      ...vendorRows.map((v) => ({
-        ...v,
-        _isUserOnly: false,
-        // Attach the linked user's email if the vendor has a userId but no contactEmail
-        contactEmail: v.contactEmail || vendorUsers.find((u) => u.id === v.userId)?.email || null,
-      })),
-      ...orphanVendorUsers,
-    ];
+    const allVendorsList = [...realVendorsList, ...orphanVendorUsers];
 
     // For the filter dropdown in the admin page (keeps backward compat)
     const allVendorsForFilter = allVendorsList.map((v) => ({
-      id: v.id ?? -1,
+      id: v.id,
       businessName: v.businessName || 'Unknown Vendor',
       contactEmail: v.contactEmail,
       ownerPhone: v.ownerPhone || null,
