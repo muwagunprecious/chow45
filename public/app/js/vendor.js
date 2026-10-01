@@ -40,23 +40,47 @@ const VendorController = {
       if (changeBtn) changeBtn.style.display = 'inline-block';
     }));
 
-    // Food Flow Photo Input (with client-side canvas compression)
+    // Food Flow Photo Input (supports all image extensions: png, jpg, webp, svg, avif, heic, gif, bmp, etc.)
     const flowFileInput = document.getElementById('vnd-flow-file-input');
     if (flowFileInput) {
       flowFileInput.addEventListener('change', e => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
-        this._compressImage(file, dataUrl => {
-          if (this.flowDraft) {
-            this.flowDraft.image = dataUrl;
+
+        const errEl = document.getElementById('vnd-photo-error-message');
+        if (errEl) errEl.style.display = 'none';
+
+        const emptyTitle = document.querySelector('#vnd-photo-empty-state .vnd-photo-title');
+        const prevTitle = emptyTitle ? emptyTitle.innerText : 'Add food photo';
+        if (emptyTitle) emptyTitle.innerText = 'Optimizing image...';
+
+        this._compressImage(
+          file,
+          dataUrl => {
+            if (emptyTitle) emptyTitle.innerText = prevTitle;
+            if (this.flowDraft) {
+              this.flowDraft.image = dataUrl;
+              this.saveDraft(this.flowDraft);
+            }
+            const preview = document.getElementById('vnd-flow-photo-preview');
+            const previewWrap = document.getElementById('vnd-photo-preview-wrap');
+            const emptyState = document.getElementById('vnd-photo-empty-state');
+            if (preview) preview.src = dataUrl;
+            if (previewWrap) previewWrap.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+            if (errEl) errEl.style.display = 'none';
+          },
+          errorMsg => {
+            if (emptyTitle) emptyTitle.innerText = prevTitle;
+            if (errEl) {
+              errEl.innerText = errorMsg;
+              errEl.style.display = 'block';
+            }
+            if (window.chowApp && window.chowApp.toast) {
+              window.chowApp.toast(errorMsg, 'error');
+            }
           }
-          const preview = document.getElementById('vnd-flow-photo-preview');
-          const previewWrap = document.getElementById('vnd-photo-preview-wrap');
-          const emptyState = document.getElementById('vnd-photo-empty-state');
-          if (preview) preview.src = dataUrl;
-          if (previewWrap) previewWrap.style.display = 'block';
-          if (emptyState) emptyState.style.display = 'none';
-        });
+        );
         e.target.value = '';
       });
     }
@@ -64,34 +88,100 @@ const VendorController = {
     this.render();
   },
 
-  /** Client-side image downscaling to prevent localStorage quota exhaustion */
-  _compressImage(file, callback) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 600;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
-        callback(dataUrl);
+  /** Universal image processor supporting any picture extension with downscaling & error detection */
+  _compressImage(file, callback, errorCallback) {
+    if (!file) {
+      if (errorCallback) errorCallback('No file selected.');
+      return;
+    }
+
+    // Limit maximum file size to 30MB
+    if (file.size > 30 * 1024 * 1024) {
+      const msg = 'Image file exceeds 30MB. Please choose a slightly smaller picture.';
+      if (errorCallback) errorCallback(msg);
+      return;
+    }
+
+    const name = file.name || '';
+    const ext = name.split('.').pop()?.toLowerCase();
+    const supportedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif', 'heic', 'heif', 'jfif', 'tif', 'tiff', 'ico', 'pjpeg', 'pjp'];
+
+    if (ext && !supportedExts.includes(ext) && !file.type.startsWith('image/')) {
+      const msg = `Unsupported file format .${ext}. Please choose a valid picture (.png, .jpg, .webp, .svg, .gif, etc.).`;
+      if (errorCallback) errorCallback(msg);
+      return;
+    }
+
+    // Vector SVGs can be used directly without rasterization
+    if (file.type === 'image/svg+xml' || ext === 'svg') {
+      const reader = new FileReader();
+      reader.onload = () => callback(reader.result);
+      reader.onerror = () => {
+        if (errorCallback) errorCallback('Failed to read SVG image file.');
       };
-      img.src = e.target.result;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      const msg = 'Unable to read the image file from your device. Please try another photo.';
+      if (errorCallback) errorCallback(msg);
     };
+
+    reader.onload = (e) => {
+      const resultDataUrl = e.target.result;
+      const img = new Image();
+
+      img.onerror = () => {
+        // Fallback: If canvas decode fails, pass data URL directly if valid
+        if (resultDataUrl && typeof resultDataUrl === 'string' && resultDataUrl.startsWith('data:image/')) {
+          callback(resultDataUrl);
+        } else if (errorCallback) {
+          errorCallback('Could not decode image format. Please convert to PNG or JPG.');
+        }
+      };
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800; // Optimal resolution for clear food photos & fast transmission
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          const isPng = file.type === 'image/png' || ext === 'png';
+          if (!isPng) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Output png for PNGs with possible transparency, and high quality jpeg for others
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+          const quality = isPng ? undefined : 0.84;
+          const dataUrl = canvas.toDataURL(mime, quality);
+          callback(dataUrl);
+        } catch (canvasErr) {
+          // If canvas tainted, fallback to direct data URL
+          callback(resultDataUrl);
+        }
+      };
+
+      img.src = resultDataUrl;
+    };
+
     reader.readAsDataURL(file);
   },
 
@@ -1736,10 +1826,15 @@ const VendorController = {
 
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        console.warn('[chow45] menu item sync failed:', res.status, detail.error || '');
+        const errMsg = detail.error || `Server responded with error status ${res.status}`;
+        console.warn('[chow45] menu item sync failed:', res.status, errMsg);
+        return { success: false, error: errMsg };
       }
+      const data = await res.json().catch(() => ({}));
+      return { success: true, data };
     } catch (err) {
       console.warn('[chow45] menu item sync unreachable:', err);
+      return { success: false, error: err.message || 'Network error syncing food to server' };
     }
   },
 
@@ -1971,13 +2066,26 @@ const VendorController = {
   },
 
   // ── Step 7 Publish & Success Screen (Points 25 & 26) ──
-  publishFoodDraft() {
+  async publishFoodDraft() {
     const d = this.flowDraft;
     if (!d) return;
     const store = this.getStore();
     if (!store) {
       window.chowApp.toast('Set up your store profile before adding dishes.', 'warning');
       return;
+    }
+
+    const errBox = document.getElementById('vnd-publish-error');
+    if (errBox) {
+      errBox.style.display = 'none';
+      errBox.innerText = '';
+    }
+
+    const publishBtn = document.getElementById('vnd-flow-publish-btn');
+    const originalBtnText = publishBtn ? publishBtn.innerText : 'Publish Food ✓';
+    if (publishBtn) {
+      publishBtn.disabled = true;
+      publishBtn.innerText = 'Publishing...';
     }
 
     const isPiece = this.flowDraft.priceType === window.ChowUnits.PIECE;
@@ -2003,29 +2111,54 @@ const VendorController = {
 
     let serverId = d.dishId || null;
 
-    if (d.dishId) {
-      window.chowStore.updateDish(store.id, d.dishId, payload);
-      window.chowApp.toast(`"${d.name}" updated successfully!`, 'success');
-    } else {
-      // addDish returns the stored dish, whose id is the key the server uses.
-      const saved = window.chowStore.addDish(store.id, payload);
-      serverId = (saved && saved.id) || null;
-      window.chowApp.toast(`"${d.name}" published to menu!`, 'success');
+    try {
+      // Sync to server first to verify validation and database persistence
+      const syncResult = await this._syncMenuItemToServer(payload, serverId);
+      if (syncResult && !syncResult.success) {
+        const errorMsg = syncResult.error || 'Failed to save food to server.';
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.innerText = `⚠️ Food upload error: ${errorMsg}`;
+        }
+        window.chowApp.toast(`Upload failed: ${errorMsg}`, 'danger');
+        if (publishBtn) {
+          publishBtn.disabled = false;
+          publishBtn.innerText = originalBtnText;
+        }
+        return;
+      }
+
+      if (d.dishId) {
+        window.chowStore.updateDish(store.id, d.dishId, payload);
+        window.chowApp.toast(`"${d.name}" updated successfully!`, 'success');
+      } else {
+        // addDish returns the stored dish, whose id is the key the server uses.
+        const saved = window.chowStore.addDish(store.id, payload);
+        serverId = (saved && saved.id) || null;
+        window.chowApp.toast(`"${d.name}" published to menu!`, 'success');
+      }
+
+      // Draft successfully published - clear saved draft
+      localStorage.removeItem('chow45_vendor_food_draft');
+      this.renderDraftsSection();
+
+      const msg = document.getElementById('vnd-success-message');
+      if (msg) msg.innerText = `"${d.name}" is now live on your Chow45 menu.`;
+
+      this.goToStep(7);
+    } catch (err) {
+      const errMsg = err.message || 'An unexpected error occurred while publishing.';
+      if (errBox) {
+        errBox.style.display = 'block';
+        errBox.innerText = `⚠️ Food upload error: ${errMsg}`;
+      }
+      window.chowApp.toast(`Upload error: ${errMsg}`, 'danger');
+    } finally {
+      if (publishBtn) {
+        publishBtn.disabled = false;
+        publishBtn.innerText = originalBtnText;
+      }
     }
-
-    // Sync under the id the item actually got in the local store. Without this
-    // the new item would post with no id, get a server-generated one, and the
-    // next edit would create a duplicate instead of updating this row.
-    this._syncMenuItemToServer(payload, serverId);
-
-    // Draft successfully published - clear saved draft
-    localStorage.removeItem('chow45_vendor_food_draft');
-    this.renderDraftsSection();
-
-    const msg = document.getElementById('vnd-success-message');
-    if (msg) msg.innerText = `"${d.name}" is now live on your Chow45 menu.`;
-
-    this.goToStep(7);
   },
 
   // ---------------------------------------------------------------

@@ -238,9 +238,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please give the item a name." }, { status: 400 });
   }
 
-  const category = String(body.category ?? "").trim().toLowerCase();
-  if (PIECE_CATEGORIES.indexOf(category) === -1 && PORTION_CATEGORIES.indexOf(category) === -1) {
-    return NextResponse.json({ error: "Unknown category." }, { status: 400 });
+  let category = String(body.category ?? "").trim().toLowerCase();
+  if (!category) category = "rice";
+
+  // Normalize common aliases & variations
+  if (category.includes("rice")) category = "rice";
+  else if (category.includes("soup")) category = "soups";
+  else if (category.includes("swallow")) category = "swallows";
+  else if (category.includes("drink") || category.includes("beverage")) category = "drinks";
+  else if (category.includes("snack") || category.includes("pastr") || category.includes("chop")) category = "snacks";
+  else if (category.includes("grill") || category.includes("bbq") || category.includes("suya")) category = "grills";
+  else if (category.includes("shawarma") || category.includes("burger")) category = "shawarma";
+  else if (PIECE_CATEGORIES.indexOf(category) === -1 && PORTION_CATEGORIES.indexOf(category) === -1) {
+    category = "others";
   }
 
   const isPiece = PIECE_CATEGORIES.indexOf(category) !== -1;
@@ -253,21 +263,26 @@ export async function POST(request: Request) {
     requestedType === "SCOOP" || requestedType === "BOTH" ? requestedType : "PLATE";
   const priceType = isPiece ? "PIECE" : portionType;
 
-  const piecePrice = toPrice(body.piecePrice);
-  const scoopPrice = toPrice(body.scoopPrice);
-  const platePrice = toPrice(body.platePrice);
+  const genericPrice = toPrice(body.price || (body as Record<string, unknown>).singlePrice);
+  let piecePrice = toPrice(body.piecePrice);
+  let scoopPrice = toPrice(body.scoopPrice);
+  let platePrice = toPrice(body.platePrice);
+
+  if (isPiece && piecePrice <= 0 && genericPrice > 0) piecePrice = genericPrice;
+  if (!isPiece && platePrice <= 0 && genericPrice > 0) platePrice = genericPrice;
+  if (!isPiece && scoopPrice <= 0 && genericPrice > 0 && priceType === "SCOOP") scoopPrice = genericPrice;
 
   if (isPiece && piecePrice <= 0) {
-    return NextResponse.json({ error: "A price per piece is required." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter a valid price per piece for this dish." }, { status: 400 });
   }
   if (!isPiece && priceType === "SCOOP" && scoopPrice <= 0) {
-    return NextResponse.json({ error: "A price per scoop is required." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter a valid price per scoop for this dish." }, { status: 400 });
   }
   if (!isPiece && priceType === "PLATE" && platePrice <= 0) {
-    return NextResponse.json({ error: "A price per plate is required." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter a valid price per plate for this dish." }, { status: 400 });
   }
   if (!isPiece && priceType === "BOTH" && scoopPrice <= 0 && platePrice <= 0) {
-    return NextResponse.json({ error: "At least one of scoop or plate is required." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter a price per scoop or plate for this dish." }, { status: 400 });
   }
 
   const existingId = readClientId(body.id);

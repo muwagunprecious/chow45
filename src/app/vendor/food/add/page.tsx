@@ -31,6 +31,8 @@ export default function AddFoodPage() {
   const [preorderNote, setPreorderNote] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
 
+  const [photoError, setPhotoError] = useState('');
+
   // Form State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -113,14 +115,88 @@ export default function AddFoodPage() {
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    setPhotoError('');
+    if (!e.target.files || !e.target.files[0]) return;
+
+    const file = e.target.files[0];
+    const fileName = file.name.toLowerCase();
+    const validExtensions = [
+      '.png', '.jpg', '.jpeg', '.webp', '.avif', '.heic', '.heif',
+      '.bmp', '.gif', '.svg', '.jfif', '.tif', '.tiff', '.ico', '.svgz'
+    ];
+    const isImageMime = file.type.startsWith('image/');
+    const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!isImageMime && !hasValidExt) {
+      setPhotoError(`The file "${file.name}" is not a recognized image format. Please select an image file (.png, .jpg, .jpeg, .webp, etc.).`);
+      return;
     }
+
+    // Max 30MB
+    if (file.size > 30 * 1024 * 1024) {
+      setPhotoError('Image file is too large (max 30MB). Please select a smaller photo.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setPhotoError('Failed to read the image file from your device. Please try again or pick another photo.');
+    };
+
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) {
+        setPhotoError('Could not process the selected image.');
+        return;
+      }
+
+      // If SVG or animated GIF, keep raw data URL to avoid rasterizing
+      if (file.type === 'image/svg+xml' || fileName.endsWith('.svg') || file.type === 'image/gif') {
+        setPhotoUrl(dataUrl);
+        return;
+      }
+
+      // Optimize/compress large images via canvas
+      const img = new Image();
+      img.onerror = () => {
+        // Fallback to raw dataUrl if canvas decoding fails for rare formats
+        setPhotoUrl(dataUrl);
+      };
+      img.onload = () => {
+        try {
+          const maxDim = 1200;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setPhotoUrl(dataUrl);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const isPng = file.type === 'image/png' || fileName.endsWith('.png');
+          const outputFormat = isPng ? 'image/png' : 'image/jpeg';
+          const compressed = canvas.toDataURL(outputFormat, isPng ? 0.88 : 0.82);
+          setPhotoUrl(compressed);
+        } catch {
+          setPhotoUrl(dataUrl);
+        }
+      };
+      img.src = dataUrl;
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const addScoop = () => setScoops([...scoops, { id: Date.now(), label: '', price: '' }]);
@@ -324,7 +400,15 @@ export default function AddFoodPage() {
           {/* Section 1: Photo */}
           <section className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <h2 className="font-display font-bold text-lg text-[#111111] mb-1">Food Photo</h2>
-            <p className="text-xs text-[#6E6D66] mb-4">Upload from your device gallery or photo files.</p>
+            <p className="text-xs text-[#6E6D66] mb-4">Upload from your device gallery or photo files. Supports all formats (PNG, JPG, WebP, AVIF, HEIC, SVG, GIF, etc.)</p>
+            
+            {photoError && (
+              <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold flex items-center justify-between">
+                <span>⚠️ {photoError}</span>
+                <button type="button" onClick={() => setPhotoError('')} className="text-red-500 hover:text-red-800 font-bold ml-2">✕</button>
+              </div>
+            )}
+
             {photoUrl ? (
               <div className="relative w-full h-52 rounded-xl overflow-hidden border border-gray-200">
                 <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -338,12 +422,17 @@ export default function AddFoodPage() {
               </div>
             ) : (
               <label className="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-[#0C513F]/20 rounded-2xl cursor-pointer bg-[#FAF6EB]/50 hover:bg-[#FAF6EB] hover:border-[#0C513F]/50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500 text-center px-4">
                   <span className="text-3xl mb-2">📸</span>
-                  <p className="text-sm font-bold text-[#0C513F]">Select photo from gallery</p>
-                  <p className="text-xs text-[#6E6D66] mt-0.5">JPG, PNG, WebP or GIF</p>
+                  <p className="text-sm font-bold text-[#0C513F]">Select photo from gallery or files</p>
+                  <p className="text-xs text-[#6E6D66] mt-1">PNG, JPG, WebP, AVIF, HEIC, GIF, SVG, BMP (any extension)</p>
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*,.png,.jpg,.jpeg,.webp,.avif,.heic,.heif,.bmp,.gif,.svg,.jfif,.tif,.tiff" 
+                  onChange={handlePhotoUpload} 
+                />
               </label>
             )}
           </section>
