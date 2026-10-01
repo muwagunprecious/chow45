@@ -1,59 +1,32 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { menuItems } from "@/db/schema/menu-items";
 import { menuItemSizes } from "@/db/schema/menu-item-sizes";
 import { menuExtras } from "@/db/schema/menu-extras";
-import { users } from "@/db/schema/users";
-import { vendors } from "@/db/schema/vendors";
-import { vendorAuth } from "@/auth";
+import { requireVendor } from "@/lib/session";
 
 /**
  * Menu items and their size variants for the signed-in vendor.
  *
- *   GET    -> the vendor's items, each with its `sizes` array
- *   POST   -> create or update one item, replacing its sizes and extras
+ *   GET    -> strictly the authenticated vendor's items (HTTP 401 if unauthenticated)
+ *   POST   -> create or update one item belonging strictly to the authenticated vendor
+ *   DELETE -> delete an item belonging strictly to the authenticated vendor
  *
- * Every read and write is scoped to the caller's own vendor row, resolved
- * from the session user id, so one vendor can never read or overwrite
- * another vendor's menu.
+ * Every read and write is strictly scoped to the caller's own vendor row, resolved
+ * from the Better Auth session user id, so one vendor can NEVER read, overwrite,
+ * or delete another vendor's menu items.
  */
 
-// Categories sold by piece. Mirrors ChowUnits.PIECE_CATEGORIES on the client;
-// sizes are only meaningful for these.
 const PIECE_CATEGORIES = ["drinks", "snacks", "grills", "shawarma", "others"];
 const PORTION_CATEGORIES = ["rice", "soups", "swallows"];
-
-async function resolveVendorId(request: Request): Promise<number | null> {
-  const session = await vendorAuth.api.getSession({ headers: request.headers });
-
-  if (!session?.user?.id) return null;
-
-  // Better Auth carries the id as a string while the column is a bigserial.
-  const userId = Number(session.user.id);
-  if (!Number.isFinite(userId)) return null;
-
-  const found = await db
-    .select({ id: vendors.id })
-    .from(vendors)
-    .innerJoin(users, eq(vendors.userId, users.id))
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return found[0]?.id ?? null;
-}
 
 function toPrice(value: unknown): number {
   const n = Math.round(Number(value));
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-/**
- * Client ids look like `dish-1756312345678-k3f9qz`. They are accepted as
- * primary keys so an edit updates the same row, but the shape is enforced so
- * a caller cannot push an arbitrary string into the key column.
- */
 function readClientId(value: unknown): string | null {
   if (typeof value !== "string") return null;
 
@@ -63,11 +36,6 @@ function readClientId(value: unknown): string | null {
   return id;
 }
 
-/**
- * Sizes are keyed by a client-generated id so the builder can keep a stable
- * handle while the vendor edits prices. Ids are reused on update; unknown ids
- * are treated as new rows.
- */
 function parseSizes(raw: unknown, menuItemId: string) {
   if (!Array.isArray(raw)) return [];
 
@@ -80,8 +48,6 @@ function parseSizes(raw: unknown, menuItemId: string) {
     const name = String((entry as Record<string, unknown>).name ?? "").trim();
     if (!name) return;
 
-    // Two sizes priced the same name would make the customer's choice
-    // meaningless, so the second one is dropped rather than shown.
     const key = name.toLowerCase();
     if (seenNames.has(key)) return;
     seenNames.add(key);
@@ -123,56 +89,21 @@ function parseExtras(raw: unknown, menuItemId: string, extraType: "REQUIRED" | "
 }
 
 export async function GET(request: Request) {
-  let vendorId = await resolveVendorId(request);
-  const url = new URL(request.url);
-  const paramId = url.searchParams.get("vendorId");
-  const paramEmail = url.searchParams.get("email");
-  const paramStoreId = url.searchParams.get("storeId");
-
-  if (vendorId === null) {
-    if (paramId && Number.isFinite(Number(paramId))) {
-      vendorId = Number(paramId);
-    } else if (paramEmail) {
-      const cleanEmail = paramEmail.trim().toLowerCase();
-      const match = await db
-        .select({ id: vendors.id })
-        .from(vendors)
-        .where(sql`LOWER(${vendors.contactEmail}) = ${cleanEmail}`)
-        .limit(1);
-      if (match[0]?.id) {
-        vendorId = match[0].id;
-      } else {
-        // Also check if user with this email has a linked vendor
-        const userMatch = await db
-          .select({ id: vendors.id })
-          .from(vendors)
-          .innerJoin(users, eq(vendors.userId, users.id))
-          .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
-          .limit(1);
-        if (userMatch[0]?.id) vendorId = userMatch[0].id;
-      }
-    } else if (paramStoreId) {
-      const match = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.storeId, paramStoreId)).limit(1);
-      if (match[0]?.id) vendorId = match[0].id;
-    } else {
-      const first = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.status, "approved")).limit(1);
-      vendorId = first[0]?.id ?? null;
-    }
+  const auth = await requireVendor(request);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { error: auth.error, message: "Unauthorized. Please sign in as a vendor to view your menu." },
+      { status: auth.status }
+    );
   }
 
-  let items;
-  if (vendorId !== null) {
-    items = await db
-      .select()
-      .from(menuItems)
-      .where(eq(menuItems.vendorId, vendorId))
-      .orderBy(asc(menuItems.createdAt));
-  } else {
-    items = await db
-      .select()
-      .from(menuItems)
-      .orderBy(asc(menuItems.createdAt));
-  }
+  const vendorId = auth.vendor.id;
+
+  const items = await db
+    .select()
+    .from(menuItems)
+    .where(eq(menuItems.vendorId, vendorId))
+    .orderBy(asc(menuItems.createdAt));
 
   if (items.length === 0) {
     return NextResponse.json({ items: [], sizes: [], extras: [] });
@@ -206,203 +137,22 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireVendor(request);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
+      { status: auth.status }
+    );
+  }
+
+  const vendorId = auth.vendor.id;
+
   try {
     let body: Record<string, unknown>;
     try {
       body = (await request.json()) as Record<string, unknown>;
     } catch {
       return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-    }
-
-    let vendorId = await resolveVendorId(request);
-    const emailCandidate = String(body.email || body.vendorEmail || "").trim().toLowerCase();
-    const rawVendorId = body.vendorId !== undefined && body.vendorId !== null ? Number(body.vendorId) : null;
-
-    // 1. Explicit vendorId provided
-    if (vendorId === null && rawVendorId !== null && Number.isFinite(rawVendorId)) {
-      if (rawVendorId > 0) {
-        const check = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.id, rawVendorId)).limit(1);
-        if (check[0]?.id) vendorId = check[0].id;
-      } else if (rawVendorId < 0) {
-        // Negative ID represents an orphan user vendor where ID is -userId
-        const targetUserId = -rawVendorId;
-        const checkUserVendor = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.userId, targetUserId)).limit(1);
-        if (checkUserVendor[0]?.id) {
-          vendorId = checkUserVendor[0].id;
-        } else {
-          const userRow = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
-          if (userRow[0]) {
-            const u = userRow[0];
-            const bName = String(body.vendorName || u.name || u.email.split("@")[0]);
-            const baseSlug = bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30) || "store";
-            const sId = String(body.storeId || `rest-${baseSlug}-${Date.now().toString(36)}`);
-            const slug = `${baseSlug}-${Date.now().toString(36)}`;
-            const [newVnd] = await db
-              .insert(vendors)
-              .values({
-                businessName: bName,
-                slug,
-                contactEmail: u.email,
-                ownerPhone: u.phone || null,
-                status: "approved",
-                storeId: sId,
-                userId: u.id,
-                address: "Hospital Road, Sagamu, Ogun State",
-              })
-              .returning({ id: vendors.id });
-            vendorId = newVnd.id;
-          }
-        }
-      }
-    }
-
-    // 2. Email candidate provided (match by contactEmail or users.email)
-    if (vendorId === null && emailCandidate && emailCandidate.includes("@")) {
-      const matchedVendor = await db
-        .select({ id: vendors.id })
-        .from(vendors)
-        .where(sql`LOWER(${vendors.contactEmail}) = ${emailCandidate}`)
-        .limit(1);
-
-      if (matchedVendor[0]?.id) {
-        vendorId = matchedVendor[0].id;
-      } else {
-        // Look up user by email
-        const matchedUser = await db
-          .select({ id: users.id, name: users.name, phone: users.phone })
-          .from(users)
-          .where(sql`LOWER(${users.email}) = ${emailCandidate}`)
-          .limit(1);
-
-        if (matchedUser[0]?.id) {
-          const userVendor = await db
-            .select({ id: vendors.id })
-            .from(vendors)
-            .where(eq(vendors.userId, matchedUser[0].id))
-            .limit(1);
-
-          if (userVendor[0]?.id) {
-            vendorId = userVendor[0].id;
-          } else {
-            const bName = String(body.vendorName || body.storeName || matchedUser[0].name || emailCandidate.split("@")[0]);
-            const baseSlug = bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30) || "store";
-            const sId = String(body.storeId || `rest-${baseSlug}-${Date.now().toString(36)}`);
-            const slug = `${baseSlug}-${Date.now().toString(36)}`;
-
-            const [newVnd] = await db
-              .insert(vendors)
-              .values({
-                businessName: bName,
-                slug,
-                contactEmail: emailCandidate,
-                ownerPhone: matchedUser[0].phone || null,
-                status: "approved",
-                storeId: sId,
-                userId: matchedUser[0].id,
-                address: "Hospital Road, Sagamu, Ogun State",
-              })
-              .returning({ id: vendors.id });
-            vendorId = newVnd.id;
-          }
-        }
-      }
-    }
-
-    // 3. Match by storeId
-    if (vendorId === null && body.storeId) {
-      const matched = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.storeId, String(body.storeId))).limit(1);
-      if (matched[0]?.id) vendorId = matched[0].id;
-    }
-
-    // 4. Match by vendorName
-    if (vendorId === null && body.vendorName) {
-      const matched = await db
-        .select({ id: vendors.id })
-        .from(vendors)
-        .where(sql`LOWER(${vendors.businessName}) = ${String(body.vendorName).trim().toLowerCase()}`)
-        .limit(1);
-      if (matched[0]?.id) vendorId = matched[0].id;
-    }
-
-    // 5. If still null and email candidate exists, check user & vendor safely
-    if (vendorId === null && emailCandidate && emailCandidate.includes("@")) {
-      let targetUserId: number | null = null;
-      let targetUserPhone: string | null = null;
-
-      const existingUser = await db
-        .select({ id: users.id, phone: users.phone })
-        .from(users)
-        .where(sql`LOWER(${users.email}) = ${emailCandidate}`)
-        .limit(1);
-
-      if (existingUser[0]) {
-        targetUserId = existingUser[0].id;
-        targetUserPhone = existingUser[0].phone || null;
-      } else {
-        const bName = String(body.storeName || body.vendorName || emailCandidate.split("@")[0]);
-        const [createdUser] = await db
-          .insert(users)
-          .values({
-            email: emailCandidate,
-            name: bName,
-            username: (emailCandidate.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") + Math.random().toString(36).slice(2, 6)).slice(0, 45),
-            refCode: ("RF" + Date.now().toString(36).slice(-6)).toUpperCase(),
-            publicId: ("pub_" + Date.now().toString(36).slice(-8)),
-            role: "VENDOR",
-            emailVerified: true,
-          })
-          .onConflictDoUpdate({
-            target: users.email,
-            set: { role: "VENDOR", emailVerified: true },
-          })
-          .returning({ id: users.id });
-        targetUserId = createdUser?.id ?? null;
-      }
-
-      if (targetUserId) {
-        const checkExistingVendor = await db
-          .select({ id: vendors.id })
-          .from(vendors)
-          .where(eq(vendors.userId, targetUserId))
-          .limit(1);
-
-        if (checkExistingVendor[0]?.id) {
-          vendorId = checkExistingVendor[0].id;
-        } else {
-          const bName = String(body.storeName || body.vendorName || emailCandidate.split("@")[0]);
-          const baseSlug = bName.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30) || "store";
-          const sId = String(body.storeId || `rest-${baseSlug}-${Date.now().toString(36)}`);
-          const slug = `${baseSlug}-${Date.now().toString(36)}`;
-
-          const [createdVendor] = await db
-            .insert(vendors)
-            .values({
-              businessName: bName,
-              slug,
-              contactEmail: emailCandidate,
-              ownerPhone: targetUserPhone,
-              status: "approved",
-              storeId: sId,
-              userId: targetUserId,
-              address: "Hospital Road, Sagamu, Ogun State",
-            })
-            .returning({ id: vendors.id });
-          vendorId = createdVendor.id;
-        }
-      }
-    }
-
-    // 6. Absolute fallback if no identifier provided at all
-    if (vendorId === null) {
-      const first = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.status, "approved")).limit(1);
-      vendorId = first[0]?.id ?? null;
-    }
-
-    if (vendorId === null) {
-      return NextResponse.json(
-        { error: "Could not find or assign a valid vendor store for this dish. Please select a valid vendor." },
-        { status: 400 }
-      );
     }
 
     const name = String(body.name ?? "").trim();
@@ -413,7 +163,6 @@ export async function POST(request: Request) {
     let category = String(body.category ?? "").trim().toLowerCase();
     if (!category) category = "rice";
 
-    // Normalize common aliases & variations
     if (category.includes("rice")) category = "rice";
     else if (category.includes("soup")) category = "soups";
     else if (category.includes("swallow")) category = "swallows";
@@ -427,7 +176,6 @@ export async function POST(request: Request) {
 
     const isPiece = PIECE_CATEGORIES.indexOf(category) !== -1;
 
-    // Force the price type to match the category
     const requestedType = String(body.priceType ?? "").toUpperCase();
     const portionType =
       requestedType === "SCOOP" || requestedType === "BOTH" ? requestedType : "PLATE";
@@ -459,32 +207,24 @@ export async function POST(request: Request) {
     let updating = false;
 
     if (existingId) {
-      const owned = await db
-        .select({ id: menuItems.id })
+      const existingItem = await db
+        .select({ id: menuItems.id, vendorId: menuItems.vendorId })
         .from(menuItems)
-        .where(and(eq(menuItems.id, existingId), eq(menuItems.vendorId, vendorId)))
+        .where(eq(menuItems.id, existingId))
         .limit(1);
 
-      if (owned.length > 0) {
-        updating = true;
-      } else {
-        const taken = await db
-          .select({ id: menuItems.id })
-          .from(menuItems)
-          .where(eq(menuItems.id, existingId))
-          .limit(1);
-
-        if (taken.length > 0) {
+      if (existingItem.length > 0) {
+        if (existingItem[0].vendorId !== vendorId) {
           return NextResponse.json(
-            { error: "That item id belongs to another vendor." },
-            { status: 409 }
+            { error: "FORBIDDEN", message: "You cannot modify food belonging to another vendor." },
+            { status: 403 }
           );
         }
+        updating = true;
       }
     }
 
-    // Compute effective price for the generic `price` column used for display/sorting
-    const effectivePrice = isPiece ? piecePrice : (priceType === 'SCOOP' ? scoopPrice : platePrice) || 0;
+    const effectivePrice = isPiece ? piecePrice : (priceType === "SCOOP" ? scoopPrice : platePrice) || 0;
     const finalStatus = typeof body.status === "string" ? String(body.status) : "available";
     const finalPublished = finalStatus === "available" || body.isPublished === true;
 
@@ -533,7 +273,6 @@ export async function POST(request: Request) {
 
     const itemId = saved.id;
 
-    // Sizes and extras are replaced wholesale
     const newSizes = isPiece ? parseSizes(body.sizes, itemId) : [];
 
     await db.delete(menuItemSizes).where(eq(menuItemSizes.menuItemId, itemId));
@@ -558,4 +297,53 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  const auth = await requireVendor(request);
+  if (!auth.ok) {
+    return NextResponse.json(
+      { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
+      { status: auth.status }
+    );
+  }
+
+  const vendorId = auth.vendor.id;
+
+  const url = new URL(request.url);
+  let id = url.searchParams.get("id");
+  if (!id) {
+    const body = await request.json().catch(() => ({}));
+    id = (body as Record<string, unknown>)?.id as string;
+  }
+
+  const itemId = readClientId(id);
+  if (!itemId) {
+    return NextResponse.json({ error: "Invalid item ID." }, { status: 400 });
+  }
+
+  const existing = await db
+    .select({ id: menuItems.id, vendorId: menuItems.vendorId })
+    .from(menuItems)
+    .where(eq(menuItems.id, itemId))
+    .limit(1);
+
+  if (existing.length === 0) {
+    return NextResponse.json({ error: "Item not found." }, { status: 404 });
+  }
+
+  if (existing[0].vendorId !== vendorId) {
+    return NextResponse.json(
+      { error: "FORBIDDEN", message: "You cannot delete food belonging to another vendor." },
+      { status: 403 }
+    );
+  }
+
+  await db.delete(menuItemSizes).where(eq(menuItemSizes.menuItemId, itemId));
+  await db.delete(menuExtras).where(eq(menuExtras.menuItemId, itemId));
+  await db
+    .delete(menuItems)
+    .where(and(eq(menuItems.id, itemId), eq(menuItems.vendorId, vendorId)));
+
+  return NextResponse.json({ success: true, message: "Menu item deleted successfully." });
 }

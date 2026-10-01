@@ -1,4 +1,7 @@
 import { userAuth, vendorAuth } from "@/auth";
+import { db } from "@/db";
+import { vendors } from "@/db/schema/vendors";
+import { eq } from "drizzle-orm";
 
 /**
  * The session shape `getSession` resolves to. Derived from the auth instance
@@ -44,3 +47,63 @@ export async function currentRole(request: Request): Promise<string | null> {
   const session = await userAuth.api.getSession({ headers: request.headers });
   return session?.user?.role ?? null;
 }
+
+export interface AuthenticatedVendorContext {
+  ok: true;
+  userId: number;
+  user: SessionUser;
+  vendor: typeof vendors.$inferSelect;
+}
+
+export interface FailedVendorContext {
+  ok: false;
+  status: 401 | 403;
+  error: string;
+}
+
+export type VendorAuthResult = AuthenticatedVendorContext | FailedVendorContext;
+
+/**
+ * Strict server-side vendor guard.
+ *
+ * 1. Verifies the caller's Better Auth session from request headers/cookies.
+ * 2. Enforces that the user has the VENDOR role.
+ * 3. Resolves the database vendor row belonging to that authenticated user ID.
+ * 4. Fails with 401 (unauthenticated) or 403 (unauthorized/forbidden).
+ *
+ * Never trusts any client-supplied vendorId, userId, or email.
+ */
+export async function requireVendor(request: Request): Promise<VendorAuthResult> {
+  const session = await vendorAuth.api.getSession({ headers: request.headers });
+  if (!session?.user?.id) {
+    return { ok: false, status: 401, error: "UNAUTHORIZED" };
+  }
+
+  const userId = Number(session.user.id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return { ok: false, status: 401, error: "UNAUTHORIZED" };
+  }
+
+  if (session.user.role !== "VENDOR") {
+    return { ok: false, status: 403, error: "FORBIDDEN_NOT_VENDOR" };
+  }
+
+  const found = await db
+    .select()
+    .from(vendors)
+    .where(eq(vendors.userId, userId))
+    .limit(1);
+
+  const vendor = found[0];
+  if (!vendor) {
+    return { ok: false, status: 403, error: "VENDOR_PROFILE_NOT_FOUND" };
+  }
+
+  return {
+    ok: true,
+    userId,
+    user: session.user,
+    vendor,
+  };
+}
+

@@ -208,17 +208,16 @@ const VendorController = {
   // Store resolution & onboarding gating
   // ---------------------------------------------------------------
   getOnboarding() {
-    return window.chowStore.state.vendorOnboarding || { status: 'approved', storeId: 'rest-mama-t' };
+    return window.chowStore.state.vendorOnboarding || null;
   },
 
   /**
    * The store the signed-in vendor is looking at.
    *
-   * Only ever their own store. There is deliberately no "fall back to the first
-   * restaurant in the seed list" branch: that handed the vendor Mama T's
-   * Kitchen, so someone signing up saw another business's name, address and
-   * hours. With no store of their own the dashboard renders an empty profile
-   * rather than sample data.
+   * Only ever their own store. There is deliberately NO fallback to the first
+   * restaurant in the list: that handed the vendor another restaurant's dishes
+   * and store info. With no store of their own yet, the dashboard renders an empty
+   * store rather than another vendor's data.
    */
   getStore() {
     const ob = this.getOnboarding();
@@ -243,7 +242,7 @@ const VendorController = {
       );
       if (found) return found;
 
-      // User is signed in as a vendor with their own email! Synthesize their own store
+      // User is signed in as a vendor with their own email: synthesize their own store
       const storeId = userProfile?.storeId || ob?.storeId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
       const storeName = userProfile?.name || ob?.storeName || (cleanEmail.split('@')[0] + "'s Kitchen");
       const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
@@ -279,37 +278,8 @@ const VendorController = {
       if (found) return found;
     }
 
-    // 4. If any restaurant exists in chowStore, and no user email is set:
-    if (restaurants.length > 0) {
-      return restaurants[0];
-    }
-
-    // 5. If restaurants list is empty, synthesize a store for the vendor so they are NEVER blocked!
-    const storeId = targetStoreId || ('rest-' + Date.now());
-    const storeName = userProfile?.name || ob?.storeName || 'My Restaurant';
-    const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
-    const newStore = {
-      id: storeId,
-      name: storeName,
-      address: storeAddr,
-      email: vendorEmail || '',
-      phone: userProfile?.phone || ob?.phone || '',
-      bannerImg: '',
-      openingTime: '08:00',
-      closingTime: '21:00',
-      isOpen: true,
-      menu: []
-    };
-    if (window.chowStore?.state) {
-      if (!window.chowStore.state.restaurants) window.chowStore.state.restaurants = [];
-      window.chowStore.state.restaurants.push(newStore);
-      if (window.chowStore.state.vendorOnboarding) {
-        window.chowStore.state.vendorOnboarding.storeId = storeId;
-        window.chowStore.state.vendorOnboarding.status = 'approved';
-      }
-      window.chowStore.save();
-    }
-    return newStore;
+    // 4. If no user or store is resolved, return empty store — NEVER fallback to another vendor's store!
+    return null;
   },
 
   /**
@@ -422,32 +392,32 @@ const VendorController = {
       const store = this.getStore();
       if (!store) return;
 
-      const userProfile = window.chowStore?.state?.userProfile;
-      const email = userProfile?.email || store.email || '';
-      const storeId = store.id || '';
-
-      const res = await fetch(`/api/vendor/menu-items?storeId=${encodeURIComponent(storeId)}&email=${encodeURIComponent(email)}`, {
+      const res = await fetch('/api/vendor/menu-items', {
         cache: 'no-store',
         credentials: 'include'
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          // Unauthenticated or not a vendor
+          return;
+        }
+        return;
+      }
+
       const data = await res.json();
       const serverItems = Array.isArray(data.items) ? data.items : [];
       const serverSizes = Array.isArray(data.sizes) ? data.sizes : [];
       const serverExtras = Array.isArray(data.extras) ? data.extras : [];
 
-      if (!serverItems.length) return;
-
-      if (!Array.isArray(store.menu)) store.menu = [];
-
-      serverItems.forEach(item => {
+      // STRICT DATA ISOLATION: store.menu contains ONLY items belonging to this vendor
+      const clientDishes = serverItems.map(item => {
         const itemSizes = serverSizes.filter(s => s.menuItemId === item.id);
         const itemExtras = serverExtras.filter(e => e.menuItemId === item.id);
         const compExtras = itemExtras.filter(e => e.extraType === 'REQUIRED');
         const optExtras = itemExtras.filter(e => e.extraType === 'OPTIONAL');
 
-        const clientDish = {
+        return {
           id: item.id,
           dishId: item.id,
           name: item.name,
@@ -469,14 +439,9 @@ const VendorController = {
           preorderDate: item.preorderDate || '',
           preorderTime: item.preorderTime || '12:00'
         };
-
-        const existingIdx = store.menu.findIndex(d => d.id === item.id || (d.name && d.name.toLowerCase() === item.name.toLowerCase()));
-        if (existingIdx >= 0) {
-          store.menu[existingIdx] = Object.assign({}, store.menu[existingIdx], clientDish);
-        } else {
-          store.menu.push(clientDish);
-        }
       });
+
+      store.menu = clientDishes;
 
       if (window.chowStore) {
         window.chowStore.save();

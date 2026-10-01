@@ -106,6 +106,15 @@ function createAuth(role: Role) {
         baseURL: process.env.NEXT_PUBLIC_APP_URL,
 
         /**
+         * Trusted origins for CSRF validation.
+         */
+        trustedOrigins: [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            process.env.NEXT_PUBLIC_APP_URL,
+        ].filter(Boolean) as string[],
+
+        /**
          * Secret used by Better Auth for signing/encrypting
          * authentication-related data.
          */

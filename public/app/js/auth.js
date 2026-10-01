@@ -507,10 +507,14 @@ const Chow45Auth = {
       });
 
       if (!res.ok) {
-        let message = 'Incorrect email or password. Please try again.';
+        let message = 'Incorrect password. Please try again.';
         try {
           const body = await res.json();
-          if (body?.message && !/invalid/i.test(body.message)) message = body.message;
+          if (body?.error === 'INVALID_CREDENTIALS') {
+            message = 'Incorrect password. Please try again.';
+          } else if (body?.message && !/invalid/i.test(body.message)) {
+            message = body.message;
+          }
         } catch { /* keep the default message */ }
         this.showAlert('password', message, { inlineOnly: true });
         return;

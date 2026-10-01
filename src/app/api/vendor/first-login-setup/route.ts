@@ -29,21 +29,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // If session is absent from cookie, check if email is tolaniakin2022@gmail.com
-    if (userId === null) {
-      const email = String(body.email ?? "").trim().toLowerCase();
-      if (email === "tolaniakin2022@gmail.com") {
-        const foundUser = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(sql`LOWER(${users.email}) = 'tolaniakin2022@gmail.com'`)
-          .limit(1);
-        if (foundUser.length > 0) {
-          userId = foundUser[0].id;
-        }
-      }
-    }
-
     if (userId === null) {
       return NextResponse.json(
         { error: "Unauthorized. Please sign in first." },
