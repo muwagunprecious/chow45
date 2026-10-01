@@ -1516,17 +1516,19 @@ const Chow45Auth = {
     // STRICT: Only for this email!
     if (email !== 'tolaniakin2022@gmail.com') return;
 
-    // STRICT: Only once! Check local storage
-    if (localStorage.getItem('chow45_first_setup_done_tolaniakin2022@gmail.com') === 'true') {
-      return;
-    }
-
-    // Check tags from profile
+    // Check tags from profile / database
     const tags = profile?.tags || serverData?.vendor?.tags || [];
     if (Array.isArray(tags) && tags.includes('first_time_setup_done')) {
       localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
       return;
     }
+
+    if (serverData && serverData.requiresFirstTimeSetup === false) {
+      return;
+    }
+
+    // Server requires setup or setup not done in DB: clear stale local storage flag
+    localStorage.removeItem('chow45_first_setup_done_tolaniakin2022@gmail.com');
 
     const modal = document.getElementById('vendor-first-setup-modal');
     if (!modal) return;
