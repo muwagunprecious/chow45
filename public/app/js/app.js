@@ -46,6 +46,8 @@ const Chow45App = {
 
     if (initialRole && ['customer', 'vendor', 'rider', 'admin'].includes(initialRole)) {
       this.switchRole(initialRole);
+    } else {
+      this.updateRoleUI(window.chowStore.state.currentRole || 'customer');
     }
 
     if (pathname.includes('/food') || urlParams.get('tab') === 'food') {
@@ -105,9 +107,12 @@ const Chow45App = {
     if (window.chowStore && window.chowStore.setRole) {
       window.chowStore.setRole(roleName);
     }
+    this.updateRoleUI(roleName);
   },
 
   updateRoleUI(role) {
+    if (!role) role = 'customer';
+
     // Update role bar buttons
     document.querySelectorAll('.role-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.role === role);
@@ -125,7 +130,7 @@ const Chow45App = {
     });
 
     // Vendor bars highlight the sub-tab that is currently open.
-    const activeSubTab = window.VendorController && window.VendorController.activeSubTab;
+    const activeSubTab = (window.VendorController && window.VendorController.activeSubTab) || 'food';
     document.querySelectorAll('[data-vendor-tab]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.vendorTab === activeSubTab);
     });

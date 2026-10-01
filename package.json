@@ -13,6 +13,7 @@
   "dependencies": {
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
+    "@sentry/nextjs": "^11.2.0",
     "@upstash/qstash": "^2.11.3",
     "@upstash/redis": "^1.39.0",
     "better-auth": "^1.7.5",

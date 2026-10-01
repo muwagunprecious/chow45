@@ -187,6 +187,9 @@ export function MarketplaceView({
           // Apply requested role
           if (initialRole) {
             window.Chow45App.switchRole(initialRole);
+            if (window.Chow45App.updateRoleUI) {
+              window.Chow45App.updateRoleUI(initialRole);
+            }
           }
 
           // Apply requested sub-tab if role is vendor
@@ -242,6 +245,29 @@ export function MarketplaceView({
         <style>{`
           #view-customer { display: none !important; }
           #view-vendor { display: block !important; }
+          .bottom-nav[data-nav-for="customer"] { display: none !important; }
+          @media (max-width: 768px) {
+            .bottom-nav[data-nav-for="vendor"] { display: flex !important; }
+          }
+          @media (min-width: 769px) {
+            .bottom-nav { display: none !important; }
+            .vendor-topnav[data-nav-for="vendor"] { display: flex !important; }
+          }
+        `}</style>
+      )}
+
+      {/* When entering directly as customer, ensure customer nav displays and vendor nav is hidden */}
+      {initialRole === 'customer' && (
+        <style>{`
+          #view-vendor { display: none !important; }
+          .bottom-nav[data-nav-for="vendor"] { display: none !important; }
+          .vendor-topnav[data-nav-for="vendor"] { display: none !important; }
+          @media (max-width: 768px) {
+            .bottom-nav[data-nav-for="customer"] { display: flex !important; }
+          }
+          @media (min-width: 769px) {
+            .bottom-nav { display: none !important; }
+          }
         `}</style>
       )}
 
