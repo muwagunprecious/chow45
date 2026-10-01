@@ -965,7 +965,7 @@ export default function AdminDashboardPage() {
                 </button>
 
                 <Link
-                  href="/vendor/food/add"
+                  href="/vendor/food/add?from=admin"
                   className="px-5 py-2.5 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-full text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_4px_14px_rgba(12,81,63,0.18)]"
                 >
                   <svg className="w-3.5 h-3.5 text-[#FFC928]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1221,7 +1221,7 @@ export default function AdminDashboardPage() {
                                   </button>
                                 ) : (
                                   <Link
-                                    href="/vendor/food/add"
+                                    href={`/vendor/food/add?vendorId=${vendor.id}&from=admin`}
                                     className="px-3 py-1.5 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-lg text-xs font-bold transition-all shadow-sm"
                                   >
                                     + Add Food
@@ -1272,7 +1272,7 @@ export default function AdminDashboardPage() {
                 </button>
 
                 <Link
-                  href="/vendor/food/add"
+                  href="/vendor/food/add?from=admin"
                   className="px-5 py-2.5 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-full text-xs font-extrabold flex items-center gap-2 transition-all shadow-[0_4px_14px_rgba(12,81,63,0.18)]"
                 >
                   <svg className="w-3.5 h-3.5 text-[#FFC928]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1502,7 +1502,7 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Link
-                    href="/vendor/food/add"
+                    href="/vendor/food/add?from=admin"
                     className="w-full sm:w-auto px-6 py-3 bg-[#0C513F] hover:bg-[#073B2E] text-white font-extrabold text-xs rounded-full transition-all shadow-[0_4px_14px_rgba(12,81,63,0.18)]"
                   >
                     + Upload Food As Vendor

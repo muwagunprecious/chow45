@@ -101,15 +101,46 @@ export default function AddFoodPage() {
     return () => clearTimeout(timer);
   }, [name, description, category, priceType, singlePrice, scoops, compulsoryGroups, optionalExtras, photoUrl, isPreorder, preorderNote, isAvailable]);
 
-  // Fetch real vendors on load and auto-select matching logged-in vendor
+  const [isAdminFlow, setIsAdminFlow] = useState(false);
+
+  // Fetch real vendors on load and auto-select matching logged-in vendor or URL parameter
   useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const isFromAdmin = params.get('from') === 'admin' || sessionStorage.getItem('chow45_admin_auth') === 'true';
+      if (isFromAdmin) setIsAdminFlow(true);
+    } catch {}
+
     fetch('/api/admin/foods')
       .then((res) => res.json())
       .then((data) => {
         if (data.vendors && data.vendors.length > 0) {
           setVendorsList(data.vendors);
 
-          // Check if user is currently signed in
+          // 1. Check if vendorId is specified in URL query parameters (e.g. from /admin)
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const queryVendorId = params.get('vendorId');
+            if (queryVendorId && Number.isFinite(Number(queryVendorId))) {
+              const numId = Number(queryVendorId);
+              const matchedFromQuery = data.vendors.find((v: any) => v.id === numId);
+              if (matchedFromQuery) {
+                setSelectedVendorId(matchedFromQuery.id);
+                return;
+              }
+            }
+
+            const queryEmail = params.get('email')?.toLowerCase();
+            if (queryEmail) {
+              const matchedEmail = data.vendors.find((v: any) => v.contactEmail?.toLowerCase() === queryEmail);
+              if (matchedEmail) {
+                setSelectedVendorId(matchedEmail.id);
+                return;
+              }
+            }
+          } catch {}
+
+          // 2. Check if user is currently signed in as a vendor in localStorage
           try {
             const rawSession = localStorage.getItem('chow45_auth_session_v1');
             if (rawSession) {
@@ -181,7 +212,7 @@ export default function AddFoodPage() {
       };
       img.onload = () => {
         try {
-          const maxDim = 1200;
+          const maxDim = 900;
           let w = img.width;
           let h = img.height;
           if (w > maxDim || h > maxDim) {
@@ -201,10 +232,12 @@ export default function AddFoodPage() {
             setPhotoUrl(dataUrl);
             return;
           }
+          // Fill background white so transparent images don't turn black in JPEG
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
           ctx.drawImage(img, 0, 0, w, h);
-          const isPng = file.type === 'image/png' || fileName.endsWith('.png');
-          const outputFormat = isPng ? 'image/png' : 'image/jpeg';
-          const compressed = canvas.toDataURL(outputFormat, isPng ? 0.88 : 0.82);
+          // High-efficiency JPEG compression (~80-120KB output)
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
           setPhotoUrl(compressed);
         } catch {
           setPhotoUrl(dataUrl);
@@ -303,10 +336,12 @@ export default function AddFoodPage() {
           piecePrice: isPiece ? numPlatePrice : null,
           imageUrl: photoUrl || null,
           vendorId: selectedVendorId,
+          storeId: (selectedVendor as any)?.storeId || undefined,
           vendorName: selectedVendor?.businessName || undefined,
           email: (selectedVendor as any)?.contactEmail || undefined,
           vendorEmail: (selectedVendor as any)?.contactEmail || undefined,
           status: isAvailable ? 'available' : 'out_of_stock',
+          isPublished: isAvailable,
           preorderEnabled: isPreorder,
           preorderDate: isPreorder ? preorderNote : null,
           compulsoryExtras: flatCompulsoryExtras,
@@ -314,15 +349,28 @@ export default function AddFoodPage() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save food item');
+      let data: any = {};
+      const responseText = await res.text();
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { error: responseText || `Server responded with status ${res.status}` };
       }
 
-      alert('Food item submitted successfully! It is now live on your Chow45 vendor menu.');
+      if (!res.ok) {
+        throw new Error(data.error || `Server error (${res.status}): Failed to save food item.`);
+      }
+
+      const targetVendorName = selectedVendor?.businessName || 'the vendor';
+      alert(`Food item submitted successfully for ${targetVendorName}! It is now live on Chow45.`);
       localStorage.removeItem('chow45_vendor_add_food_page_draft');
       localStorage.removeItem('chow45_vendor_food_draft');
-      router.push('/vendor');
+
+      if (isAdminFlow) {
+        router.push('/admin');
+      } else {
+        router.push('/vendor');
+      }
     } catch (err: any) {
       setSubmitError(err.message || 'Error saving food item');
     } finally {
@@ -346,16 +394,16 @@ export default function AddFoodPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Link href="/vendor" className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
+            <Link href={isAdminFlow ? "/admin" : "/vendor"} className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
             <div>
               <h1 className="font-display font-extrabold text-2xl text-[#111111]">Upload Vendor Food</h1>
-              <p className="text-xs text-[#6E6D66]">Submits dishes directly to your Chow45 vendor menu</p>
+              <p className="text-xs text-[#6E6D66]">{isAdminFlow ? 'Upload food items directly for any vendor store' : 'Submits dishes directly to your Chow45 vendor menu'}</p>
             </div>
           </div>
-          <Link href="/vendor" className="text-xs font-semibold text-[#0C513F] hover:underline">
-            Vendor Dashboard →
+          <Link href={isAdminFlow ? "/admin" : "/vendor"} className="text-xs font-semibold text-[#0C513F] hover:underline">
+            {isAdminFlow ? '← Back to Admin' : 'Vendor Dashboard →'}
           </Link>
         </div>
 
@@ -412,9 +460,9 @@ export default function AddFoodPage() {
               className="w-full bg-[#FAF6EB] border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#0C513F]/20 focus:border-[#0C513F] outline-none font-semibold text-sm"
               required
             >
-              {vendorsList.map((v) => (
+              {vendorsList.map((v: any) => (
                 <option key={v.id} value={v.id}>
-                  {v.businessName || `Vendor #${v.id}`}
+                  {v.businessName || `Vendor #${v.id}`} {v.contactEmail ? `(${v.contactEmail})` : ''}
                 </option>
               ))}
             </select>
