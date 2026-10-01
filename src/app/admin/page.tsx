@@ -433,11 +433,11 @@ export default function AdminDashboardPage() {
       <div className="min-h-screen bg-[#FFFDF6] text-[#111111] flex items-center justify-center p-4 font-sans">
         <div className="w-full max-w-md bg-white border border-[#0C513F]/15 rounded-3xl p-8 shadow-[0_12px_40px_rgba(12,81,63,0.08)]">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-[#0C513F] flex items-center justify-center font-extrabold text-xl text-[#FFC928] shadow-md shadow-[#0C513F]/20">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-              </svg>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Chow45 Logo"
+              className="w-12 h-12 rounded-2xl bg-white object-contain p-1 border border-[#0C513F]/20 shadow-md shadow-[#0C513F]/10"
+            />
             <div>
               <h1 className="text-2xl font-extrabold text-[#111111] tracking-tight">
                 Chow<span className="text-[#0C513F]">45</span>
@@ -512,11 +512,11 @@ export default function AdminDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-2xl bg-[#0C513F] flex items-center justify-center font-extrabold text-lg text-[#FFC928] shadow-[0_4px_12px_rgba(12,81,63,0.2)]">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                </svg>
-              </div>
+              <img
+                src="/logo.png"
+                alt="Chow45 Logo"
+                className="w-10 h-10 rounded-2xl bg-white object-contain p-1 border border-[#0C513F]/20 shadow-[0_4px_12px_rgba(12,81,63,0.15)]"
+              />
               <div>
                 <span className="text-xl font-extrabold text-[#111111] tracking-tight block leading-tight">
                   Chow<span className="text-[#0C513F]">45</span>

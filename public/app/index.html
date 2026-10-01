@@ -17,6 +17,7 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
 
   <!-- Chow45 Design System & Role Styles -->
+  <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="stylesheet" href="/app/css/tokens.css?v=20260921b" />
   <link rel="stylesheet" href="/app/css/layout.css?v=20260921b" />
   <link rel="stylesheet" href="/app/css/marketplace.css?v=20260921b" />
@@ -34,7 +35,8 @@
     <header class="top-nav">
       <div class="top-nav-inner">
         <!-- Brand Badge -->
-        <a href="/app" class="brand-badge" title="Chow45 Marketplace">
+        <a href="/app" class="brand-badge" title="Chow45 Marketplace" style="display: inline-flex; align-items: center; gap: 8px;">
+          <img src="/logo.png" alt="Chow45" style="height: 28px; width: 28px; object-fit: contain; border-radius: 6px;" />
           <span>CHOW45</span>
           <span class="badge-tag">Marketplace</span>
         </a>
@@ -255,6 +257,9 @@
               <button class="vnd-topnav-btn" data-vendor-tab="money" onclick="VendorController.switchSubTab('money')">
                 <span aria-hidden="true">💰</span> Earnings
               </button>
+              <button class="vnd-topnav-btn vnd-topnav-logout" onclick="Chow45Auth.openAccountModal()" title="My Profile & Logout" style="margin-left: auto;">
+                <span aria-hidden="true">👤</span> Profile &amp; Logout
+              </button>
             </nav>
 
             <!-- SUB-TAB 1: FOOD (Primary & Star Screen - Points 1 & 2) -->
@@ -358,7 +363,7 @@
             <!-- SUB-TAB 5: STORE (profile, open/close toggle & settings) -->
             <div id="vnd-tab-pane-store" class="vnd-tab-pane">
               <div class="vendor-store-banner">
-                <div class="vendor-profile-info">
+                <div class="vendor-profile-info" onclick="Chow45Auth.openAccountModal()" style="cursor: pointer;" title="Click to view profile & logout">
                   <img id="vendor-store-avatar" class="vendor-avatar" src="" alt="Store" />
                   <div>
                     <h2 id="vendor-store-name" class="vendor-title">Your Store</h2>
@@ -403,7 +408,12 @@
                 </div>
                 <div class="vnd-store-details-wrap">
                   <p class="vnd-muted" style="margin-bottom: 14px;">Keep your restaurant details and delivery pickup point up to date.</p>
-                  <button class="vendor-register-link" onclick="VendorController.openRegistrationModal()">Register New Store +</button>
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="vendor-register-link" onclick="VendorController.openRegistrationModal()">Register New Store +</button>
+                    <button type="button" class="vnd-btn vnd-btn-secondary" onclick="Chow45Auth.openAccountModal()" style="color: #e11d48; border-color: #fecdd3; background: #fff1f2; font-weight: 700; cursor: pointer;">
+                      🚪 Profile &amp; Sign Out
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -690,6 +700,11 @@
         <span>Cart</span>
         <span class="tab-badge cart-badge-count" style="display: none;">0</span>
       </button>
+
+      <button class="bottom-tab" onclick="Chow45Auth.open()" title="Profile & Account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
+      </button>
     </nav>
 
     <!-- Vendors manage a menu, not a storefront, so they get their own bar. -->
@@ -713,6 +728,11 @@
       <button class="bottom-tab" data-vendor-tab="money" onclick="VendorController.switchSubTab('money')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.7 0-3 .8-3 2s1.3 2 3 2 3 .8 3 2-1.3 2-3 2a3 3 0 0 1-3-1.5"/><path d="M12 6.5v11"/></svg>
         <span>Earnings</span>
+      </button>
+
+      <button class="bottom-tab" onclick="Chow45Auth.openAccountModal()" title="Profile & Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
       </button>
     </nav>
 
@@ -1728,7 +1748,8 @@
             <button type="button" id="auth-header-back-btn" class="auth-back-nav-btn" style="display: none;" onclick="Chow45Auth.showStep1()">
               ← Back
             </button>
-            <div class="auth-brand-row">
+            <div class="auth-brand-row" style="display: flex; align-items: center; gap: 8px;">
+              <img src="/logo.png" alt="Chow45 Logo" style="height: 28px; width: 28px; object-fit: contain; border-radius: 6px;" />
               <span class="auth-logo-badge">CHOW45</span>
               <span id="auth-modal-header-tag" class="auth-modal-tag">Sign In / Join</span>
             </div>
@@ -2083,8 +2104,8 @@
             </button>
           </div>
 
-          <div class="account-logout-wrap">
-            <button class="account-logout-btn" onclick="Chow45Auth.signOut()">
+          <div class="account-logout-wrap" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--c-border-subtle, #f1f5f9);">
+            <button class="account-logout-btn" onclick="Chow45Auth.signOut()" style="width: 100%; padding: 13px 18px; background: #fff1f2; border: 1.5px solid #fda4af; border-radius: 14px; color: #e11d48; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;">
               🚪 Sign Out of Chow45
             </button>
           </div>
@@ -2228,9 +2249,9 @@
   <script src="/app/js/vendor.js?v=20261001b"></script>
   <script src="/app/js/rider.js"></script>
   <script src="/app/js/admin.js"></script>
-<script src="/app/js/auth.js?v=20261001b"></script>
+<script src="/app/js/auth.js?v=20261001c"></script>
 <script src="/app/js/vendor-onboarding.js?v=20260928a"></script>
-<script src="/app/js/app.js?v=20261001c"></script>
+<script src="/app/js/app.js?v=20261001d"></script>
 </body>
 </html>
 

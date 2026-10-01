@@ -41,10 +41,10 @@ const SCRIPTS_TO_LOAD = [
   '/app/js/vendor.js?v=20261001b',
   '/app/js/rider.js',
   '/app/js/admin.js',
-  '/app/js/auth.js?v=20261001b',
+  '/app/js/auth.js?v=20261001c',
   // Must be ready before app.js boots, because app.js starts the gate.
   '/app/js/vendor-onboarding.js?v=20260928a',
-  '/app/js/app.js?v=20261001c',
+  '/app/js/app.js?v=20261001d',
 ];
 
 // Globals that must exist before the controllers can safely run. Without this

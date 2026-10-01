@@ -1341,11 +1341,27 @@ const Chow45Auth = {
     }
   },
 
-  signOut() {
-    localStorage.removeItem(this.STORAGE_KEY);
+  async signOut() {
+    try {
+      await Promise.allSettled([
+        fetch('/api/auth/vendor/sign-out', { method: 'POST', credentials: 'include' }),
+        fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' })
+      ]);
+    } catch (e) {
+      console.warn('[auth] sign-out request failed:', e);
+    }
 
-    if (window.chowStore && window.chowStore.state && window.chowStore.state.userProfile) {
-      window.chowStore.state.userProfile.isLoggedIn = false;
+    localStorage.removeItem(this.STORAGE_KEY);
+    sessionStorage.removeItem('chow45_vendor_trigger_setup');
+
+    if (window.chowStore && window.chowStore.state) {
+      window.chowStore.state.userProfile = {
+        isLoggedIn: false,
+        name: 'Guest',
+        phone: '',
+        email: '',
+        role: 'customer'
+      };
       if (window.chowStore.saveState) {
         window.chowStore.saveState();
       }
@@ -1357,6 +1373,10 @@ const Chow45Auth = {
     if (window.chowApp && window.chowApp.toast) {
       window.chowApp.toast('Signed out successfully', 'info');
     }
+
+    setTimeout(() => {
+      window.location.href = '/app';
+    }, 250);
   },
 
   updateUI() {

@@ -104,16 +104,9 @@ export default function MarketingPage() {
             <a
               href="#top"
               aria-label="Chow45 home"
-              className="inline-flex items-center gap-2 rounded-full bg-brand-green px-[18px] py-2.5 text-white shadow-[0_6px_20px_rgba(12,81,63,0.22)] transition hover:-translate-y-0.5 hover:bg-brand-green-dark"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 shadow-[0_4px_16px_rgba(12,81,63,0.12)] border border-brand-green/20 transition hover:-translate-y-0.5"
             >
-              <span className="flex items-center text-brand-yellow">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                </svg>
-              </span>
-              <span className="font-display text-[19px] font-extrabold tracking-[-0.03em]">
-                Chow<span className="text-brand-yellow">45</span>
-              </span>
+              <img src="/logo.png" alt="Chow45 Logo" className="h-8 w-auto object-contain" />
             </a>
             <div className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-brand-green/[0.14] bg-white px-3.5 py-2 text-[13px] font-bold text-brand-ink shadow-[0_4px_14px_rgba(0,0,0,0.05)]">
               <span className="text-sm leading-none">🇳🇬</span>
@@ -574,7 +567,7 @@ export default function MarketingPage() {
               {!submitted ? (
                 <>
                   <div className="mb-6 flex items-center gap-5 border-b-[1.5px] border-brand-green/[0.14] pb-6">
-                    <span className="flex h-14 w-14 -rotate-[10deg] items-center justify-center rounded-full border-2 border-brand-green bg-brand-green-light text-center font-display text-[10px] font-extrabold leading-[1.1] text-brand-green">CHOW45<br />OOU SAGAMU</span>
+                    <img src="/logo.png" alt="Chow45 Logo" className="h-14 w-14 object-contain rounded-2xl bg-[#FAF9F5] p-1 border border-brand-green/20 shadow-xs" />
                     <div>
                       <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-brand-green">Save your spot</p>
                       <h3 id="waitlist-title" className="font-display text-2xl font-extrabold tracking-[-0.04em] text-brand-ink">Let&rsquo;s get you fed.</h3>
@@ -644,9 +637,7 @@ export default function MarketingPage() {
         <div className="mx-auto flex w-[min(1200px,calc(100%-48px))] flex-col justify-between gap-9 pb-14 min-[769px]:flex-row">
           <div>
             <a href="#top" className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-green px-[18px] py-2.5 text-white">
-              <span className="flex items-center text-brand-yellow">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" /></svg>
-              </span>
+              <img src="/logo.png" alt="Chow45 Logo" className="h-6 w-auto object-contain bg-white rounded-lg p-0.5" />
               <span className="font-display text-[19px] font-extrabold tracking-[-0.03em]">Chow<span className="text-brand-yellow">45</span></span>
             </a>
             <p className="text-[15px] leading-[1.5] text-[#B2D8C6]">Food ordering,<br />built for campus life.</p>

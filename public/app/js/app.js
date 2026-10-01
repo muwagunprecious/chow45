@@ -83,6 +83,38 @@ const Chow45App = {
           VendorController.render();
         }
       }
+
+      if (data.signedIn && data.user) {
+        const u = data.user;
+        const role = data.role === 'VENDOR' ? 'vendor' : 'customer';
+        const profile = {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || '',
+          role: role,
+          isLoggedIn: true
+        };
+        if (window.chowStore && window.chowStore.state) {
+          window.chowStore.state.userProfile = Object.assign(
+            {},
+            window.chowStore.state.userProfile || {},
+            profile
+          );
+          if (window.chowStore.saveState) {
+            window.chowStore.saveState();
+          }
+        }
+        if (typeof Chow45Auth !== 'undefined') {
+          const session = {
+            token: 'chow45_session_' + Date.now(),
+            user: profile,
+            createdAt: new Date().toISOString()
+          };
+          localStorage.setItem(Chow45Auth.STORAGE_KEY, JSON.stringify(session));
+          Chow45Auth.updateUI();
+        }
+      }
     } catch (err) {
       console.warn('[chow45] could not sync from bootstrap:', err);
     }
