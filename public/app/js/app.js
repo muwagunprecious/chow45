@@ -27,7 +27,7 @@ const Chow45App = {
     // signed-out visitors.
     if (window.location.pathname.startsWith('/vendor')
         && typeof Chow45Auth !== 'undefined'
-        && Chow45Auth.isLoggedIn()) {
+        && (Chow45Auth.isLoggedIn() || sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true')) {
       Chow45Auth.loadVendorProfile();
     }
 
@@ -93,10 +93,11 @@ const Chow45App = {
       this.updateLocationUI(state.selectedLocation);
     });
 
-    // Close modals on backdrop click
+    // Close modals on backdrop click (except mandatory first-time setup modal)
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+          if (modal.id === 'vendor-first-setup-modal') return;
           modal.classList.remove('open');
         }
       });

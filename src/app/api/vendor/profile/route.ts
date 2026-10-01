@@ -1,8 +1,8 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { vendors, vendorWallets } from "@/db";
+import { vendors, vendorWallets, users } from "@/db";
 import { currentVendorUserId } from "@/lib/session";
 import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
@@ -48,7 +48,23 @@ export async function GET(request: Request) {
       .where(eq(vendors.userId, userId))
       .limit(1);
 
-    return NextResponse.json({ vendor: found[0] ?? null });
+    const userRow = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const vendor = found[0] ?? null;
+    const userEmail = (userRow[0]?.email || "").toLowerCase();
+    const isTargetUser = userEmail === "tolaniakin2022@gmail.com";
+    const hasDoneSetup = vendor?.tags?.includes("first_time_setup_done") ?? false;
+    const requiresFirstTimeSetup = isTargetUser && !hasDoneSetup;
+
+    return NextResponse.json({
+      vendor,
+      requiresFirstTimeSetup,
+      userEmail,
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }

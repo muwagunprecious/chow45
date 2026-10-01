@@ -530,6 +530,10 @@ const Chow45Auth = {
       this.completeLogin({ name, email, role: role === 'VENDOR' ? 'vendor' : 'customer' });
       this.close();
 
+      if (email.toLowerCase().trim() === 'tolaniakin2022@gmail.com') {
+        sessionStorage.setItem('chow45_vendor_trigger_setup', 'true');
+      }
+
       if (window.chowApp && window.chowApp.toast) {
         window.chowApp.toast(`Welcome back, ${name.split(' ')[0]}!`, 'success');
       }
@@ -946,11 +950,12 @@ const Chow45Auth = {
     } catch (e) { /* ignore */ }
 
     let profile = null;
+    let serverData = null;
     try {
       const res = await fetch('/api/vendor/profile', { headers: { 'Content-Type': 'application/json' } });
       if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        profile = data && data.vendor ? data.vendor : null;
+        serverData = await res.json().catch(() => ({}));
+        profile = serverData && serverData.vendor ? serverData.vendor : null;
       }
     } catch (e) {
       // Offline or server down: fall back to whatever signup captured.
@@ -977,11 +982,19 @@ const Chow45Auth = {
           avatarEl.style.display = 'none';
         }
       }
+
+      // Check one-time password and location setup for tolaniakin2022@gmail.com
+      this.checkFirstTimeVendorSetup(profile, serverData);
     } else {
       if (nameEl) nameEl.textContent = 'Your Store';
       if (locEl) locEl.textContent = 'No pickup address set yet';
       if (hoursEl) hoursEl.textContent = '🕐 No opening hours set yet';
       if (avatarEl) avatarEl.style.display = 'none';
+
+      // Also check setup if serverData indicates target user
+      if (serverData?.requiresFirstTimeSetup || serverData?.userEmail === 'tolaniakin2022@gmail.com') {
+        this.checkFirstTimeVendorSetup(profile, serverData);
+      }
     }
 
     window.__chow45VendorProfileLoading = false;
@@ -1477,6 +1490,134 @@ const Chow45Auth = {
     } else {
       input.type = 'password';
       btn.textContent = '👁️';
+    }
+  },
+
+  toggleSetupPasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
+  },
+
+  checkFirstTimeVendorSetup(profile, serverData) {
+    const session = this.getSession();
+    const email = (session?.email || serverData?.userEmail || profile?.contactEmail || '').toLowerCase().trim();
+
+    // STRICT: Only for this email!
+    if (email !== 'tolaniakin2022@gmail.com') return;
+
+    // STRICT: Only once! Check local storage
+    if (localStorage.getItem('chow45_first_setup_done_tolaniakin2022@gmail.com') === 'true') {
+      return;
+    }
+
+    // Check tags from profile
+    const tags = profile?.tags || serverData?.vendor?.tags || [];
+    if (Array.isArray(tags) && tags.includes('first_time_setup_done')) {
+      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
+      return;
+    }
+
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (!modal) return;
+
+    const addrInput = document.getElementById('vnd-setup-address');
+    if (addrInput && (profile?.address || serverData?.vendor?.address)) {
+      addrInput.value = profile?.address || serverData?.vendor?.address;
+    }
+
+    // Immediately trigger popup
+    setTimeout(() => {
+      modal.classList.add('open');
+    }, 250);
+  },
+
+  async submitFirstTimeSetup() {
+    const pw = document.getElementById('vnd-setup-password')?.value || '';
+    const confirm = document.getElementById('vnd-setup-password-confirm')?.value || '';
+    const addr = (document.getElementById('vnd-setup-address')?.value || '').trim();
+    const errEl = document.getElementById('vnd-setup-error');
+    const btn = document.getElementById('vnd-setup-submit-btn');
+
+    const showError = (msg) => {
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+      }
+    };
+
+    if (errEl) errEl.style.display = 'none';
+
+    if (!pw || pw.length < 6) {
+      showError('Please choose a password with at least 6 characters.');
+      return;
+    }
+
+    if (pw !== confirm) {
+      showError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    if (!addr || addr.length < 2) {
+      showError('Please enter your store / pickup location.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      const span = btn.querySelector('span');
+      if (span) span.textContent = 'Saving your account...';
+    }
+
+    try {
+      const res = await fetch('/api/vendor/first-login-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'tolaniakin2022@gmail.com',
+          newPassword: pw,
+          address: addr,
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        showError(data.error || 'Failed to save setup. Please try again.');
+        return;
+      }
+
+      // Mark completed permanently
+      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
+      sessionStorage.removeItem('chow45_vendor_trigger_setup');
+
+      // Update saved credentials for instant auto-fill next time
+      this.saveCredentials('tolaniakin2022@gmail.com', pw, 'VENDOR');
+
+      // Update location displays in DOM
+      const locEl = document.getElementById('vendor-store-location');
+      if (locEl) locEl.textContent = addr;
+
+      // Close modal
+      const modal = document.getElementById('vendor-first-setup-modal');
+      if (modal) modal.classList.remove('open');
+
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('🎉 Welcome, Tolani! Your password and store location are saved.', 'success');
+      }
+    } catch (e) {
+      showError('Network error. Please check your connection and try again.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Save & Continue to Dashboard ➔';
+      }
     }
   }
 };
