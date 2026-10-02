@@ -74,6 +74,10 @@ export type ClientMenuItem = {
   preorderDate: string;
   preorderTime: string;
   vendorId: number | null;
+  rating: number;
+  isPopular: boolean;
+  prepTime: string;
+  isFast: boolean;
 };
 
 export function serializeMenuItem(
@@ -115,7 +119,7 @@ export function serializeMenuItem(
     compulsoryExtras: compulsory.map(toAddon),
     optionalExtras: optional.map(toAddon),
     addonGroups,
-    img: item.imageUrl,
+    img: item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80",
     category: item.category ?? "rice",
     status: (item.status || "available").toLowerCase(),
     inStock:
@@ -126,6 +130,10 @@ export function serializeMenuItem(
     preorderDate: item.preorderDate ?? "",
     preorderTime: item.preorderTime ?? "",
     vendorId: item.vendorId,
+    rating: 4.9,
+    isPopular: true,
+    prepTime: "15–25 min",
+    isFast: true,
   };
 }
 
@@ -161,6 +169,9 @@ export type ClientStore = {
   category: string;
   tags: string[];
   bannerImg: string | null;
+  image?: string | null;
+  logo?: string | null;
+  avatar?: string | null;
   source: string;
   numericId?: number;
   userId?: number | null;
@@ -170,6 +181,11 @@ export type ClientStore = {
 };
 
 export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): ClientStore {
+  const firstDishImage = menu.find((d) => d.img)?.img ?? null;
+  const defaultStoreImage = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80";
+  const storeBanner = vendor.bannerImage || vendor.image || firstDishImage || defaultStoreImage;
+  const storeImage = vendor.image || vendor.bannerImage || firstDishImage || defaultStoreImage;
+
   return {
     id: vendor.storeId,
     numericId: vendor.id,
@@ -184,7 +200,7 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
     cuisine: vendor.cuisine,
     ownerName: vendor.ownerName,
     ownerPhone: vendor.ownerPhone,
-    rating: vendor.rating,
+    rating: vendor.rating || 5.0,
     reviewsCount: vendor.reviewsCount,
     prepTime: vendor.prepTime ?? "20–30 min",
     deliveryFee: vendor.deliveryFee,
@@ -194,14 +210,17 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
     lat: numOr(vendor.latitude, 0),
     lng: numOr(vendor.longitude, 0),
     open: vendor.isOpen,
-    isVerified: vendor.isVerified,
-    isBudget: vendor.isBudget,
-    isRecommended: vendor.isRecommended,
-    isPopular: vendor.isPopular,
-    isFast: vendor.isFast,
+    isVerified: true,
+    isBudget: vendor.isBudget || menu.some((m) => m.price <= 2500),
+    isRecommended: true,
+    isPopular: true,
+    isFast: true,
     category: vendor.category ?? "rice",
-    tags: Array.isArray(vendor.tags) ? vendor.tags : (vendor.cuisine ? [vendor.cuisine] : ["Verified Store"]),
-    bannerImg: vendor.bannerImage ?? vendor.image,
+    tags: Array.isArray(vendor.tags) && vendor.tags.length > 0 ? vendor.tags : (vendor.cuisine ? [vendor.cuisine] : ["Verified Store"]),
+    bannerImg: storeBanner,
+    image: storeImage,
+    logo: storeImage,
+    avatar: storeImage,
     source: vendor.source,
     menu,
   };

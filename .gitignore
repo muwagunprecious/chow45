@@ -42,7 +42,6 @@ next-env.d.ts
 
 # Deliberately withheld local shells
 /src/app/app/
-/src/app/rider/
 /scratch/
 dev.log
 .kilo/

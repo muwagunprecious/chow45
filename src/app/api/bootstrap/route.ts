@@ -142,8 +142,6 @@ async function loadStores(): Promise<ClientStore[]> {
     .where(
       and(
         inArray(menuItems.vendorId, vendorIds),
-        eq(menuItems.isPublished, true),
-        ne(menuItems.status, "pending_verification"),
         ne(menuItems.status, "rejected")
       )
     )

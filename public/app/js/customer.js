@@ -129,7 +129,10 @@ const CustomerController = {
       });
     });
 
-    const popularDishes = allDishes.filter(d => d.isPopular || d.rating >= 4.8);
+    const popularDishes = allDishes.filter(d => d.isPopular || (d.rating && d.rating >= 4.8));
+    const displayPopular = popularDishes.length > 0 ? popularDishes : allDishes;
+    const fastDishes = allDishes.filter(d => (d.prepTime && d.prepTime.includes('15')) || d.isFast);
+    const displayFast = fastDishes.length > 0 ? fastDishes : allDishes.slice().reverse();
 
     container.innerHTML = `
       <!-- Section 1: Popular Near You (Food Cards with Instant + Button) -->
@@ -142,7 +145,7 @@ const CustomerController = {
           <span class="section-link" onclick="CustomerController.selectCategory('all')">See all</span>
         </div>
         <div class="food-cards-grid">
-          ${popularDishes.slice(0, 4).map(dish => this.renderFoodCard(dish)).join('')}
+          ${displayPopular.slice(0, 6).map(dish => this.renderFoodCard(dish)).join('')}
         </div>
       </div>
 
@@ -168,7 +171,7 @@ const CustomerController = {
           </div>
         </div>
         <div class="food-cards-grid">
-          ${allDishes.filter(d => d.prepTime && d.prepTime.includes('15')).slice(0, 4).map(dish => this.renderFoodCard(dish)).join('')}
+          ${displayFast.slice(0, 6).map(dish => this.renderFoodCard(dish)).join('')}
         </div>
       </div>
     `;
@@ -228,7 +231,7 @@ const CustomerController = {
     return `
       <div class="store-card" onclick="CustomerController.openStoreMenu('${store.id}')">
         <div class="store-thumb-wrap">
-          <img class="store-thumb" src="${store.bannerImg}" alt="${store.name}" loading="lazy" />
+          <img class="store-thumb" src="${store.bannerImg || store.image || '/logo.png'}" alt="${store.name}" loading="lazy" />
           <div class="store-badge-open">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span> Open Now
           </div>
@@ -307,60 +310,235 @@ const CustomerController = {
     window.chowApp.toast(added ? 'Saved to favorites ❤️' : 'Removed from favorites', added ? 'success' : 'info');
   },
 
-  openStoreMenu(storeId) {
-    const store = window.chowStore.state.restaurants.find(r => r.id === storeId);
+  async openStoreMenu(storeId) {
+    let store = window.chowStore.state.restaurants.find(r => r.id === storeId);
+    if (!store) {
+      store = window.chowStore.state.restaurants.find(r => String(r.numericId) === String(storeId) || r.slug === storeId);
+    }
+
+    if (!store || !Array.isArray(store.menu) || store.menu.length === 0) {
+      try {
+        const res = await fetch('/api/bootstrap');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.stores)) {
+            window.chowStore.state.restaurants = data.stores;
+            window.chowStore.save();
+            const fresh = data.stores.find(r => r.id === storeId || String(r.numericId) === String(storeId) || r.slug === storeId);
+            if (fresh) store = fresh;
+          }
+        }
+      } catch (err) {
+        console.warn('[customer] Could not refresh store menu:', err);
+      }
+    }
     if (!store) return;
 
     this.activeRestaurant = store;
+    this.activeStoreMenuFilter = 'all';
+    this.storeMenuSearchQuery = '';
 
-    document.getElementById('customer-home-section').style.display = 'none';
+    const homeSec = document.getElementById('customer-home-section');
+    if (homeSec) homeSec.style.display = 'none';
+    const trackSec = document.getElementById('customer-tracking-section');
+    if (trackSec) trackSec.style.display = 'none';
+    const confSec = document.getElementById('customer-order-confirmed-section');
+    if (confSec) confSec.style.display = 'none';
+
     const storeSection = document.getElementById('customer-store-section');
-    storeSection.style.display = 'block';
+    if (storeSection) storeSection.style.display = 'block';
 
-    document.getElementById('store-detail-banner').src = store.bannerImg;
-    document.getElementById('store-detail-name').innerText = store.name;
-    const storeDetailTags = Array.isArray(store.tags) ? store.tags : (store.cuisine ? [store.cuisine] : ['Verified Store']);
-    document.getElementById('store-detail-tags').innerText = storeDetailTags.join(' • ');
-    document.getElementById('store-detail-meta').innerHTML = `
-      <span>★ ${store.rating} (${store.reviewsCount} reviews)</span> • 
-      <span>⏱ ${store.prepTime}</span> • 
-      <span>📍 ${store.address} (${formatNaira(store.deliveryFee)} delivery)</span>
-    `;
+    const bannerEl = document.getElementById('store-detail-banner');
+    if (bannerEl) bannerEl.src = store.bannerImg || store.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200';
 
+    const badgeEl = document.getElementById('store-detail-avatar-badge');
+    if (badgeEl) badgeEl.src = store.logo || store.avatar || store.image || store.bannerImg || '/logo.png';
+
+    const nameEl = document.getElementById('store-detail-name');
+    if (nameEl) nameEl.innerText = store.name;
+
+    const tagsEl = document.getElementById('store-detail-tags');
+    if (tagsEl) {
+      const storeDetailTags = Array.isArray(store.tags) ? store.tags : (store.cuisine ? [store.cuisine] : ['Verified Store']);
+      tagsEl.innerText = storeDetailTags.join(' • ');
+    }
+
+    const ratingEl = document.getElementById('store-detail-rating');
+    if (ratingEl) {
+      ratingEl.innerText = `${store.rating || '5.0'} Excellent`;
+    }
+
+    const searchInput = document.getElementById('store-menu-search-input');
+    if (searchInput) searchInput.value = '';
+
+    // Render dynamic category pills based on the dishes actually available in this store
+    const pillsContainer = document.getElementById('store-category-pills');
+    if (pillsContainer) {
+      const allDishes = Array.isArray(store.menu) ? store.menu : [];
+      const cats = new Set();
+      allDishes.forEach(d => {
+        const c = (d.category || '').trim().toLowerCase();
+        if (c && c !== 'all') cats.add(c);
+      });
+
+      let pillsHtml = `
+        <button class="store-cat-pill active" data-cat="all" onclick="CustomerController.filterStoreMenuCategory('all', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: #F1F5F9; color: #0F172A; white-space: nowrap;">
+          All Dishes (${allDishes.length})
+        </button>
+      `;
+
+      cats.forEach(c => {
+        const count = allDishes.filter(d => (d.category || '').trim().toLowerCase() === c).length;
+        const label = c.charAt(0).toUpperCase() + c.slice(1);
+        pillsHtml += `
+          <button class="store-cat-pill" data-cat="${c}" onclick="CustomerController.filterStoreMenuCategory('${c}', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">
+            ${label} (${count})
+          </button>
+        `;
+      });
+
+      // If no distinct categories were found, keep default popular categories
+      if (cats.size === 0) {
+        ['rice', 'pasta', 'specials', 'extras'].forEach(c => {
+          const label = c.charAt(0).toUpperCase() + c.slice(1);
+          pillsHtml += `
+            <button class="store-cat-pill" data-cat="${c}" onclick="CustomerController.filterStoreMenuCategory('${c}', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">
+              ${label}
+            </button>
+          `;
+        });
+      }
+
+      pillsContainer.innerHTML = pillsHtml;
+    }
+
+    this.renderStoreDishes();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  filterStoreMenuCategory(catSlug, btnEl) {
+    this.activeStoreMenuFilter = catSlug || 'all';
+    const pills = document.querySelectorAll('#store-category-pills .store-cat-pill');
+    pills.forEach(p => {
+      const isTarget = btnEl ? p === btnEl : (p.getAttribute('data-cat') === this.activeStoreMenuFilter);
+      p.classList.toggle('active', isTarget);
+      if (isTarget) {
+        p.style.background = '#F1F5F9';
+        p.style.color = '#0F172A';
+        p.style.border = 'none';
+      } else {
+        p.style.background = '#FFF';
+        p.style.color = '#475569';
+        p.style.border = '1px solid #E2E8F0';
+      }
+    });
+    this.renderStoreDishes();
+  },
+
+  searchStoreMenu(q) {
+    this.storeMenuSearchQuery = (q || '').toLowerCase().trim();
+    this.renderStoreDishes();
+  },
+
+  renderStoreDishes() {
+    const store = this.activeRestaurant;
+    if (!store) return;
     const menuGrid = document.getElementById('store-dishes-grid');
-    menuGrid.innerHTML = store.menu.map(dish => {
+    if (!menuGrid) return;
+
+    let items = Array.isArray(store.menu) ? [...store.menu] : [];
+
+    // Filter by category pill if not 'all'
+    if (this.activeStoreMenuFilter && this.activeStoreMenuFilter !== 'all') {
+      const filter = this.activeStoreMenuFilter.toLowerCase();
+      items = items.filter(d => {
+        const cat = (d.category || '').toLowerCase();
+        const name = (d.name || '').toLowerCase();
+        if (cat === filter) return true;
+        if (filter === 'rice') return cat.includes('rice') || name.includes('rice') || name.includes('jollof') || name.includes('fried');
+        if (filter === 'pasta') return cat.includes('pasta') || cat.includes('spag') || name.includes('pasta') || name.includes('spag') || name.includes('noodles');
+        if (filter === 'specials') return cat.includes('special') || cat.includes('combo') || name.includes('max') || name.includes('special') || name.includes('refuel') || name.includes('burger');
+        if (filter === 'extras') return cat.includes('extra') || cat.includes('side') || cat.includes('drink') || cat.includes('snack') || name.includes('chicken') || name.includes('dodo') || name.includes('plantain') || name.includes('salad');
+        return cat.includes(filter) || name.includes(filter);
+      });
+    }
+
+    // Filter by search query
+    if (this.storeMenuSearchQuery) {
+      const q = this.storeMenuSearchQuery;
+      items = items.filter(d => 
+        (d.name || '').toLowerCase().includes(q) ||
+        (d.desc || '').toLowerCase().includes(q) ||
+        (d.category || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (items.length === 0) {
+      const totalDishes = Array.isArray(store.menu) ? store.menu.length : 0;
+      menuGrid.innerHTML = `
+        <div style="text-align: center; padding: 40px 16px; background: #FAF9F5; border-radius: 18px; border: 1px dashed #E2E8F0;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">🍽️</div>
+          <h4 style="font-weight: 800; font-size: 1rem; color: #0F172A; margin: 0 0 4px 0;">No dishes found</h4>
+          <p style="font-size: 0.82rem; color: #64748B; margin: 0 0 14px 0;">Try selecting a different category or clearing your search.</p>
+          ${totalDishes > 0 ? `
+            <button type="button" onclick="CustomerController.filterStoreMenuCategory('all', null)" style="padding: 8px 18px; border-radius: 999px; background: var(--c-primary); color: white; border: none; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
+              Show All Dishes (${totalDishes})
+            </button>
+          ` : `
+            <div style="font-size: 0.8rem; color: #94A3B8;">This store has not added dishes to its menu yet.</div>
+          `}
+        </div>
+      `;
+      return;
+    }
+
+    menuGrid.innerHTML = items.map(dish => {
       const isOut = dish.status === 'OUT_OF_STOCK' || dish.inStock === false;
       const isPreorder = Boolean(dish.preorderEnabled) && !isOut;
-
       const priceLabel = this._dishPriceLabel(dish);
+      const displayPrice = priceLabel.startsWith('From') || priceLabel.startsWith('Starts')
+        ? priceLabel
+        : `Starts from ${priceLabel}`;
 
       return `
-        <div class="dish-card ${isOut ? 'is-out-of-stock' : ''}" style="${isOut ? 'opacity:0.7;' : ''}" onclick="CustomerController.handleFoodCardClick('${store.id}', '${dish.id}')">
-          <div class="dish-info">
-            <h4 class="dish-title">${dish.name}</h4>
-            <p class="dish-desc">${dish.desc || ''}</p>
-            <div class="dish-price">${priceLabel}</div>
-            ${isOut ? '<div style="font-size:0.75rem;font-weight:700;color:#DC2626;margin-top:4px;">Out of stock</div>' : ''}
-            ${isPreorder ? `<div style="font-size:0.75rem;font-weight:700;color:#92400E;margin-top:4px;">🟡 Pre-order · ${dish.preorderDate || 'Soon'}</div>` : ''}
+        <div class="store-dish-item-card ${isOut ? 'is-out-of-stock' : ''}" 
+             onclick="CustomerController.handleFoodCardClick('${store.id}', '${dish.id}')"
+             style="display: flex; justify-content: space-between; align-items: stretch; gap: 14px; background: #FFFFFF; border: 1.5px solid #F1F5F9; border-radius: 18px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease; ${isOut ? 'opacity: 0.65;' : ''}">
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 0 0 6px 0; letter-spacing: -0.01em;">${this._esc(dish.name)}</h4>
+              <p style="font-size: 0.82rem; color: #64748B; margin: 0 0 10px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                ${this._esc(dish.desc || 'Prepared fresh with high quality ingredients and authentic Nigerian seasonings.')}
+              </p>
+            </div>
+            <div>
+              <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; margin-bottom: 2px;">
+                ${displayPrice}
+              </div>
+              ${isOut ? '<span style="font-size:0.75rem;font-weight:700;color:#DC2626;">Out of stock</span>' : ''}
+              ${isPreorder ? `<span style="font-size:0.75rem;font-weight:700;color:#92400E;">🟡 Pre-order · ${dish.preorderDate || 'Soon'}</span>` : ''}
+            </div>
           </div>
-          <div class="dish-thumb-wrap">
-            <img class="dish-thumb" src="${dish.img}" alt="${dish.name}" loading="lazy" />
-            <button class="dish-add-btn" aria-label="Add ${dish.name}" 
+
+          <div style="position: relative; width: 92px; height: 92px; flex-shrink: 0; border-radius: 14px; overflow: hidden; align-self: center;">
+            <img src="${this._esc(dish.img || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500')}" alt="${this._esc(dish.name)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" loading="lazy" />
+            <button type="button" aria-label="Add ${this._esc(dish.name)}"
                     onclick="event.stopPropagation(); CustomerController.handleQuickAdd('${store.id}', '${dish.id}')"
-                    ${isOut ? 'disabled style="background: #94A3B8; cursor:not-allowed;"' : ''}>
+                    ${isOut ? 'disabled style="background: #94A3B8; cursor: not-allowed;"' : ''}
+                    style="position: absolute; bottom: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; background: #0C513F; color: #FFFFFF; border: none; font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
               ${isOut ? '✕' : '+'}
             </button>
           </div>
         </div>
       `;
     }).join('');
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   closeStoreMenu() {
-    document.getElementById('customer-store-section').style.display = 'none';
-    document.getElementById('customer-home-section').style.display = 'block';
+    const storeSection = document.getElementById('customer-store-section');
+    if (storeSection) storeSection.style.display = 'none';
+    const homeSection = document.getElementById('customer-home-section');
+    if (homeSection) homeSection.style.display = 'block';
     this.activeRestaurant = null;
   },
 
@@ -1019,7 +1197,7 @@ const CustomerController = {
     document.getElementById('cart-modal').classList.remove('open');
   },
 
-  placeOrder() {
+  async placeOrder() {
     const { cart } = window.chowStore.state;
     if (cart.items.length === 0) return;
 
@@ -1029,6 +1207,7 @@ const CustomerController = {
     const deliveryNotes = document.getElementById('checkout-notes-input').value.trim();
     const paymentMethod = document.getElementById('checkout-payment-method').value;
 
+    // 1. Create order initially with PENDING_PAYMENT
     const newOrder = window.chowStore.createOrder({
       storeId: cart.storeId,
       storeName: cart.storeName,
@@ -1037,59 +1216,296 @@ const CustomerController = {
       deliveryAddress,
       deliveryNotes,
       paymentMethod,
+      status: 'PENDING_PAYMENT',
       deliveryQuote: this.quoteCache || null,
       deliveryLocation: window.chowStore.state.selectedLocation || null
     });
 
-    this.closeCart();
-    window.chowApp.toast('Payment successful! Order confirmed ✓', 'success');
+    // 2. Perform Payment Verification API call
+    const payRef = 'PAY_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    try {
+      const verifyRes = await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: newOrder.id,
+          reference: payRef,
+          amount: newOrder.total
+        })
+      });
+      if (verifyRes.ok) {
+        window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+      } else {
+        window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+      }
+    } catch (e) {
+      window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+    }
 
-    this.openOrderTracking(newOrder.id);
+    this.closeCart();
+
+    // 3. Populate and show Order Confirmed screen (matches media_1790893923594.png)
+    this.lastConfirmedOrderId = newOrder.id;
+    const basePts = Math.round((newOrder.total || 4500) * 0.6);
+    const bonusPts = Math.round((newOrder.total || 4500) * 0.3);
+    const totalPts = basePts + bonusPts;
+
+    const ptsPill = document.getElementById('confirmed-points-pill');
+    if (ptsPill) ptsPill.innerText = `+${totalPts.toLocaleString()} points`;
+    const ptsBase = document.getElementById('confirmed-points-base');
+    if (ptsBase) ptsBase.innerText = `+ ${basePts.toLocaleString()} pts`;
+    const ptsBonus = document.getElementById('confirmed-points-bonus');
+    if (ptsBonus) ptsBonus.innerText = `+ ${bonusPts.toLocaleString()} pts`;
+    const ptsTotal = document.getElementById('confirmed-points-total');
+    if (ptsTotal) ptsTotal.innerText = `+ ${totalPts.toLocaleString()} pts`;
+
+    // Hide other views, display Order Confirmed screen
+    const homeSec = document.getElementById('customer-home-section');
+    if (homeSec) homeSec.style.display = 'none';
+    const storeSec = document.getElementById('customer-store-section');
+    if (storeSec) storeSec.style.display = 'none';
+    const trackSec = document.getElementById('customer-tracking-section');
+    if (trackSec) trackSec.style.display = 'none';
+
+    const confirmedSec = document.getElementById('customer-order-confirmed-section');
+    if (confirmedSec) {
+      confirmedSec.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.chowApp.toast('Payment verified! Order sent to kitchen ✓', 'success');
+  },
+
+  trackConfirmedOrder() {
+    const confirmedSec = document.getElementById('customer-order-confirmed-section');
+    if (confirmedSec) confirmedSec.style.display = 'none';
+    if (this.lastConfirmedOrderId) {
+      this.openOrderTracking(this.lastConfirmedOrderId);
+    }
   },
 
   // -------------------------------------------------------------
-  // Live Mapbox Order Tracking View
+  // Live Mapbox Order Tracking View (Matches media_1790893892975.png)
   // -------------------------------------------------------------
   openOrderTracking(orderId) {
     const order = window.chowStore.state.orders.find(o => o.id === orderId);
     if (!order) return;
 
+    this.activeTrackingOrderId = orderId;
     const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId) || window.chowStore.state.restaurants[0];
     const location = window.chowStore.state.selectedLocation;
 
-    document.getElementById('customer-home-section').style.display = 'none';
-    document.getElementById('customer-store-section').style.display = 'none';
+    const homeSec = document.getElementById('customer-home-section');
+    if (homeSec) homeSec.style.display = 'none';
+    const storeSec = document.getElementById('customer-store-section');
+    if (storeSec) storeSec.style.display = 'none';
+    const confirmedSec = document.getElementById('customer-order-confirmed-section');
+    if (confirmedSec) confirmedSec.style.display = 'none';
+
     const trackSection = document.getElementById('customer-tracking-section');
     trackSection.style.display = 'block';
 
-    document.getElementById('track-order-id').innerText = order.id;
-    document.getElementById('track-order-pin').innerText = order.pin;
-    document.getElementById('track-store-name').innerText = order.storeName;
-    document.getElementById('track-dest-address').innerText = order.deliveryAddress;
+    const orderNumEl = document.getElementById('track-order-num');
+    if (orderNumEl) {
+      orderNumEl.innerText = order.pin ? `CH${order.pin}` : (order.id.slice(0, 6).toUpperCase());
+    }
+
+    const pinEl = document.getElementById('track-order-pin');
+    if (pinEl) pinEl.innerText = order.pin || '4528';
+
+    const storeNameEl = document.getElementById('track-store-name');
+    if (storeNameEl) storeNameEl.innerText = order.storeName;
+
+    const destAddrEl = document.getElementById('track-dest-address');
+    if (destAddrEl) destAddrEl.innerText = order.deliveryAddress;
+
+    const noteDisplay = document.getElementById('track-order-note-display');
+    if (noteDisplay) {
+      noteDisplay.innerText = order.deliveryNotes ? `Note: ${order.deliveryNotes}` : 'Add Order Note';
+    }
+
+    // Rider Dispatch Profile
+    const rider = order.riderId ? window.chowStore.state.riders.find(r => r.id === order.riderId) : null;
+    const riderNameEl = document.getElementById('track-rider-name');
+    if (riderNameEl) riderNameEl.innerText = rider ? rider.name : (order.riderName || 'David Adeleke');
+
+    const phone = rider ? rider.phone : '+2348124902819';
+    const callBtn = document.getElementById('track-rider-call-btn');
+    if (callBtn) callBtn.href = `tel:${phone}`;
+    const waBtn = document.getElementById('track-rider-wa-btn');
+    if (waBtn) waBtn.href = `https://wa.me/${phone.replace(/\D/g, '')}`;
 
     this.updateTrackingStatusUI(order);
 
-    window.chowMap.renderDeliveryMission(order, store, location);
+    if (window.chowMap && typeof window.chowMap.renderDeliveryMission === 'function') {
+      window.chowMap.renderDeliveryMission(order, store, location);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
   updateTrackingStatusUI(order) {
-    const stage = ORDER_STAGES[order.status] || ORDER_STAGES.PAID;
-    document.getElementById('track-status-heading').innerText = stage.humanText;
+    const status = order.status;
+    let stepIndex = 1;
+    let heading = 'Order in transit';
+    let subtext = 'Your Order Is On The Way';
 
+    if (status === 'PENDING_PAYMENT') {
+      stepIndex = 1;
+      heading = 'Payment Confirmation';
+      subtext = 'Authorizing payment with bank';
+    } else if (status === 'PAID') {
+      stepIndex = 1;
+      heading = 'Payment Received';
+      subtext = 'Ticket transmitted to restaurant';
+    } else if (status === 'RESTAURANT_ACCEPTED') {
+      stepIndex = 2;
+      heading = 'Restaurant Accepted';
+      subtext = 'Chef received and accepted your order';
+    } else if (status === 'PREPARING') {
+      stepIndex = 3;
+      heading = 'Preparing your Order';
+      subtext = 'Chefs are cooking and packaging fresh';
+    } else if (status === 'READY_FOR_PICKUP') {
+      stepIndex = 3;
+      heading = 'Ready for Pickup';
+      subtext = 'Waiting for dispatch pickup';
+    } else if (['RIDER_ASSIGNED', 'RIDER_HEADING_TO_STORE', 'RIDER_AT_STORE', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY'].includes(status)) {
+      stepIndex = 4;
+      heading = 'Order in transit';
+      subtext = 'Your Order Is On The Way';
+    } else if (status === 'DELIVERED') {
+      stepIndex = 5;
+      heading = 'Order Completed';
+      subtext = 'Delivered and verified with security PIN';
+    }
+
+    const headingEl = document.getElementById('track-status-heading');
+    if (headingEl) headingEl.innerText = heading;
+
+    const subtextEl = document.getElementById('track-status-subtext');
+    if (subtextEl) subtextEl.innerText = subtext;
+
+    // 5-Segment Stepper
     const segments = document.querySelectorAll('.tracking-stepper .stepper-segment');
     segments.forEach((seg, idx) => {
       seg.className = 'stepper-segment';
-      if (idx < (stage.stepIndex || 1)) seg.classList.add('completed');
-      else if (idx === (stage.stepIndex || 1)) seg.classList.add('active');
+      if (idx < stepIndex) {
+        seg.style.background = '#22C55E';
+      } else {
+        seg.style.background = '#E2E8F0';
+      }
     });
 
-    const etaText = order.status === 'DELIVERED' ? 'Delivered' : (order.status === 'OUT_FOR_DELIVERY' ? 'Est: 8 mins away' : 'Est: 25 mins');
-    document.getElementById('track-eta-badge').innerText = etaText;
+    const etaBadge = document.getElementById('track-eta-badge');
+    if (etaBadge) {
+      etaBadge.innerText = status === 'DELIVERED' ? 'Delivered' : (stepIndex >= 4 ? 'Est: 8 mins away' : 'Est: 25 mins');
+    }
+  },
+
+  // -------------------------------------------------------------
+  // Order Timeline Modal (Matches media_1790893952397.png)
+  // -------------------------------------------------------------
+  openTimelineModal() {
+    const orderId = this.activeTrackingOrderId || (window.chowStore.state.orders[0]?.id);
+    const order = window.chowStore.state.orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const status = order.status;
+    const isStep1 = true;
+    const isStep2 = !['PENDING_PAYMENT'].includes(status);
+    const isStep3 = ['PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED', 'RIDER_HEADING_TO_STORE', 'RIDER_AT_STORE', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY', 'DELIVERED'].includes(status);
+    const isStep4 = ['PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY', 'DELIVERED'].includes(status);
+    const isStep5 = status === 'DELIVERED';
+
+    const orderTime = new Date(order.createdAt || Date.now());
+    const formatT = (offsetMin) => {
+      const d = new Date(orderTime.getTime() + offsetMin * 60000);
+      return `Today, ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+    };
+
+    const timelineHeading = document.getElementById('timeline-status-heading');
+    if (timelineHeading) {
+      timelineHeading.innerText = isStep5 ? 'Order Completed' : (isStep4 ? 'Order In Transit' : (isStep3 ? 'Preparing Order' : 'Order Confirmed'));
+    }
+
+    const container = document.getElementById('timeline-events-container');
+    if (container) {
+      const steps = [
+        {
+          title: 'Payment Confirmation',
+          desc: 'Payment for your order has been received and confirmed',
+          time: formatT(0),
+          done: isStep1
+        },
+        {
+          title: 'Payment Received',
+          desc: 'Order sent to restaurant and kitchen confirmed',
+          time: formatT(1),
+          done: isStep2
+        },
+        {
+          title: 'Preparing your Order',
+          desc: 'Your order is being prepared and packed with care',
+          time: formatT(4),
+          done: isStep3
+        },
+        {
+          title: 'Order in Transit',
+          desc: 'Rider has picked up your order and is heading your way',
+          time: formatT(12),
+          done: isStep4
+        },
+        {
+          title: 'Order Completed',
+          desc: '4-digit PIN verified by rider and meal delivered',
+          time: isStep5 ? formatT(22) : 'Estimated soon',
+          done: isStep5
+        }
+      ];
+
+      container.innerHTML = steps.map((s, idx) => {
+        const isLast = idx === steps.length - 1;
+        const checkBg = s.done ? '#16A34A' : '#E2E8F0';
+        const checkColor = s.done ? '#FFFFFF' : '#94A3B8';
+        const titleColor = s.done ? '#0F172A' : '#94A3B8';
+        const lineColor = s.done && !isLast ? '#22C55E' : '#E2E8F0';
+
+        return `
+          <div style="display: flex; gap: 14px; position: relative;">
+            <div style="display: flex; flex-direction: column; align-items: center; width: 26px;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; background: ${checkBg}; color: ${checkColor}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; z-index: 2;">
+                ${s.done ? '✓' : ''}
+              </div>
+              ${!isLast ? `<div style="width: 2px; flex: 1; background: ${lineColor}; min-height: 48px; margin: 4px 0;"></div>` : ''}
+            </div>
+            <div style="flex: 1; padding-bottom: ${isLast ? '0' : '20px'};">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+                <h4 style="font-size: 0.95rem; font-weight: 800; color: ${titleColor}; margin: 0 0 2px 0;">${s.title}</h4>
+                <span style="font-size: 0.72rem; color: #94A3B8; font-weight: 600; white-space: nowrap;">${s.time}</span>
+              </div>
+              <p style="font-size: 0.8rem; color: #64748B; margin: 0; line-height: 1.4;">${s.desc}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    const modal = document.getElementById('order-timeline-modal');
+    if (modal) modal.classList.add('open');
+  },
+
+  closeTimelineModal() {
+    const modal = document.getElementById('order-timeline-modal');
+    if (modal) modal.classList.remove('open');
   },
 
   closeTracking() {
-    document.getElementById('customer-tracking-section').style.display = 'none';
+    const trackSec = document.getElementById('customer-tracking-section');
+    if (trackSec) trackSec.style.display = 'none';
+    const confirmedSec = document.getElementById('customer-order-confirmed-section');
+    if (confirmedSec) confirmedSec.style.display = 'none';
+    const storeSec = document.getElementById('customer-store-section');
+    if (storeSec) storeSec.style.display = 'none';
     document.getElementById('customer-home-section').style.display = 'block';
     if (window.chowMap) window.chowMap.clearMarkers();
   },

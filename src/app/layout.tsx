@@ -77,9 +77,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased`}
     >
-      <body className="min-h-screen bg-brand-paper text-brand-ink flex flex-col">
+      <body suppressHydrationWarning className="min-h-screen bg-brand-paper text-brand-ink flex flex-col">
         {children}
       </body>
     </html>

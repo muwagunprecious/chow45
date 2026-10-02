@@ -37,11 +37,11 @@ const SCRIPTS_TO_LOAD = [
   '/app/js/state.js?v=20261001b',
   '/app/js/mapbox-service.js?v=20260928c',
   '/app/js/location-picker.js?v=20260930d',
-  '/app/js/customer.js?v=20261001b',
-  '/app/js/vendor.js?v=20261001b',
-  '/app/js/rider.js',
+  '/app/js/customer.js?v=20261002c',
+  '/app/js/vendor.js?v=20261002c',
+  '/app/js/rider.js?v=20261002a',
   '/app/js/admin.js',
-  '/app/js/auth.js?v=20261001c',
+  '/app/js/auth.js?v=20261002b',
   // Must be ready before app.js boots, because app.js starts the gate.
   '/app/js/vendor-onboarding.js?v=20260928a',
   '/app/js/app.js?v=20261001d',
@@ -260,13 +260,32 @@ export function MarketplaceView({
       {initialRole === 'customer' && (
         <style>{`
           #view-vendor { display: none !important; }
+          #view-rider { display: none !important; }
           .bottom-nav[data-nav-for="vendor"] { display: none !important; }
+          .bottom-nav[data-nav-for="rider"] { display: none !important; }
           .vendor-topnav[data-nav-for="vendor"] { display: none !important; }
           @media (max-width: 768px) {
             .bottom-nav[data-nav-for="customer"] { display: flex !important; }
           }
           @media (min-width: 769px) {
             .bottom-nav { display: none !important; }
+          }
+        `}</style>
+      )}
+
+      {/* When entering directly as rider, ensure rider view displays and others are hidden */}
+      {initialRole === 'rider' && (
+        <style>{`
+          .top-nav { display: none !important; }
+          #view-customer { display: none !important; }
+          #view-vendor { display: none !important; }
+          #view-admin { display: none !important; }
+          #view-rider { display: block !important; background: #FFFDF6 !important; min-height: 100vh !important; }
+          .bottom-nav[data-nav-for="customer"] { display: none !important; }
+          .bottom-nav[data-nav-for="vendor"] { display: none !important; }
+          .vendor-topnav { display: none !important; }
+          @media (max-width: 768px) {
+            .bottom-nav[data-nav-for="rider"] { display: flex !important; }
           }
         `}</style>
       )}

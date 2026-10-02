@@ -69,7 +69,7 @@ function generateUsernameFromEmail(email: string) {
  * VENDOR:
  * Event organizers/vendors.
  */
-type Role = "USER" | "VENDOR";
+type Role = "USER" | "VENDOR" | "RIDER";
 
 /**
  * Creates a Better Auth instance for a specific role.
@@ -822,3 +822,14 @@ export const userAuth = createAuth("USER");
  * Only accounts with role = VENDOR are allowed through this instance.
  */
 export const vendorAuth = createAuth("VENDOR");
+ 
+ 
+/**
+ * RIDER authentication instance.
+ *
+ * Uses:
+ * /api/auth/rider
+ *
+ * Only accounts with role = RIDER are allowed through this instance.
+ */
+export const riderAuth = createAuth("RIDER");

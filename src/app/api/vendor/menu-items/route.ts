@@ -225,8 +225,9 @@ export async function POST(request: Request) {
     }
 
     const effectivePrice = isPiece ? piecePrice : (priceType === "SCOOP" ? scoopPrice : platePrice) || 0;
-    const finalStatus = typeof body.status === "string" ? String(body.status) : "available";
-    const finalPublished = finalStatus === "available" || body.isPublished === true;
+    const rawStatus = typeof body.status === "string" ? String(body.status).toLowerCase() : "available";
+    const finalStatus = rawStatus === "out_of_stock" || rawStatus === "preorder" || rawStatus === "hidden" ? rawStatus : "available";
+    const finalPublished = body.isPublished === false ? false : true;
 
     const [saved] = await db
       .insert(menuItems)

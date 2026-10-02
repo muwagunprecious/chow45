@@ -132,89 +132,237 @@
         </div>
 
         <!-- 1B: Restaurant Menu Detail Section (Initially hidden) -->
-        <div id="customer-store-section" style="display: none;">
-          <button class="back-btn" onclick="CustomerController.closeStoreMenu()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            Back to Restaurants
-          </button>
+        <!-- 1B: Restaurant Menu Detail Section (Matches Reference Screenshot) -->
+        <div id="customer-store-section" style="display: none; padding-bottom: 80px;">
+          <div class="store-hero-container" style="position: relative; margin: -16px -16px 0; overflow: visible;">
+            <button class="store-floating-back-btn" onclick="CustomerController.closeStoreMenu()" aria-label="Back to Restaurants" style="position: absolute; top: 18px; left: 18px; z-index: 10; width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.92); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <img id="store-detail-banner" class="store-banner-hero" src="" alt="Restaurant Banner" style="width: 100%; height: 210px; object-fit: cover; display: block;" />
 
-          <div class="store-view-header">
-            <img id="store-detail-banner" class="store-banner-hero" src="" alt="Restaurant Banner" />
-            <div class="store-header-body">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div>
-                  <h2 id="store-detail-name" style="font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; margin-bottom: 4px;"></h2>
-                  <p id="store-detail-tags" style="color: var(--c-text-secondary); font-size: 0.85rem; margin-bottom: 8px;"></p>
-                </div>
-                <button class="action-btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.chowApp.toast('Store saved to favorites ❤️', 'success')">
-                  Favorite
-                </button>
-              </div>
-              <div id="store-detail-meta" style="font-size: 0.82rem; font-weight: 600; color: var(--c-text-secondary);"></div>
+            <!-- Floating Round Logo Badge (Overlaps bottom-left of hero) -->
+            <div style="position: absolute; bottom: -28px; left: 20px; z-index: 5;">
+              <img id="store-detail-avatar-badge" src="/logo.png" alt="Logo" style="width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff; object-fit: cover; background: #fff; box-shadow: 0 6px 16px rgba(0,0,0,0.12);" />
             </div>
           </div>
 
-          <h3 class="section-title" style="margin-bottom: var(--space-16);">Menu</h3>
-          <div id="store-dishes-grid" class="menu-items-grid">
-            <!-- Dynamic dishes injected by customer.js -->
+          <div style="padding: 38px 4px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+              <div>
+                <h1 id="store-detail-name" style="font-family: var(--font-display); font-size: 1.55rem; font-weight: 800; color: #111; margin: 0 0 4px 0; letter-spacing: -0.02em;"></h1>
+                <p id="store-detail-tags" style="color: #64748B; font-size: 0.88rem; margin: 0;"></p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.88rem; color: #334155; background: #FFF; padding: 4px 10px; border-radius: 999px; border: 1px solid #E2E8F0; flex-shrink: 0;">
+                <span style="color: #F59E0B;">★</span> <span id="store-detail-rating">5.0 Excellent</span>
+              </div>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div id="store-category-pills" style="display: flex; gap: 8px; overflow-x: auto; padding: 16px 0 8px; margin-top: 10px; scrollbar-width: none;">
+              <button class="store-cat-pill active" onclick="CustomerController.filterStoreMenuCategory('all', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; background: #F1F5F9; color: #0F172A; white-space: nowrap;">All Dishes</button>
+              <button class="store-cat-pill" onclick="CustomerController.filterStoreMenuCategory('rice', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">Rice Dishes</button>
+              <button class="store-cat-pill" onclick="CustomerController.filterStoreMenuCategory('pasta', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">Pasta</button>
+              <button class="store-cat-pill" onclick="CustomerController.filterStoreMenuCategory('specials', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">Specials</button>
+              <button class="store-cat-pill" onclick="CustomerController.filterStoreMenuCategory('extras', this)" style="padding: 7px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; border: 1px solid #E2E8F0; background: #FFF; color: #475569; cursor: pointer; white-space: nowrap;">Extras &amp; Add ons</button>
+            </div>
+
+            <!-- In-Store Search Input -->
+            <div style="position: relative; margin: 12px 0 20px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.4" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="store-menu-search-input" placeholder="Search menu..." oninput="CustomerController.searchStoreMenu(this.value)" style="width: 100%; height: 42px; padding: 0 16px 0 42px; border-radius: 999px; border: 1.5px solid #E2E8F0; background: #F8FAFC; font-size: 0.9rem; outline: none; box-sizing: border-box;" />
+            </div>
+
+            <!-- Dishes List (Matches Chicken Republic Card Design) -->
+            <div id="store-dishes-grid" style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Dynamic dishes injected by customer.js -->
+            </div>
           </div>
         </div>
 
-        <!-- 1C: Live Mapbox Order Tracking Section (Point 16 & 17) -->
-        <div id="customer-tracking-section" style="display: none;">
-          <button class="tracking-back-btn" onclick="CustomerController.closeTracking()">
-            ← Back to food menu
-          </button>
+        <!-- 1D: Order Confirmed Celebration Screen (Matches Reference Screenshot) -->
+        <div id="customer-order-confirmed-section" style="display: none; min-height: 80vh; padding: 36px 16px 80px; max-width: 440px; margin: 0 auto; text-align: center;">
+          <div style="margin-top: 24px; margin-bottom: 20px;">
+            <div style="width: 88px; height: 88px; border-radius: 50%; background: #D9F7E8; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 0 0 10px #F0FDF4;">
+              <div style="width: 62px; height: 62px; border-radius: 50%; background: #16A34A; display: flex; align-items: center; justify-content: center; color: white; font-size: 30px; font-weight: 900;">
+                ✓
+              </div>
+            </div>
+          </div>
 
-          <div class="tracking-screen">
-            <!-- Mapbox Container -->
-            <div class="map-viewport">
-              <div id="mapbox-canvas"></div>
+          <h2 style="font-family: var(--font-display); font-size: 1.85rem; font-weight: 800; color: #111827; margin: 0 0 8px 0; letter-spacing: -0.03em;">Order Confirmed</h2>
+          <p style="color: #64748B; font-size: 0.95rem; margin: 0 0 20px 0; line-height: 1.45;">
+            Your order has been received<br />and is being processed
+          </p>
+
+          <p style="font-size: 0.88rem; color: #475569; margin: 0 0 26px 0;">
+            You will receive <strong style="color: #16A34A;" id="confirmed-points-pill">+4,100 points</strong> once your order has been completed
+          </p>
+
+          <!-- Points Breakdown Card -->
+          <div style="background: #FAF9F5; border: 1.5px solid #F1EFE9; border-radius: 20px; padding: 20px 22px; text-align: left; margin-bottom: 34px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 0.92rem; color: #334155;">
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.1rem;">⭐</span> Points to be added
+              </span>
+              <strong id="confirmed-points-base" style="color: #0F172A; font-weight: 800;">+ 2,650 pts</strong>
             </div>
 
-            <!-- Floating Live Status Bottom Sheet -->
-            <div class="tracking-overlay-card">
-              <div class="tracking-header-row">
-                <div>
-                  <span style="font-size: 0.75rem; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase;">Order #<span id="track-order-id"></span></span>
-                  <h3 id="track-status-heading" class="status-headline">Your food is being prepared</h3>
-                </div>
-                <div id="track-eta-badge" class="status-eta-pill">Est: 20 mins</div>
-              </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 0.92rem; color: #334155;">
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.1rem;">⚡</span> Streak Bonus (1.2x)
+              </span>
+              <strong id="confirmed-points-bonus" style="color: #0F172A; font-weight: 800;">+ 1,200 pts</strong>
+            </div>
 
-              <!-- Progress Stepper -->
-              <div class="tracking-stepper">
-                <div class="stepper-segment completed"></div>
-                <div class="stepper-segment active"></div>
-                <div class="stepper-segment"></div>
-                <div class="stepper-segment"></div>
-                <div class="stepper-segment"></div>
-              </div>
+            <div style="height: 1px; background: #E2E8F0; margin: 14px 0;"></div>
 
-              <!-- Rider Dispatch Profile -->
-              <div class="rider-dispatch-card">
-                <div class="rider-avatar-wrap">
-                  <img class="rider-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" alt="Rider" />
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1rem; font-weight: 800;">
+              <span style="color: #1E293B;">Total</span>
+              <span id="confirmed-points-total" style="color: #16A34A; font-size: 1.15rem; font-weight: 900;">+ 4,100 pts</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="button" class="cta-primary-btn" onclick="CustomerController.closeTracking();" style="width: 100%; padding: 16px; background: #15803D; color: #fff; border-radius: 14px; font-weight: 800; font-size: 1rem; border: none; cursor: pointer; box-shadow: 0 6px 18px rgba(22,163,74,0.25);">
+              Go Home
+            </button>
+            <button type="button" onclick="CustomerController.trackConfirmedOrder();" style="width: 100%; padding: 15px; background: transparent; color: #15803D; border: 2px solid #15803D; border-radius: 14px; font-weight: 800; font-size: 1rem; cursor: pointer;">
+              Track Order
+            </button>
+          </div>
+        </div>
+
+        <!-- 1C: Live Mapbox Order Tracking Section (Matches Reference Screenshot) -->
+        <div id="customer-tracking-section" style="display: none; padding-bottom: 30px;">
+          <!-- Top Screen Header: Back button + Order ID -->
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 16px; border-bottom: 1px solid #F1F5F9;">
+            <button type="button" onclick="CustomerController.closeTracking()" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #0F172A; padding: 4px; display: flex; align-items: center;">
+              ←
+            </button>
+            <h2 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0;">
+              Order <span id="track-order-num">CH4528</span>
+            </h2>
+            <div style="width: 24px;"></div>
+          </div>
+
+          <!-- Order Status Bar (Matches Screenshot) -->
+          <div style="padding: 16px 4px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.76rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em;">Order Status</span>
+              <button type="button" onclick="CustomerController.openTimelineModal()" style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; color: #334155; cursor: pointer;">
+                View Timeline
+              </button>
+            </div>
+            <h2 id="track-status-heading" style="font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: #0F172A; margin: 0 0 10px 0; letter-spacing: -0.02em;">
+              Order in transit
+            </h2>
+
+            <!-- 5-Segment Green Stepper -->
+            <div class="tracking-stepper" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0 8px;">
+              <div class="stepper-segment completed" style="height: 5px; border-radius: 3px; background: #22C55E;"></div>
+              <div class="stepper-segment completed" style="height: 5px; border-radius: 3px; background: #22C55E;"></div>
+              <div class="stepper-segment completed" style="height: 5px; border-radius: 3px; background: #22C55E;"></div>
+              <div class="stepper-segment active" style="height: 5px; border-radius: 3px; background: #22C55E;"></div>
+              <div class="stepper-segment" style="height: 5px; border-radius: 3px; background: #E2E8F0;"></div>
+            </div>
+
+            <p id="track-status-subtext" style="color: #64748B; font-size: 0.88rem; margin: 4px 0 0 0;">
+              Your Order Is On The Way
+            </p>
+          </div>
+
+          <div class="tracking-screen" style="position: relative;">
+            <!-- Mapbox Container -->
+            <div class="map-viewport" style="height: 380px; border-radius: 20px; overflow: hidden; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+              <div id="mapbox-canvas" style="width: 100%; height: 100%;"></div>
+            </div>
+
+            <!-- Floating Live Status Bottom Sheet (Matches Screenshot Design) -->
+            <div class="tracking-overlay-card" style="background: #FFFFFF; border-radius: 24px; padding: 20px 22px; box-shadow: 0 12px 36px rgba(0,0,0,0.12); border: 1px solid #E2E8F0;">
+              <!-- Little drag handle -->
+              <div style="width: 40px; height: 4px; background: #E2E8F0; border-radius: 2px; margin: 0 auto 16px auto;"></div>
+
+              <!-- Rider Dispatch Profile Row -->
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #F1F5F9;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="width: 46px; height: 46px; border-radius: 50%; background: #FAF6EB; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                    🛵
+                  </div>
                   <div>
-                    <div class="rider-name">David Adeleke (Chow45 Rider)</div>
-                    <div class="rider-rating">★ 4.9 • Bajaj Boxer 150 (LAG-452)</div>
+                    <h3 id="track-rider-name" style="font-size: 0.98rem; font-weight: 800; color: #0F172A; margin: 0 0 2px 0;">David Adeleke</h3>
+                    <span style="font-size: 0.78rem; color: #64748B; font-weight: 600;">Dispatch</span>
                   </div>
                 </div>
-                <button class="rider-action-btn" title="Call Rider" onclick="window.chowApp.toast('Calling David (+234 812 490 2819)...', 'info')">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+
+                <!-- Three Action Buttons: Call, WhatsApp, Report -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <a id="track-rider-call-btn" href="tel:+2348124902819" title="Call Dispatch" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
+                    📞
+                  </a>
+                  <a id="track-rider-wa-btn" href="https://wa.me/2348124902819" target="_blank" rel="noopener" title="WhatsApp" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
+                    💬
+                  </a>
+                  <button type="button" onclick="window.chowApp.toast('Contacting Chow45 Support Team...', 'info')" title="Report Issue" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; cursor: pointer; font-size: 1rem;">
+                    🚩
+                  </button>
+                </div>
+              </div>
+
+              <!-- Delivery Destination Row -->
+              <div style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid #F1F5F9;">
+                <span style="font-size: 1.2rem; flex-shrink: 0; margin-top: 1px;">📍</span>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Delivery Dropoff</div>
+                  <strong id="track-dest-address" style="font-size: 0.92rem; color: #0F172A; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
+                </div>
+              </div>
+
+              <!-- 4-Digit Security Dropoff PIN Box -->
+              <div style="background: #F0FDF4; border: 1.5px dashed #86EFAC; border-radius: 14px; padding: 12px 16px; margin: 14px 0; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 0.76rem; font-weight: 700; color: #166534; text-transform: uppercase;">4-Digit Delivery PIN</div>
+                  <small style="color: #15803D; font-size: 0.76rem;">Give to rider to confirm delivery</small>
+                </div>
+                <div id="track-order-pin" style="font-family: monospace; font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em; color: #15803D; background: #DCFCE7; padding: 4px 12px; border-radius: 8px;">
+                  4528
+                </div>
+              </div>
+
+              <!-- Order Note Row -->
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; font-size: 0.85rem; color: #475569;">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                  <span>💬</span> <span id="track-order-note-display">Add Order Note</span>
+                </span>
+                <span id="track-store-name" style="font-weight: 700; color: #0C513F;"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1E: Order Timeline Bottom Sheet Modal (Matches Design Reference Screenshot) -->
+        <div id="order-timeline-modal" class="modal-backdrop" onclick="if(event.target === this) CustomerController.closeTimelineModal();">
+          <div class="modal-sheet" style="max-width: 480px; border-radius: 24px 24px 0 0; background: #FFFFFF; overflow: hidden; padding-bottom: 24px;">
+            <div style="padding: 20px 22px 14px; border-bottom: 1px solid #F1F5F9; display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <span style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Order Status</span>
+                <h3 id="timeline-status-heading" style="font-family: var(--font-display); font-size: 1.45rem; font-weight: 800; color: #0F172A; margin: 2px 0 0 0;">
+                  Order In Transit
+                </h3>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="window.chowApp.toast('Contacting Chow45 Support...', 'info')" style="background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 999px; padding: 6px 14px; font-size: 0.78rem; font-weight: 700; color: #0F172A; cursor: pointer;">
+                  Contact Support
+                </button>
+                <button type="button" onclick="CustomerController.closeTimelineModal()" style="border: none; background: none; font-size: 1.2rem; cursor: pointer; color: #64748B; padding: 4px;">
+                  ✕
                 </button>
               </div>
+            </div>
 
-              <!-- 4-Digit Security Dropoff PIN -->
-              <div class="pin-security-box">
-                <span>Give this 4-digit PIN to rider upon arrival:</span>
-                <span id="track-order-pin" class="pin-code">4528</span>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--c-text-muted); margin-top: 10px;">
-                <span>Pickup: <strong id="track-store-name" style="color: var(--c-text-primary);">Restaurant</strong></span>
-                <span>Dropoff: <strong id="track-dest-address" style="color: var(--c-text-primary);">9 Goshen Ave</strong></span>
-              </div>
+            <!-- Vertical Stepped Timeline List -->
+            <div id="timeline-events-container" style="padding: 22px 24px 10px;">
+              <!-- Dynamic timeline injected by customer.js -->
             </div>
           </div>
         </div>
@@ -404,6 +552,25 @@
 
               <div class="vnd-card">
                 <div class="vnd-card-head">
+                  <h3>Store Cover Picture</h3>
+                </div>
+                <div class="vnd-store-details-wrap">
+                  <p class="vnd-muted" style="margin-bottom: 12px;">This is your restaurant picture that customers see on the marketplace.</p>
+                  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <img id="vnd-store-banner-preview" style="width: 130px; height: 85px; object-fit: cover; border-radius: 12px; border: 1px solid #E2E8F0; background: #F8FAFC;" src="/logo.png" alt="Store Picture" />
+                    <div>
+                      <input type="file" id="vnd-change-banner-input" accept="image/*" style="display: none;" onchange="VendorController.handleStoreBannerUpload(event)" />
+                      <button type="button" class="vnd-btn vnd-btn-secondary" onclick="document.getElementById('vnd-change-banner-input').click()" style="padding: 8px 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        📸 Upload Store Picture
+                      </button>
+                      <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 6px;">Upload a storefront, restaurant signboard, or kitchen photo</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="vnd-card">
+                <div class="vnd-card-head">
                   <h3>Store Profile & Hours</h3>
                 </div>
                 <div class="vnd-store-details-wrap">
@@ -426,17 +593,61 @@
            ROLE 3: RIDER / DISPATCH PORTAL
            ------------------------------------------------------- -->
       <section id="view-rider" class="role-view">
+        <!-- Floating Landing Page Branded Capsule Header -->
+        <header class="rider-landing-header">
+          <div class="rider-landing-nav">
+            <div class="rider-nav-left">
+              <a href="/" class="rider-logo-pill" title="Chow45 Home">
+                <img src="/logo.png" alt="Chow45 Logo" class="rider-logo-img" />
+              </a>
+              <div class="rider-flag-pill">
+                <span class="flag-icon">🇳🇬</span>
+                <span class="flag-text">NG</span>
+                <span class="campus-tag">OOU Sagamu</span>
+              </div>
+              <div class="rider-dispatch-badge">
+                <span class="radar-pulse-dot"></span>
+                <span class="dispatch-text">RADAR ACTIVE</span>
+              </div>
+            </div>
+
+            <div class="rider-nav-links">
+              <a href="/app" class="rider-nav-link">Marketplace ↗</a>
+              <a href="/riders" class="rider-nav-link">Fleet Radar ↗</a>
+              <a href="/vendor" class="rider-nav-link">Vendors ↗</a>
+            </div>
+
+            <div class="rider-nav-right">
+              <div id="rider-header-duty-toggle" class="rider-duty-pill online" onclick="RiderController.toggleOnlineStatus()" title="Toggle Duty Status">
+                <span class="duty-dot"></span>
+                <span id="rider-duty-text">On Duty</span>
+              </div>
+              <button class="rider-profile-pill" onclick="Chow45Auth.openAccountModal()" title="Profile & Sign Out">
+                <span class="rider-profile-icon">👤</span>
+                <span class="rider-profile-label">Profile</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
         <div class="rider-dashboard">
           <div class="rider-status-bar">
             <div class="rider-info-group">
-              <img id="rider-profile-avatar" class="rider-profile-img" src="" alt="Rider" />
+              <div class="rider-avatar-wrapper">
+                <img id="rider-profile-avatar" class="rider-profile-img" src="" alt="Rider" />
+                <span class="rider-avatar-pulse-badge"></span>
+              </div>
               <div>
+                <div class="rider-badge-row">
+                  <span class="rider-official-tag">✦ VERIFIED DISPATCH RIDER</span>
+                  <span class="rider-campus-subtag">Sagamu Campus Fleet</span>
+                </div>
                 <h3 id="rider-profile-name" class="rider-name-heading">David Adeleke</h3>
                 <div id="rider-profile-vehicle" class="rider-vehicle-type">Bajaj Boxer 150 (LAG-452-IKJ)</div>
               </div>
             </div>
 
-            <div class="rider-online-toggle">
+            <div class="rider-online-toggle online" onclick="RiderController.toggleOnlineStatus()" title="Click to toggle duty status">
               <span class="radar-pulse-dot"></span>
               <span>ONLINE & READY</span>
             </div>
@@ -461,7 +672,12 @@
           <!-- Available Jobs Feed (Shown when not in active mission) -->
           <div id="rider-radar-feed-section" class="jobs-feed-container">
             <div class="feed-header-row">
-              <h3 class="section-title">Available Deliveries Near You</h3>
+              <div>
+                <p class="rider-section-eyebrow">
+                  <span class="eyebrow-dot"></span> 01 / Live Campus Orders
+                </p>
+                <h3 class="section-title">Available Deliveries Near You</h3>
+              </div>
               <span class="live-radar-badge">
                 <span class="radar-pulse-dot"></span> Radar Active
               </span>
@@ -731,6 +947,29 @@
       </button>
 
       <button class="bottom-tab" onclick="Chow45Auth.openAccountModal()" title="Profile & Logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+    <!-- Dedicated Rider Navigation -->
+    <nav class="bottom-nav" data-nav-for="rider" aria-label="Rider Navigation" hidden>
+      <button class="bottom-tab active" onclick="if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Radar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 6a6 6 0 0 1 6 6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span>Radar</span>
+      </button>
+
+      <button class="bottom-tab" onclick="if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Active Mission">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <span>Delivery</span>
+      </button>
+
+      <button class="bottom-tab" onclick="window.location.href='/riders';" title="Fleet Hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Fleet Hub</span>
+      </button>
+
+      <button class="bottom-tab" onclick="Chow45Auth.openAccountModal()" title="Profile & Sign Out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -2245,11 +2484,11 @@
   <script src="/app/js/state.js?v=20261001b"></script>
   <script src="/app/js/mapbox-service.js?v=20260928c"></script>
   <script src="/app/js/location-picker.js?v=20260930d"></script>
-  <script src="/app/js/customer.js?v=20261001b"></script>
-  <script src="/app/js/vendor.js?v=20261001b"></script>
-  <script src="/app/js/rider.js"></script>
+  <script src="/app/js/customer.js?v=20261002c"></script>
+  <script src="/app/js/vendor.js?v=20261002c"></script>
+  <script src="/app/js/rider.js?v=20261002a"></script>
   <script src="/app/js/admin.js"></script>
-<script src="/app/js/auth.js?v=20261001c"></script>
+<script src="/app/js/auth.js?v=20261002b"></script>
 <script src="/app/js/vendor-onboarding.js?v=20260928a"></script>
 <script src="/app/js/app.js?v=20261001d"></script>
 </body>

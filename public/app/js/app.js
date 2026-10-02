@@ -95,6 +95,19 @@ const Chow45App = {
           role: role,
           isLoggedIn: true
         };
+
+        if (role === 'vendor' && Array.isArray(data.stores)) {
+          const myStore = data.stores.find(s => 
+            (s.userId && String(s.userId) === String(u.id)) ||
+            (s.numericId && String(s.numericId) === String(u.vendorId)) ||
+            (s.email && s.email.toLowerCase() === u.email.toLowerCase()) ||
+            (s.contactEmail && s.contactEmail.toLowerCase() === u.email.toLowerCase())
+          );
+          if (myStore) {
+            profile.storeId = myStore.id;
+            profile.vendorId = myStore.numericId;
+          }
+        }
         if (window.chowStore && window.chowStore.state) {
           window.chowStore.state.userProfile = Object.assign(
             {},

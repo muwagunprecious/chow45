@@ -903,12 +903,14 @@ const VendorController = {
         <span class="vnd-addon-pill">＋${this._esc(a.name)}</span>
       `).join('');
       return `
-        <div class="vnd-item-line">
-          <span class="vnd-item-qty">${item.qty}x</span>
-          <span class="vnd-item-name">${this._esc(item.name)}</span>
-          <span class="vnd-item-price">${this._naira(item.itemTotal)}</span>
+        <div class="vnd-item-line" style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed #F1F5F9;">
+          <div style="flex: 1; padding-right: 8px;">
+            <span class="vnd-item-qty" style="font-weight: 800; color: #0C513F; margin-right: 6px;">${item.qty}x</span>
+            <span class="vnd-item-name" style="font-weight: 700; color: #0F172A;">${this._esc(item.name)}</span>
+            ${addons ? `<div class="vnd-item-addons" style="margin-top: 4px; font-size: 0.78rem; color: #64748B;">${addons}</div>` : ''}
+          </div>
+          <span class="vnd-item-price" style="font-weight: 800; color: #0F172A; white-space: nowrap;">${this._naira(item.itemTotal)}</span>
         </div>
-        ${addons ? `<div class="vnd-item-addons">${addons}</div>` : ''}
       `;
     }).join('');
 
@@ -927,27 +929,34 @@ const VendorController = {
     }
 
     let riderLine = '';
-    if (order.status === 'RIDER_ASSIGNED' || order.status === 'RIDER_HEADING_TO_STORE' || order.status === 'RIDER_AT_STORE' || order.status === 'PICKED_UP' || order.status === 'OUT_FOR_DELIVERY' || order.status === 'RIDER_NEARBY') {
-      riderLine = `<div class="vnd-rider-line">🛵 ${this._esc(order.riderName || 'Rider')} · ${this._esc(stage ? stage.label : 'In transit')}</div>`;
+    if (['RIDER_ASSIGNED', 'RIDER_HEADING_TO_STORE', 'RIDER_AT_STORE', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY'].includes(order.status)) {
+      riderLine = `<div class="vnd-rider-line" style="font-weight: 700; color: #0C513F; background: #F0FDF4; padding: 8px 12px; border-radius: 10px; margin: 10px 0; font-size: 0.85rem;">🛵 Dispatch Rider Assigned · ${this._esc(order.riderName || 'Rider')} (${this._esc(stage ? stage.label : 'In Transit')})</div>`;
     } else if (order.status === 'DELIVERED') {
-      riderLine = `<div class="vnd-rider-line">✅ Delivered by ${this._esc(order.riderName || 'Rider')}</div>`;
+      riderLine = `<div class="vnd-rider-line" style="font-weight: 700; color: #166534; background: #DCFCE7; padding: 8px 12px; border-radius: 10px; margin: 10px 0; font-size: 0.85rem;">✅ Order Delivered Successfully by ${this._esc(order.riderName || 'Rider')}</div>`;
     }
 
     const customerSpot = order.deliveryAddress || order.deliveryLocation || '';
     return `
-      <div class="vnd-order-card">
-        <div class="vnd-order-top">
-          <div class="vnd-order-id">#${this._esc(order.id)}</div>
-          <div class="vnd-customer-name">${this._esc(order.customerName)}</div>
-          <div class="vnd-customer-spot">📍 ${this._esc(customerSpot)}</div>
+      <div class="vnd-order-card" style="border: 2px solid #E2E8F0; border-radius: 18px; background: #FFF; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+        <div style="border-bottom: 2px dashed #E2E8F0; padding-bottom: 12px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0C513F; background: #ECFDF5; padding: 3px 8px; border-radius: 6px;">CHOW45 KITCHEN RECEIPT</span>
+            <span style="font-family: monospace; font-size: 0.95rem; font-weight: 800; color: #0F172A;">#${this._esc(order.id)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A;">${this._esc(order.customerName)}</div>
+            <div style="font-size: 0.82rem; color: #64748B; font-weight: 600;">⏰ Due by ${this._esc(eta)}</div>
+          </div>
+          <div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">📍 ${this._esc(customerSpot)}</div>
+          ${order.deliveryNotes ? `<div style="font-size: 0.8rem; color: #B45309; background: #FEF3C7; padding: 6px 10px; border-radius: 8px; margin-top: 8px; font-weight: 600;">Note: ${this._esc(order.deliveryNotes)}</div>` : ''}
         </div>
-        <div class="vnd-order-items">${itemsHtml}</div>
-        <div class="vnd-order-meta">
-          <span class="vnd-meta-pill">⏰ Due by ${this._esc(eta)}</span>
-          <span class="vnd-meta-pill">Subtotal ${this._naira(order.subtotal)}</span>
+        <div class="vnd-order-items" style="margin-bottom: 12px;">${itemsHtml}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F1F5F9; padding-top: 10px; margin-bottom: 10px;">
+          <span style="font-size: 0.88rem; color: #64748B; font-weight: 600;">Total Payout</span>
+          <strong style="font-size: 1.15rem; color: #0C513F; font-weight: 900;">${this._naira(order.subtotal || order.total)}</strong>
         </div>
         ${riderLine}
-        <div class="vnd-order-actions">${actions}</div>
+        <div class="vnd-order-actions" style="margin-top: 14px; display: flex; gap: 8px;">${actions}</div>
       </div>
     `;
   },
@@ -996,6 +1005,11 @@ const VendorController = {
   // Store tab owns the store banner, so its counts refresh when it is shown.
   renderStoreTab() {
     const store = this.getStore();
+    const bannerPreview = document.getElementById('vnd-store-banner-preview');
+    if (bannerPreview) {
+      bannerPreview.src = (store && (store.bannerImg || store.image)) || '/logo.png';
+    }
+
     if (!store) {
       // Report zeros rather than the seeded restaurant's numbers.
       const foodCount = document.getElementById('vnd-quick-food-count');
@@ -1018,6 +1032,58 @@ const VendorController = {
       const live = buckets.new.length + buckets.preparing.length;
       orderCount.innerText = `${live} live order${live === 1 ? '' : 's'}`;
     }
+  },
+
+  async handleStoreBannerUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      window.chowApp.toast('Please select an image file (JPG, PNG, or WebP).', 'warning');
+      return;
+    }
+
+    const store = this.getStore();
+    if (!store) {
+      window.chowApp.toast('No active store found to update.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target.result;
+      const preview = document.getElementById('vnd-store-banner-preview');
+      if (preview) preview.src = dataUrl;
+      const avatar = document.getElementById('vendor-store-avatar');
+      if (avatar) avatar.src = dataUrl;
+
+      store.bannerImg = dataUrl;
+      store.image = dataUrl;
+      window.chowStore.save();
+
+      try {
+        const res = await fetch('/api/vendor/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            businessName: store.name,
+            bannerImage: dataUrl,
+            image: dataUrl
+          })
+        });
+
+        if (res.ok) {
+          window.chowApp.toast('Store cover picture updated successfully!', 'success');
+        } else {
+          window.chowApp.toast('Picture saved locally; sync with server had an issue.', 'info');
+        }
+      } catch (err) {
+        console.warn('[vendor] Store banner upload sync error:', err);
+        window.chowApp.toast('Picture saved locally.', 'info');
+      }
+    };
+    reader.readAsDataURL(file);
   },
 
   filterCategory(cat) {
@@ -1850,7 +1916,7 @@ const VendorController = {
         const detail = await res.json().catch(() => ({}));
         const errMsg = detail.error || `Server responded with error status ${res.status}`;
         console.warn('[chow45] menu item sync failed:', res.status, errMsg);
-        return { success: false, error: errMsg };
+        return { success: false, status: res.status, error: errMsg };
       }
       const data = await res.json().catch(() => ({}));
       return { success: true, data };
@@ -2137,6 +2203,19 @@ const VendorController = {
       // Sync to server first to verify validation and database persistence
       const syncResult = await this._syncMenuItemToServer(payload, serverId);
       if (syncResult && !syncResult.success) {
+        if (syncResult.status === 401 || syncResult.error === 'UNAUTHORIZED' || syncResult.error?.includes('Unauthorized')) {
+          this.saveDraft(this.flowDraft);
+          window.chowApp.toast('Please sign in to your vendor account to publish food. Your draft has been saved.', 'warning');
+          if (window.Chow45Auth) {
+            window.Chow45Auth.open('vendor');
+          }
+          if (publishBtn) {
+            publishBtn.disabled = false;
+            publishBtn.innerText = originalBtnText;
+          }
+          return;
+        }
+
         const errorMsg = syncResult.error || 'Failed to save food to server.';
         if (errBox) {
           errBox.style.display = 'block';

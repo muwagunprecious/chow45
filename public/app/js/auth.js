@@ -956,10 +956,17 @@ const Chow45Auth = {
     let profile = null;
     let serverData = null;
     try {
-      const res = await fetch('/api/vendor/profile', { headers: { 'Content-Type': 'application/json' } });
+      const res = await fetch('/api/vendor/profile', {
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
       if (res.ok) {
         serverData = await res.json().catch(() => ({}));
         profile = serverData && serverData.vendor ? serverData.vendor : null;
+      } else if (res.status === 401) {
+        if (window.chowStore?.state?.userProfile) {
+          window.chowStore.state.userProfile.isLoggedIn = false;
+        }
       }
     } catch (e) {
       // Offline or server down: fall back to whatever signup captured.

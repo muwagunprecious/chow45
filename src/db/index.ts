@@ -19,6 +19,7 @@ import * as ridersSchema from "./schema/riders";
 import * as ordersSchema from "./schema/orders";
 import * as cartSchema from "./schema/cart";
 import * as vendorFinanceSchema from "./schema/vendor-finance";
+import * as riderFinanceSchema from "./schema/rider-finance";
 import * as categoriesSchema from "./schema/categories";
 import * as waitlistSchema from "./schema/waitlist";
 
@@ -39,6 +40,7 @@ export const db = drizzle({ client: pool,
         ...ordersSchema,
         ...cartSchema,
         ...vendorFinanceSchema,
+        ...riderFinanceSchema,
         ...categoriesSchema,
         ...waitlistSchema,
     },
@@ -54,5 +56,6 @@ export * from "./schema/riders";
 export * from "./schema/orders";
 export * from "./schema/cart";
 export * from "./schema/vendor-finance";
+export * from "./schema/rider-finance";
 export * from "./schema/categories";
 export * from "./schema/waitlist";

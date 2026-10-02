@@ -11,13 +11,19 @@ export async function POST(request: Request) {
     if (url.pathname.endsWith("/sign-in/email")) {
         const res = await authHandler.POST(request);
         if (!res.ok) {
+            let errData: any = {};
+            try {
+                errData = await res.clone().json();
+            } catch {
+                errData = { message: await res.clone().text().catch(() => "Sign in failed.") };
+            }
             return NextResponse.json(
                 {
                     success: false,
-                    error: "INVALID_CREDENTIALS",
-                    message: "Incorrect password. Please try again.",
+                    error: errData.code || "INVALID_CREDENTIALS",
+                    message: errData.message || "Incorrect password. Please try again.",
                 },
-                { status: 401 }
+                { status: res.status || 401 }
             );
         }
         return res;

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema/users";
+import { users, accounts } from "@/db/schema/users";
 import { vendors, vendorWallets } from "@/db";
 import { vendorAuth } from "@/auth";
+import { hashPassword } from "better-auth/crypto";
 
 function slugify(name: string): string {
   return (
@@ -136,6 +137,27 @@ export async function POST(request: Request) {
         { error: "Could not create vendor account. Please try again." },
         { status: 500 }
       );
+    }
+
+    // Ensure credential account exists for this vendor in accounts table
+    try {
+      const existingAccount = await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(eq(accounts.userId, userId))
+        .limit(1);
+
+      if (existingAccount.length === 0) {
+        const hashedPassword = await hashPassword(password);
+        await db.insert(accounts).values({
+          userId,
+          accountId: String(userId),
+          providerId: "credential",
+          password: hashedPassword,
+        });
+      }
+    } catch (accErr) {
+      console.warn("[vendor register] Error ensuring account credentials:", accErr);
     }
 
     // 2. Check if vendor profile already exists for this email or userId

@@ -147,6 +147,11 @@ export async function POST(request: Request) {
     const pin = String(Math.floor(1000 + Math.random() * 9000));
     const now = new Date();
 
+    const requestedStatus =
+      String(body.status || "").toUpperCase() === "PENDING_PAYMENT"
+        ? "PENDING_PAYMENT"
+        : "PAID";
+
     const [order] = await db
       .insert(orders)
       .values({
@@ -173,7 +178,7 @@ export async function POST(request: Request) {
         serviceFee,
         deliveryFee,
         total,
-        status: "PAID",
+        status: requestedStatus,
         pin,
         routeDistanceMeters: hintMeters,
         estimatedDurationSeconds: Math.round(Number(body.estimatedDurationSeconds)) || null,
@@ -194,31 +199,46 @@ export async function POST(request: Request) {
 
     await db.insert(orderEvents).values({
       orderId,
-      status: "PAID",
-      note: STATUS_NOTES.PAID,
+      status: requestedStatus,
+      note: STATUS_NOTES[requestedStatus] || STATUS_NOTES.PAID,
       actor: "customer",
     });
 
-    // The basket is emptied only after the order exists, so a failure above
-    // leaves the customer still holding their items.
-    await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+    if (requestedStatus === "PAID") {
+      // The basket is emptied only when order is paid
+      await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
 
-    // Platform totals move in the same statement as the order, so the admin
-    // dashboard cannot drift from the order table.
-    await db
-      .insert(platformLedgers)
-      .values({ id: 1, totalGmv: total, totalServiceFees: serviceFee })
-      .onConflictDoUpdate({
-        target: platformLedgers.id,
-        set: {
-          totalGmv: sql`${platformLedgers.totalGmv} + ${total}`,
-          totalServiceFees: sql`${platformLedgers.totalServiceFees} + ${serviceFee}`,
-          updatedAt: now,
-        },
-      });
+      // Platform totals move in the same statement as the order
+      await db
+        .insert(platformLedgers)
+        .values({ id: 1, totalGmv: total, totalServiceFees: serviceFee })
+        .onConflictDoUpdate({
+          target: platformLedgers.id,
+          set: {
+            totalGmv: sql`${platformLedgers.totalGmv} + ${total}`,
+            totalServiceFees: sql`${platformLedgers.totalServiceFees} + ${serviceFee}`,
+            updatedAt: now,
+          },
+        });
+    }
 
     return NextResponse.json(
-      { order: serializeOrder(order, [], [{ id: 0, orderId, status: "PAID", note: STATUS_NOTES.PAID, actor: "customer", createdAt: now }]) },
+      {
+        order: serializeOrder(
+          order,
+          [],
+          [
+            {
+              id: 0,
+              orderId,
+              status: requestedStatus,
+              note: STATUS_NOTES[requestedStatus] || STATUS_NOTES.PAID,
+              actor: "customer",
+              createdAt: now,
+            },
+          ]
+        ),
+      },
       { status: 201 },
     );
   } catch (e: any) {
