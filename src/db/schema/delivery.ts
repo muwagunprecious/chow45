@@ -47,8 +47,8 @@ export const deliveryConfigs = pgTable("delivery_configs", {
   id: integer("id").primaryKey().default(1),
   baseFee: integer("base_fee").notNull().default(300),
   serviceFee: integer("service_fee").notNull().default(400),
-  /** Stored as a fraction of one naira, so 0.15 is kept exactly. */
-  ratePerMeter: real("rate_per_meter").notNull().default(0.15),
+  /** Stored as a fraction of one naira, so 200 is kept exactly. */
+  ratePerMeter: real("rate_per_meter").notNull().default(200),
   minDeliveryFee: integer("min_delivery_fee").notNull().default(300),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

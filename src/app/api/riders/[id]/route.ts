@@ -54,6 +54,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/riders/[id
     // that only ever moves one direction is a footgun: let them set it either way.
     if (body.isOnline !== undefined) patch.isOnline = body.isOnline === true;
     if (body.isAvailable !== undefined) patch.isAvailable = body.isAvailable === true;
+    if (body.location !== undefined) patch.location = String(body.location).toLowerCase().trim();
 
     const lat = body.lat !== undefined ? toLat(body.lat) : body.currentLat !== undefined ? toLat(body.currentLat) : null;
     const lng = body.lng !== undefined ? toCoord(body.lng) : body.currentLng !== undefined ? toCoord(body.currentLng) : null;
@@ -70,4 +71,28 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/riders/[id
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }
+}
+
+
+export async function GET(request: Request, ctx: RouteContext<"/api/riders/[id]"> ){
+  const userId = await currentUserId(request);
+  if (userId === null) {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const riderId = String(id);
+
+  const found = await db.select().from(riders).where(eq(riders.id, riderId)).limit(1);
+  const rider = found[0];
+
+  if(!rider){
+    return NextResponse.json({
+      error: "Rider not found."
+    })
+  };
+ 
+return NextResponse.json({
+  rider: serializeRider(rider)
+});
 }

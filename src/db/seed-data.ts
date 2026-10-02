@@ -78,6 +78,7 @@ export type SeedMenuItem = {
 
 export type SeedRider = {
   id: string;
+  publicId?: string;
   name: string;
   phone: string;
   vehicle: string;

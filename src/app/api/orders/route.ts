@@ -131,7 +131,7 @@ export async function POST(request: Request) {
 
     const deliveryFee = Math.max(
       config?.minDeliveryFee ?? 300,
-      Math.round((config?.baseFee ?? 300) + (hintMeters ?? 2000) * (config?.ratePerMeter ?? 0.15)),
+      Math.round((config?.baseFee ?? 300) + (hintMeters ?? 2000) * (config?.ratePerMeter ?? 200)),
     );
 
     // Line items are priced from the cart, which was itself priced from the

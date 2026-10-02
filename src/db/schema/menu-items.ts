@@ -5,7 +5,7 @@ export const menuItems = pgTable("menu_items", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  vendorId: bigint("vendor_id", { mode: "number" })
+  vendorId: bigint("vendor_id", { mode: "number" }).notNull()
     .references(() => vendors.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
