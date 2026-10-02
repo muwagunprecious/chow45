@@ -27,7 +27,7 @@ export async function GET() {
   if (!config) {
     // The seed inserts the row, but a fresh checkout that skipped seeding should
     // still return the documented defaults rather than a 404.
-    return NextResponse.json({ config: { baseFee: 300, serviceFee: 400, ratePerMeter: 0.15, minDeliveryFee: 300 } });
+    return NextResponse.json({ config: { baseFee: 300, serviceFee: 400, ratePerMeter: 200, minDeliveryFee: 300 } });
   }
 
   return NextResponse.json({
@@ -55,7 +55,7 @@ export async function PUT(request: Request) {
 
   // The rate is a fraction of a naira per meter and rounds to a sane range.
   const rawRate = Number(body.ratePerMeter);
-  const ratePerMeter = Number.isFinite(rawRate) ? Math.min(5, Math.max(0, rawRate)) : 0.15;
+  const ratePerMeter = Number.isFinite(rawRate) ? Math.min(5000, Math.max(0, rawRate)) : 200;
 
   const config = {
     baseFee: clampInt(body.baseFee, 0, BASE_FEE_MAX, 300),

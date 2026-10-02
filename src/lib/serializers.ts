@@ -229,7 +229,7 @@ export function serializeConfig(config: DeliveryConfig | undefined) {
   return {
     baseFee: config?.baseFee ?? 300,
     serviceFee: config?.serviceFee ?? 400,
-    ratePerMeter: config?.ratePerMeter ?? 0.15,
+    ratePerMeter: config?.ratePerMeter ?? 200,
     minDeliveryFee: config?.minDeliveryFee ?? 300,
   };
 }

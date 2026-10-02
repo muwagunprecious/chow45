@@ -118,7 +118,7 @@ function sanitizeCenter(value: unknown): [number, number] {
 }
 
 function sanitizeRules(value: unknown) {
-  const fallback = { baseFee: 300, ratePerMeter: 0.15, serviceFee: 400 };
+  const fallback = { baseFee: 300, ratePerMeter: 200, serviceFee: 400 };
   if (!value || typeof value !== "object") return fallback;
   const v = value as Record<string, unknown>;
   const n = (x: unknown, fb: number) => {

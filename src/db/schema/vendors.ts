@@ -60,7 +60,7 @@ export const vendors = pgTable("vendors", {
   latitude: numeric("latitude", { precision: 9, scale: 6 }),
   longitude: numeric("longitude", { precision: 9, scale: 6 }),
   address: text("address"),
-  locationOfOperation: text("locationOfOperation"),
+  location: text("location"),
 
   isOpen: boolean("is_open").notNull().default(true),
   isVerified: boolean("is_verified").notNull().default(false),

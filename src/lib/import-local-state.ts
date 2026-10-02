@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 import { db } from "@/db";
 import {
@@ -231,7 +232,7 @@ async function importZones(
       maxDeliveryDistance: Math.max(0, money(zone.maxDeliveryDistance, 3000)),
       deliveryRules: {
         baseFee: money(rules.baseFee, 300),
-        ratePerMeter: rate(rules.ratePerMeter, 0.15),
+        ratePerMeter: rate(rules.ratePerMeter, 200),
         serviceFee: money(rules.serviceFee, 400),
       },
       operatingHours: {
@@ -278,6 +279,7 @@ async function importRiders(
     }
 
     const values = {
+      publicId: optionalText(rider.publicId, 21) ?? nanoid(),
       name: optionalText(rider.name, 255) ?? id,
       phone: optionalText(rider.phone, 20),
       vehicle: optionalText(rider.vehicle, 255),

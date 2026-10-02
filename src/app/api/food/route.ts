@@ -36,7 +36,7 @@ export async function GET(req: Request) {
             where: and(
                 eq(vendors.status, "approved"),
                 eq(vendors.isOpen, true),
-                ilike(vendors.locationOfOperation, `%${locationParam}%`)
+                ilike(vendors.location, `%${locationParam}%`)
  ),
         });
 

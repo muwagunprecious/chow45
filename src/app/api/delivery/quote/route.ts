@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     const durationSeconds = Math.round((distance / 500) * 60);
 
     const base = config?.baseFee ?? 300;
-    const rate = config?.ratePerMeter ?? 0.15;
+    const rate = config?.ratePerMeter ?? 200;
     const min = config?.minDeliveryFee ?? 300;
 
     // A dropoff outside every active zone still gets a quote, but is flagged so

@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 import { users } from "./users";
 import { pgTable, varchar, boolean, timestamp, integer, numeric, real, bigint, text } from "drizzle-orm/pg-core";
 
@@ -13,7 +15,10 @@ export const riders = pgTable("riders", {
   userId: bigint("user_id", { mode: "number" })
     .unique()
     .references(() => users.id, { onDelete: "set null" }),
-  publicId: varchar("public_id", { length: 21 }).notNull().unique(),
+  publicId: varchar("public_id", { length: 21 })
+    .notNull()
+    .unique()
+    .$defaultFn(() => nanoid()),
 
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),

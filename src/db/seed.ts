@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { nanoid } from "nanoid";
 config({ path: ".env.local" });
 config({ path: ".env" });
 
@@ -239,7 +240,7 @@ async function seedDeliveryGeography() {
       id: 1,
       baseFee: money(deliveryConfig.baseFee) || 300,
       serviceFee: money(deliveryConfig.serviceFee) || 400,
-      ratePerMeter: Number(deliveryConfig.ratePerMeter) || 0.15,
+      ratePerMeter: Number(deliveryConfig.ratePerMeter) || 200,
       minDeliveryFee: money(deliveryConfig.minDeliveryFee) || 300,
     })
     .onConflictDoNothing();
@@ -418,6 +419,7 @@ async function seedRiders() {
     .values(
       seed.map((r) => ({
         id: r.id,
+        publicId: r.publicId ?? nanoid(),
         userId: null,
         name: r.name,
         phone: r.phone,
@@ -434,6 +436,7 @@ async function seedRiders() {
     .onConflictDoUpdate({
       target: riders.id,
       set: {
+        publicId: sql`excluded.public_id`,
         name: sql`excluded.name`,
         phone: sql`excluded.phone`,
         vehicle: sql`excluded.vehicle`,
