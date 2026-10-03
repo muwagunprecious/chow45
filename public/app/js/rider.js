@@ -10,6 +10,26 @@ const RiderController = {
   init() {
     this.bindEvents();
     this.render();
+    this.startLocationTracking();
+  },
+
+   startLocationTracking(){
+    navigator.geolocation.watchPosition(
+      (position) => {this.latestposition = position.coords},
+      (error) => console.error("GPS error:", error),
+      {enableHighAccuracy: true}
+    );
+
+    setInterval(()=> {
+      if(!this.latestposition) return;
+      if (!this.activeOrder) return;
+
+      fetch(`/api/riders/${this.currentRiderId}`,{
+        method: 'PATCH',
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ lat: this.latestposition.latitude, lng: this.latestposition.longitude})
+      });
+    }, 8000);
   },
 
   bindEvents() {
@@ -98,6 +118,8 @@ const RiderController = {
       `;
       return;
     }
+
+    
 
     container.innerHTML = availableOrders.map(order => {
       const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId) || {};

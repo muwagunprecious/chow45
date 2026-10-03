@@ -69,13 +69,13 @@ function generateUsernameFromEmail(email: string) {
  * VENDOR:
  * Event organizers/vendors.
  */
-type Role = "USER" | "VENDOR";
+type Role = "USER" | "VENDOR" | "RIDER";
 
 /**
  * Creates a Better Auth instance for a specific role.
  *
  * Instead of maintaining completely separate authentication
- * configurations for USER and VENDOR, both use this same function.
+ * configurations for USER, VENDOR and RIDER, both use this same function.
  *
  * The role passed here determines:
  * - API authentication path
@@ -95,6 +95,9 @@ function createAuth(role: Role) {
          *
          * VENDOR:
          * /api/auth/vendor
+         * 
+         * RIDER:
+         * /api/auth/rider
          */
         basePath: `/api/auth/${role.toLowerCase()}`,
 
@@ -235,9 +238,12 @@ function createAuth(role: Role) {
          *
          * Normal users go to:
          * /login
+         * 
+         * Riders go to:
+         * /rider/login
          */
         onAPIError: {
-            errorURL: role === "VENDOR" ? "/vendor/login" : "/login",
+            errorURL: role === "RIDER" ? "rider/login" : role === "VENDOR" ? "/vendor/login" : "/login",
         },
 
 
@@ -596,10 +602,15 @@ function createAuth(role: Role) {
                          *
                          * Users:
                          * /verify-email
+                         * 
+                         * riders:
+                         * /rider/verify-email
                          */
+
                         const verificationUrl = new URL(
                             role === "VENDOR"
                                 ? "/vendor/verify-email"
+                                : role === "RIDER" ? "/rider/verify-email"
                                 : "/verify-email",
                             process.env.NEXT_PUBLIC_APP_URL
                         );
@@ -813,3 +824,14 @@ export const userAuth = createAuth("USER");
  * Only accounts with role = VENDOR are allowed through this instance.
  */
 export const vendorAuth = createAuth("VENDOR");
+
+/**
+ * RIDER authentication instance.
+ *
+ * Uses:
+ * /api/auth/rider
+ *
+ * Only accounts with role = RIDER are allowed through this instance.
+ */
+
+export const riderAuth = createAuth("RIDER");
