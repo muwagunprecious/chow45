@@ -7,3 +7,7 @@ export const authClient = createAuthClient({
 export const vendorAuthClient = createAuthClient({
     baseURL: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/vendor`,
 });
+
+export const riderAuthClient = createAuthClient({
+    baseURL: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/rider`
+})

@@ -22,7 +22,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   phone: varchar("phone", { length: 20 }),
   phoneVerified: boolean("phone_verified").notNull().default(false),
-  role: varchar("role", { length: 20 }).notNull().default("USER"), //USER, VENDOR, ADMIN
+  role: varchar("role", { length: 20 }).notNull().default("USER"), //USER, VENDOR, ADMIN, RIDER
   verificationEmailSentAt: timestamp("verification_email_sent_at", {
     withTimezone: true,
   }),
