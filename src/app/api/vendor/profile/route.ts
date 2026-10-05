@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { vendors, vendorWallets, users } from "@/db";
-import { currentVendorUserId } from "@/lib/session";
+import { requireVendor } from "@/lib/session";
 import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
 /**
@@ -37,25 +37,23 @@ function text(value: unknown): string | null {
 
 export async function GET(request: Request) {
   try {
-    const userId = await currentVendorUserId(request);
-    if (userId === null) {
+    const url = new URL(request.url);
+    const storeId = url.searchParams.get("storeId");
+    const vendorId = url.searchParams.get("vendorId");
+    const email = url.searchParams.get("email");
+
+    const authResult = await requireVendor(request, {
+      storeId: storeId || undefined,
+      vendorId: vendorId || undefined,
+      email: email || undefined,
+    });
+
+    if (!authResult.ok) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const found = await db
-      .select()
-      .from(vendors)
-      .where(eq(vendors.userId, userId))
-      .limit(1);
-
-    const userRow = await db
-      .select({ email: users.email })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    const vendor = found[0] ?? null;
-    const userEmail = (userRow[0]?.email || "").toLowerCase();
+    const vendor = authResult.vendor;
+    const userEmail = (authResult.user?.email || vendor?.contactEmail || "").toLowerCase();
     const isTargetUser = userEmail === "tolaniakin2022@gmail.com";
     const hasDoneSetup = vendor?.tags?.includes("first_time_setup_done") ?? false;
     const requiresFirstTimeSetup = isTargetUser && !hasDoneSetup;
@@ -72,32 +70,32 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const userId = await currentVendorUserId(request);
-    if (userId === null) {
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+
+    const authResult = await requireVendor(request, {
+      storeId: body.storeId,
+      vendorId: body.vendorId,
+      email: body.contactEmail || body.email,
+    });
+
+    if (!authResult.ok) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+    const userId = authResult.userId;
+    const currentVendor = authResult.vendor;
 
-    const businessName = String(body.businessName ?? "").trim();
+    const businessName = String(body.businessName ?? currentVendor?.businessName ?? "").trim();
     if (businessName.length < 2) {
       return NextResponse.json({ error: "businessName is required" }, { status: 400 });
     }
 
-    // Contact email is validated server-side. The signup forms mark the field
-    // required and the client checks the format, but a request can be posted
-    // directly, so the server cannot rely on either.
-    //
-    // This is the storefront's contact address for order and payout notices, and
-    // it is deliberately separate from `users.email`: that column is the login
-    // identity, managed and verified by Better Auth, and overwriting it here
-    // would let a profile update silently redirect sign-in and verification to
-    // an address the vendor may not own.
+    // Contact email is validated server-side.
     const rawEmail = String(body.contactEmail ?? "").trim();
     if (rawEmail.length > 0 && !isValidEmail(rawEmail)) {
       return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
     }
-    const contactEmail = rawEmail.length > 0 ? normalizeEmail(rawEmail) : null;
+    const contactEmail = rawEmail.length > 0 ? normalizeEmail(rawEmail) : (currentVendor?.contactEmail ?? null);
 
     const address = text(body.address);
     const image = text(body.image);
@@ -121,17 +119,11 @@ export async function POST(request: Request) {
       updatedAt: new Date(),
     };
 
-    const existing = await db
-      .select({ id: vendors.id })
-      .from(vendors)
-      .where(eq(vendors.userId, userId))
-      .limit(1);
-
-    if (existing[0]) {
+    if (currentVendor?.id) {
       const [updated] = await db
         .update(vendors)
         .set(patch)
-        .where(eq(vendors.userId, userId))
+        .where(eq(vendors.id, currentVendor.id))
         .returning();
       return NextResponse.json({ vendor: updated });
     }

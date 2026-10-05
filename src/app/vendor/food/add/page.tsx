@@ -322,9 +322,14 @@ export default function AddFoodPage() {
 
       const selectedVendor = vendorsList.find((v) => v.id === selectedVendorId);
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (selectedVendorId) headers['x-vendor-id'] = String(selectedVendorId);
+      if ((selectedVendor as any)?.storeId) headers['x-vendor-store-id'] = String((selectedVendor as any).storeId);
+      if ((selectedVendor as any)?.contactEmail) headers['x-vendor-email'] = String((selectedVendor as any).contactEmail);
+
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           name: name.trim(),

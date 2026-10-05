@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { users, accounts } from "@/db/schema/users";
+import { users, accounts, sessions } from "@/db/schema/users";
 import { vendors, vendorWallets } from "@/db";
 import { vendorAuth } from "@/auth";
 import { hashPassword } from "better-auth/crypto";
+import { nanoid } from "nanoid";
 
 function slugify(name: string): string {
   return (
@@ -223,9 +224,27 @@ export async function POST(request: Request) {
         .onConflictDoNothing();
     }
 
-    return NextResponse.json({
+    // Create session for the newly registered vendor user
+    const sessionToken = nanoid(32);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    try {
+      await db
+        .insert(sessions)
+        .values({
+          token: sessionToken,
+          userId,
+          expiresAt,
+        })
+        .onConflictDoNothing();
+    } catch (sessionErr) {
+      console.warn("[vendor register] Failed to insert session record:", sessionErr);
+    }
+
+    const response = NextResponse.json({
       success: true,
       message: "Vendor registered successfully!",
+      token: sessionToken,
+      sessionToken,
       user: {
         id: userId,
         email,
@@ -242,6 +261,31 @@ export async function POST(request: Request) {
         address,
       },
     });
+
+    const isSecure =
+      process.env.NODE_ENV === "production" ||
+      request.headers.get("x-forwarded-proto") === "https" ||
+      request.url.startsWith("https://");
+
+    response.cookies.set("better-auth.session_token", sessionToken, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: "lax",
+      path: "/",
+      expires: expiresAt,
+    });
+
+    if (isSecure) {
+      response.cookies.set("__Secure-better-auth.session_token", sessionToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        expires: expiresAt,
+      });
+    }
+
+    return response;
   } catch (error: any) {
     console.error("[vendor register] Error:", error);
     return NextResponse.json(

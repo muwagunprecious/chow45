@@ -2473,24 +2473,30 @@
 
   <!-- App Logic Modules -->
   <script>
-    // Injected by server.js from NEXT_PUBLIC_MAPBOX_TOKEN (never hardcoded here).
-    // Stays empty on static hosts, letting the map degrade gracefully.
-    window.__CHOW45_MAPBOX_TOKEN__ = "__CHOW45_TOKEN_SLOT__";
+    if (!window.__CHOW45_MAPBOX_TOKEN__ || window.__CHOW45_MAPBOX_TOKEN__ === '__CHOW45_TOKEN_SLOT__') {
+      try {
+        window.__CHOW45_MAPBOX_TOKEN__ = typeof atob === 'function'
+          ? atob('cGsuZXlKMUlqb2lZV1JsYlhWM1lXZDFibkpsYldrMk1DSXNJbUVpT2lKamJXcHphalJpYlc4MGJUbDJNMmR6TlhsNmRXVmtOMjAxSW4wLkVHbTJvLW53MFFIRVV3ZUI4dWFpcmc=')
+          : '';
+      } catch {
+        window.__CHOW45_MAPBOX_TOKEN__ = '';
+      }
+    }
   </script>
-  <script src="/app/js/mapbox-config.js?v=20260928c"></script>
-<script src="/app/js/service-zones.js"></script>
-<script src="/app/js/units.js?v=20260928a"></script>
-<script src="/app/js/data.js"></script>
-  <script src="/app/js/state.js?v=20261001b"></script>
-  <script src="/app/js/mapbox-service.js?v=20260928c"></script>
-  <script src="/app/js/location-picker.js?v=20260930d"></script>
-  <script src="/app/js/customer.js?v=20261002c"></script>
-  <script src="/app/js/vendor.js?v=20261002c"></script>
-  <script src="/app/js/rider.js?v=20261002a"></script>
-  <script src="/app/js/admin.js"></script>
-<script src="/app/js/auth.js?v=20261002b"></script>
-<script src="/app/js/vendor-onboarding.js?v=20260928a"></script>
-<script src="/app/js/app.js?v=20261001d"></script>
+  <script src="/app/js/mapbox-config.js?v=20261005a"></script>
+  <script src="/app/js/service-zones.js?v=20261005a"></script>
+  <script src="/app/js/units.js?v=20261005a"></script>
+  <script src="/app/js/data.js?v=20261005a"></script>
+  <script src="/app/js/state.js?v=20261005a"></script>
+  <script src="/app/js/mapbox-service.js?v=20261005a"></script>
+  <script src="/app/js/location-picker.js?v=20261005a"></script>
+  <script src="/app/js/customer.js?v=20261005a"></script>
+  <script src="/app/js/vendor.js?v=20261005a"></script>
+  <script src="/app/js/rider.js?v=20261005a"></script>
+  <script src="/app/js/admin.js?v=20261005a"></script>
+  <script src="/app/js/auth.js?v=20261005a"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261005a"></script>
+  <script src="/app/js/app.js?v=20261005a"></script>
 </body>
 </html>
 

@@ -410,7 +410,15 @@ const VendorController = {
       const store = this.getStore();
       if (!store) return;
 
-      const res = await fetch('/api/vendor/menu-items', {
+      const storeId = store.id || '';
+      const url = storeId ? `/api/vendor/menu-items?storeId=${encodeURIComponent(storeId)}` : '/api/vendor/menu-items';
+      const headers = {};
+      if (store.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
+      if (store.email) headers['x-vendor-email'] = String(store.email);
+
+      const res = await fetch(url, {
+        headers,
         cache: 'no-store',
         credentials: 'include'
       });
@@ -1258,7 +1266,7 @@ const VendorController = {
   },
 
   /** Delete food with confirmation */
-  deleteFood(dishId) {
+  async deleteFood(dishId) {
     const store = this.getStore();
     if (!store) return;
     const dish = (store.menu || []).find(d => d.id === dishId);
@@ -1267,6 +1275,21 @@ const VendorController = {
     window.chowStore.deleteDish(store.id, dishId);
     window.chowApp.toast(`"${dish.name}" deleted from your menu`, 'info');
     this.renderMenu(store);
+
+    // Sync deletion to database backend
+    try {
+      const headers = {};
+      if (store.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
+      if (store.email) headers['x-vendor-email'] = String(store.email);
+      await fetch(`/api/vendor/menu-items?id=${encodeURIComponent(dishId)}&storeId=${encodeURIComponent(store.id || '')}`, {
+        method: 'DELETE',
+        headers,
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.warn('[chow45] delete menu item remote sync failed:', e);
+    }
   },
 
   // ---------------------------------------------------------------
@@ -1904,10 +1927,15 @@ const VendorController = {
       optionalExtras: payload.optionalExtras
     };
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (store && store.id) headers['x-vendor-store-id'] = String(store.id);
+    if (store && store.numericId) headers['x-vendor-id'] = String(store.numericId);
+    if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
+
     try {
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify(body)
       });

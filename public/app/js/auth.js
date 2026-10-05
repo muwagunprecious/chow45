@@ -955,18 +955,33 @@ const Chow45Auth = {
 
     let profile = null;
     let serverData = null;
+
+    const store = (window.VendorController && window.VendorController.getStore)
+      ? window.VendorController.getStore()
+      : (window.chowStore?.getCurrentVendor ? window.chowStore.getCurrentVendor() : null);
+
+    const sessionUser = this.getSession();
+    const vendorEmail = (store && store.email) || sessionUser?.email || window.chowStore?.state?.userProfile?.email || '';
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (store?.id) headers['x-vendor-store-id'] = String(store.id);
+    if (store?.numericId) headers['x-vendor-id'] = String(store.numericId);
+    if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
+
+    const qs = store?.id
+      ? `?storeId=${encodeURIComponent(store.id)}`
+      : (vendorEmail ? `?email=${encodeURIComponent(vendorEmail)}` : '');
+
     try {
-      const res = await fetch('/api/vendor/profile', {
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`/api/vendor/profile${qs}`, {
+        headers,
         credentials: 'include'
       });
       if (res.ok) {
         serverData = await res.json().catch(() => ({}));
         profile = serverData && serverData.vendor ? serverData.vendor : null;
       } else if (res.status === 401) {
-        if (window.chowStore?.state?.userProfile) {
-          window.chowStore.state.userProfile.isLoggedIn = false;
-        }
+        console.warn('[auth] /api/vendor/profile returned 401, retaining local state.');
       }
     } catch (e) {
       // Offline or server down: fall back to whatever signup captured.
@@ -1346,6 +1361,17 @@ const Chow45Auth = {
     if (window.VendorOnboarding && typeof window.VendorOnboarding.onAuthenticated === 'function') {
       window.VendorOnboarding.onAuthenticated();
     }
+  },
+
+  getSession() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed?.user || parsed;
+      }
+    } catch {}
+    return null;
   },
 
   async signOut() {

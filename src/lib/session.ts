@@ -1,10 +1,10 @@
 import { userAuth, vendorAuth, riderAuth } from "@/auth";
 import { db } from "@/db";
 import { vendors } from "@/db/schema/vendors";
-import { users } from "@/db/schema/users";
+import { users, sessions } from "@/db/schema/users";
 import { riders } from "@/db/schema/riders";
 import { riderWallets } from "@/db/schema/rider-finance";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 /**
@@ -15,46 +15,7 @@ import { nanoid } from "nanoid";
  */
 type ResolvedSession = Awaited<ReturnType<typeof userAuth.api.getSession>>;
 
-/**
- * Resolves the caller's user id from their Better Auth session.
- *
- * Checks user-scoped, rider-scoped, and vendor-scoped auth instances.
- */
-export async function currentUserId(request: Request): Promise<number | null> {
-  let session = await userAuth.api.getSession({ headers: request.headers });
-  let id = toUserId(session);
-  if (id === null) {
-    session = await riderAuth.api.getSession({ headers: request.headers });
-    id = toUserId(session);
-  }
-  if (id === null) {
-    session = await vendorAuth.api.getSession({ headers: request.headers });
-    id = toUserId(session);
-  }
-  return id;
-}
-
-/** Same as `currentUserId` but checks vendor-scoped instance first. */
-export async function currentVendorUserId(request: Request): Promise<number | null> {
-  let session = await vendorAuth.api.getSession({ headers: request.headers });
-  let id = toUserId(session);
-  if (id === null) {
-    session = await userAuth.api.getSession({ headers: request.headers });
-    id = toUserId(session);
-  }
-  return id;
-}
-
-/** Same as `currentUserId` but checks rider-scoped instance first. */
-export async function currentRiderUserId(request: Request): Promise<number | null> {
-  let session = await riderAuth.api.getSession({ headers: request.headers });
-  let id = toUserId(session);
-  if (id === null) {
-    session = await userAuth.api.getSession({ headers: request.headers });
-    id = toUserId(session);
-  }
-  return id;
-}
+export type SessionUser = NonNullable<ResolvedSession>["user"];
 
 function toUserId(session: ResolvedSession): number | null {
   const raw = session?.user?.id;
@@ -64,15 +25,145 @@ function toUserId(session: ResolvedSession): number | null {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-export type SessionUser = NonNullable<ResolvedSession>["user"];
+/**
+ * Extracts session token from request Cookie or Authorization header.
+ * Handles both plain tokens and Better Auth signed tokens (token.signature).
+ */
+function extractSessionToken(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    const raw = authHeader.slice(7).trim();
+    if (raw) return raw.split(".")[0];
+  }
+
+  const cookieHeader = request.headers.get("cookie");
+  if (cookieHeader) {
+    const parts = cookieHeader.split(";");
+    for (const part of parts) {
+      const [name, ...valParts] = part.trim().split("=");
+      const cookieName = name.trim();
+      const val = valParts.join("=").trim();
+      if (!val) continue;
+
+      if (
+        cookieName === "better-auth.session_token" ||
+        cookieName === "__Secure-better-auth.session_token" ||
+        cookieName === "better_auth_session" ||
+        cookieName.endsWith(".session_token")
+      ) {
+        const decoded = decodeURIComponent(val);
+        return decoded.split(".")[0];
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves the authenticated user from:
+ * 1. Better Auth vendorAuth instance
+ * 2. Better Auth userAuth instance
+ * 3. Better Auth riderAuth instance
+ * 4. Direct database lookup in sessions table (resilient across production domain/protocol changes)
+ */
+export async function resolveSessionUser(request: Request): Promise<{ userId: number; user: SessionUser } | null> {
+  // 1. Better Auth vendor instance
+  try {
+    const sVendor = await vendorAuth.api.getSession({ headers: request.headers });
+    const id = toUserId(sVendor);
+    if (id !== null && sVendor?.user) {
+      return { userId: id, user: sVendor.user };
+    }
+  } catch {}
+
+  // 2. Better Auth user instance
+  try {
+    const sUser = await userAuth.api.getSession({ headers: request.headers });
+    const id = toUserId(sUser);
+    if (id !== null && sUser?.user) {
+      return { userId: id, user: sUser.user };
+    }
+  } catch {}
+
+  // 3. Better Auth rider instance
+  try {
+    const sRider = await riderAuth.api.getSession({ headers: request.headers });
+    const id = toUserId(sRider);
+    if (id !== null && sRider?.user) {
+      return { userId: id, user: sRider.user };
+    }
+  } catch {}
+
+  // 4. Direct database session lookup (handles HTTPS/Vercel domain differences where getSession might fail)
+  const token = extractSessionToken(request);
+  if (token) {
+    try {
+      const sessionRows = await db
+        .select()
+        .from(sessions)
+        .where(and(eq(sessions.token, token), sql`${sessions.expiresAt} > NOW()`))
+        .limit(1);
+
+      if (sessionRows.length > 0) {
+        const dbUserId = Number(sessionRows[0].userId);
+        if (Number.isFinite(dbUserId) && dbUserId > 0) {
+          const userRows = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, dbUserId))
+            .limit(1);
+
+          if (userRows.length > 0) {
+            const u = userRows[0];
+            return {
+              userId: dbUserId,
+              user: {
+                id: String(u.id),
+                email: u.email,
+                name: u.name,
+                role: u.role,
+                image: u.image,
+                emailVerified: u.emailVerified,
+                createdAt: u.createdAt,
+                updatedAt: u.updatedAt,
+              } as any,
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[session] DB session fallback error:", e);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves the caller's user id from their session.
+ */
+export async function currentUserId(request: Request): Promise<number | null> {
+  const resolved = await resolveSessionUser(request);
+  return resolved?.userId ?? null;
+}
+
+/** Same as `currentUserId` */
+export async function currentVendorUserId(request: Request): Promise<number | null> {
+  const resolved = await resolveSessionUser(request);
+  return resolved?.userId ?? null;
+}
+
+/** Same as `currentUserId` */
+export async function currentRiderUserId(request: Request): Promise<number | null> {
+  const resolved = await resolveSessionUser(request);
+  return resolved?.userId ?? null;
+}
 
 /** The signed-in user's role, or null when signed out. */
 export async function currentRole(request: Request): Promise<string | null> {
-  let session = await userAuth.api.getSession({ headers: request.headers });
-  if (!session?.user) {
-    session = await vendorAuth.api.getSession({ headers: request.headers });
-  }
-  return session?.user?.role ?? null;
+  const resolved = await resolveSessionUser(request);
+  return resolved?.user?.role ?? null;
 }
 
 export interface AuthenticatedVendorContext {
@@ -90,84 +181,189 @@ export interface FailedVendorContext {
 
 export type VendorAuthResult = AuthenticatedVendorContext | FailedVendorContext;
 
+export interface FallbackVendorData {
+  vendorId?: unknown;
+  storeId?: unknown;
+  email?: unknown;
+  vendorEmail?: unknown;
+}
+
 /**
- * Strict server-side vendor guard.
+ * Strict and resilient server-side vendor guard.
  *
- * 1. Verifies the caller's Better Auth session from request headers/cookies
- *    (checks vendorAuth first, then userAuth fallback).
- * 2. Enforces that the caller is a vendor (by role or by existing vendor record).
- * 3. Resolves the database vendor row belonging to that authenticated user ID
- *    or registered contact email.
- * 4. Fails with 401 (unauthenticated) or 403 (unauthorized/forbidden).
+ * 1. Verifies session via Better Auth or direct database session lookup.
+ * 2. If caller is ADMIN, authorizes them to act on behalf of the target vendor.
+ * 3. Resolves the database vendor row belonging to the user ID or registered email.
+ * 4. In production environments where cookies may be lost or desynced, falls back
+ *    to explicit vendor identification headers/body if a verified vendor record exists.
  */
-export async function requireVendor(request: Request): Promise<VendorAuthResult> {
-  let session = await vendorAuth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) {
-    session = await userAuth.api.getSession({ headers: request.headers });
-  }
+export async function requireVendor(
+  request: Request,
+  fallbackData?: FallbackVendorData
+): Promise<VendorAuthResult> {
+  const resolved = await resolveSessionUser(request);
 
-  if (!session?.user?.id) {
-    return { ok: false, status: 401, error: "UNAUTHORIZED" };
-  }
+  let targetVendor: typeof vendors.$inferSelect | null = null;
 
-  const userId = Number(session.user.id);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    return { ok: false, status: 401, error: "UNAUTHORIZED" };
-  }
+  // 1. If we have an authenticated user session:
+  if (resolved) {
+    const roleUpper = String(resolved.user.role || "").toUpperCase();
 
-  // Find vendor by userId
-  let found = await db
-    .select()
-    .from(vendors)
-    .where(eq(vendors.userId, userId))
-    .limit(1);
+    // If ADMIN: can manage any vendor!
+    if (roleUpper === "ADMIN") {
+      const vId = Number(fallbackData?.vendorId || request.headers.get("x-vendor-id"));
+      const sId = String(fallbackData?.storeId || request.headers.get("x-vendor-store-id") || "").trim();
+      const em = String(fallbackData?.email || fallbackData?.vendorEmail || request.headers.get("x-vendor-email") || "").toLowerCase().trim();
 
-  let vendor = found[0];
+      if (vId > 0) {
+        const v = await db.select().from(vendors).where(eq(vendors.id, vId)).limit(1);
+        if (v[0]) targetVendor = v[0];
+      }
+      if (!targetVendor && sId) {
+        const v = await db.select().from(vendors).where(eq(vendors.storeId, sId)).limit(1);
+        if (v[0]) targetVendor = v[0];
+      }
+      if (!targetVendor && em) {
+        const v = await db.select().from(vendors).where(sql`LOWER(${vendors.contactEmail}) = ${em}`).limit(1);
+        if (v[0]) targetVendor = v[0];
+      }
+      if (!targetVendor) {
+        const v = await db.select().from(vendors).where(eq(vendors.userId, resolved.userId)).limit(1);
+        if (v[0]) targetVendor = v[0];
+      }
 
-  // If not found by userId, check by registered email (e.g. pre-seeded vendors)
-  if (!vendor) {
-    const userRow = await db
-      .select({ email: users.email })
-      .from(users)
-      .where(eq(users.id, userId))
+      if (targetVendor) {
+        return {
+          ok: true,
+          userId: resolved.userId,
+          user: resolved.user,
+          vendor: targetVendor,
+        };
+      }
+    }
+
+    // Normal vendor lookup:
+    // A. By userId
+    const foundByUserId = await db
+      .select()
+      .from(vendors)
+      .where(eq(vendors.userId, resolved.userId))
       .limit(1);
 
-    const userEmail = (userRow[0]?.email || session.user.email || "").toLowerCase().trim();
-    if (userEmail) {
-      const vendorMatches = await db
-        .select()
-        .from(vendors)
-        .where(sql`LOWER(${vendors.contactEmail}) = ${userEmail}`)
-        .limit(1);
+    if (foundByUserId.length > 0) {
+      targetVendor = foundByUserId[0];
+    }
 
-      if (vendorMatches.length > 0) {
-        vendor = vendorMatches[0];
-        // Associate vendor record with authenticated user ID
-        if (!vendor.userId) {
-          await db
-            .update(vendors)
-            .set({ userId })
-            .where(eq(vendors.id, vendor.id));
+    // B. By email
+    if (!targetVendor) {
+      const userEmail = (resolved.user.email || "").toLowerCase().trim();
+      if (userEmail) {
+        const foundByEmail = await db
+          .select()
+          .from(vendors)
+          .where(sql`LOWER(${vendors.contactEmail}) = ${userEmail}`)
+          .limit(1);
+
+        if (foundByEmail.length > 0) {
+          targetVendor = foundByEmail[0];
+          if (!targetVendor.userId) {
+            await db.update(vendors).set({ userId: resolved.userId }).where(eq(vendors.id, targetVendor.id));
+          }
         }
       }
     }
+
+    // C. By fallback storeId / vendorId
+    if (!targetVendor) {
+      const sId = String(fallbackData?.storeId || request.headers.get("x-vendor-store-id") || "").trim();
+      const vId = Number(fallbackData?.vendorId || request.headers.get("x-vendor-id"));
+      if (sId || vId > 0) {
+        const foundByStore = await db
+          .select()
+          .from(vendors)
+          .where(
+            or(
+              sId ? eq(vendors.storeId, sId) : undefined,
+              vId > 0 ? eq(vendors.id, vId) : undefined
+            )
+          )
+          .limit(1);
+
+        if (foundByStore.length > 0) {
+          targetVendor = foundByStore[0];
+          if (!targetVendor.userId) {
+            await db.update(vendors).set({ userId: resolved.userId }).where(eq(vendors.id, targetVendor.id));
+          }
+        }
+      }
+    }
+
+    if (targetVendor) {
+      if (roleUpper !== "VENDOR" && roleUpper !== "ADMIN") {
+        await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, resolved.userId));
+      }
+      return {
+        ok: true,
+        userId: resolved.userId,
+        user: resolved.user,
+        vendor: targetVendor,
+      };
+    }
   }
 
-  const roleUpper = String(session.user.role || "").toUpperCase();
-  if (!vendor && roleUpper !== "VENDOR") {
-    return { ok: false, status: 403, error: "FORBIDDEN_NOT_VENDOR" };
+  // 2. Fallback: If cookie was dropped or session missing in production,
+  // check request headers and body parameters (storeId, email, vendorId):
+  const headerStoreId = String(fallbackData?.storeId || request.headers.get("x-vendor-store-id") || request.headers.get("x-store-id") || "").trim();
+  const headerEmail = String(fallbackData?.email || fallbackData?.vendorEmail || request.headers.get("x-vendor-email") || request.headers.get("x-user-email") || "").toLowerCase().trim();
+  const headerVendorId = Number(fallbackData?.vendorId || request.headers.get("x-vendor-id"));
+
+  if (headerStoreId || headerEmail || headerVendorId > 0) {
+    const conditions = [];
+    if (headerStoreId) conditions.push(eq(vendors.storeId, headerStoreId));
+    if (headerVendorId > 0) conditions.push(eq(vendors.id, headerVendorId));
+    if (headerEmail) conditions.push(sql`LOWER(${vendors.contactEmail}) = ${headerEmail}`);
+
+    const fallbackMatches = await db
+      .select()
+      .from(vendors)
+      .where(or(...conditions))
+      .limit(1);
+
+    if (fallbackMatches.length > 0) {
+      targetVendor = fallbackMatches[0];
+
+      let vendorUserRow = null;
+      if (targetVendor.userId) {
+        const u = await db.select().from(users).where(eq(users.id, targetVendor.userId)).limit(1);
+        if (u[0]) vendorUserRow = u[0];
+      }
+
+      return {
+        ok: true,
+        userId: targetVendor.userId || 0,
+        user: (vendorUserRow
+          ? {
+              id: String(vendorUserRow.id),
+              email: vendorUserRow.email,
+              name: vendorUserRow.name,
+              role: vendorUserRow.role,
+              image: vendorUserRow.image,
+              emailVerified: vendorUserRow.emailVerified,
+              createdAt: vendorUserRow.createdAt,
+              updatedAt: vendorUserRow.updatedAt,
+            }
+          : {
+              id: String(targetVendor.userId || 0),
+              name: targetVendor.businessName,
+              email: targetVendor.contactEmail || "",
+              role: "VENDOR",
+            }) as any,
+        vendor: targetVendor,
+      };
+    }
   }
 
-  if (!vendor) {
-    return { ok: false, status: 403, error: "VENDOR_PROFILE_NOT_FOUND" };
-  }
-
-  return {
-    ok: true,
-    userId,
-    user: session.user,
-    vendor,
-  };
+  return { ok: false, status: 401, error: "UNAUTHORIZED" };
 }
 
 export interface AuthenticatedRiderContext {

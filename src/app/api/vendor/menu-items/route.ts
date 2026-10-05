@@ -89,7 +89,15 @@ function parseExtras(raw: unknown, menuItemId: string, extraType: "REQUIRED" | "
 }
 
 export async function GET(request: Request) {
-  const auth = await requireVendor(request);
+  const url = new URL(request.url);
+  const storeId = url.searchParams.get("storeId");
+  const vendorIdParam = url.searchParams.get("vendorId");
+
+  const auth = await requireVendor(request, {
+    storeId: storeId || undefined,
+    vendorId: vendorIdParam || undefined,
+  });
+
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: "Unauthorized. Please sign in as a vendor to view your menu." },
@@ -137,16 +145,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireVendor(request);
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
-      { status: auth.status }
-    );
-  }
-
-  const vendorId = auth.vendor.id;
-
   try {
     let body: Record<string, unknown>;
     try {
@@ -154,6 +152,21 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
+
+    const auth = await requireVendor(request, {
+      storeId: body.storeId,
+      vendorId: body.vendorId,
+      email: body.email || body.vendorEmail,
+    });
+
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
+        { status: auth.status }
+      );
+    }
+
+    const vendorId = auth.vendor.id;
 
     const name = String(body.name ?? "").trim();
     if (!name) {
@@ -301,7 +314,22 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = await requireVendor(request);
+  const url = new URL(request.url);
+  let id = url.searchParams.get("id");
+  const storeIdParam = url.searchParams.get("storeId");
+  const vendorIdParam = url.searchParams.get("vendorId");
+
+  let body: Record<string, unknown> = {};
+  if (!id) {
+    body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    id = (body?.id as string) || null;
+  }
+
+  const auth = await requireVendor(request, {
+    storeId: storeIdParam || body?.storeId || undefined,
+    vendorId: vendorIdParam || body?.vendorId || undefined,
+  });
+
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
@@ -310,13 +338,6 @@ export async function DELETE(request: Request) {
   }
 
   const vendorId = auth.vendor.id;
-
-  const url = new URL(request.url);
-  let id = url.searchParams.get("id");
-  if (!id) {
-    const body = await request.json().catch(() => ({}));
-    id = (body as Record<string, unknown>)?.id as string;
-  }
 
   const itemId = readClientId(id);
   if (!itemId) {
