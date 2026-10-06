@@ -2495,23 +2495,26 @@
 
     <!-- Modal: First-Time Vendor Setup (Password & Store Address) for tolaniakin2022@gmail.com -->
     <div id="vendor-first-setup-modal" class="modal-backdrop">
-      <div class="modal-sheet vendor-first-setup-sheet" style="max-width: 480px; border-radius: 20px; overflow: hidden; background: #fff;">
-        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 20px 24px 16px;">
+      <div class="modal-sheet vendor-first-setup-sheet" style="max-width: 480px; max-height: 90vh; display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; background: #ffffff; box-shadow: 0 25px 60px rgba(0,0,0,0.35);">
+        
+        <!-- Header with close button -->
+        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 20px 24px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; background: #FFFDF6;">
           <div>
-            <div class="modal-title" style="font-size: 1.25rem; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px;">
+            <div class="modal-title" style="font-size: 1.25rem; font-weight: 800; color: #0C513F; display: flex; align-items: center; gap: 8px;">
               <span>🔐</span> Set Your Password & Location
             </div>
-            <p style="font-size: 0.86rem; color: #64748b; margin: 6px 0 0 0; line-height: 1.4;">
+            <p style="font-size: 0.86rem; color: #475569; margin: 6px 0 0 0; line-height: 1.45;">
               Welcome, <strong>Tolani</strong>! An admin prepared your store and food menu. Please set your personal password and pickup address to complete your account activation.
             </p>
           </div>
+          <button type="button" class="modal-close-btn" onclick="Chow45Auth.closeFirstTimeSetup()" title="Dismiss & Go to Dashboard" style="font-size: 1.2rem; cursor: pointer; background: #F1F5F9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #64748B;">✕</button>
         </div>
 
-        <div class="modal-body" style="padding: 20px 24px;">
+        <div class="modal-body" style="padding: 20px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; max-height: calc(88vh - 100px);">
           <form onsubmit="event.preventDefault(); Chow45Auth.submitFirstTimeSetup();">
             <!-- New Password -->
             <div style="margin-bottom: 16px;">
-              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 6px; letter-spacing: 0.02em;">
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1E293B; margin-bottom: 6px; letter-spacing: 0.02em;">
                 NEW PASSWORD <span style="color: #e11d48;">*</span>
               </label>
               <div style="position: relative;">
@@ -2520,7 +2523,7 @@
                   id="vnd-setup-password"
                   required
                   placeholder="At least 6 characters"
-                  style="width: 100%; height: 46px; padding: 0 44px 0 14px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none;"
+                  style="width: 100%; height: 46px; padding: 0 44px 0 14px; background: #FFFFFF; color: #0F172A; border: 1.5px solid #94A3B8; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none;"
                 />
                 <button
                   type="button"
@@ -2532,7 +2535,7 @@
 
             <!-- Confirm New Password -->
             <div style="margin-bottom: 18px;">
-              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 6px; letter-spacing: 0.02em;">
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1E293B; margin-bottom: 6px; letter-spacing: 0.02em;">
                 CONFIRM NEW PASSWORD <span style="color: #e11d48;">*</span>
               </label>
               <div style="position: relative;">
@@ -2541,7 +2544,7 @@
                   id="vnd-setup-password-confirm"
                   required
                   placeholder="Re-type your new password"
-                  style="width: 100%; height: 46px; padding: 0 44px 0 14px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none;"
+                  style="width: 100%; height: 46px; padding: 0 44px 0 14px; background: #FFFFFF; color: #0F172A; border: 1.5px solid #94A3B8; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none;"
                 />
                 <button
                   type="button"
@@ -2553,16 +2556,23 @@
 
             <!-- Store / Pickup Address -->
             <div style="margin-bottom: 22px;">
-              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 6px; letter-spacing: 0.02em;">
-                STORE / PICKUP LOCATION <span style="color: #e11d48;">*</span>
-              </label>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B; letter-spacing: 0.02em;">
+                  STORE / PICKUP LOCATION <span style="color: #e11d48;">*</span>
+                </label>
+                <button
+                  type="button"
+                  onclick="Chow45Auth._captureLiveLocation('vnd-setup-address', 'Pickup address')"
+                  style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;"
+                >📍 GPS Location</button>
+              </div>
               <input
                 type="text"
                 id="vnd-setup-address"
                 required
-                value="sagamu"
+                value="Sagamu Campus (OSUTH), Sagamu, Ogun State"
                 placeholder="e.g. Back of OOU Campus, Sagamu"
-                style="width: 100%; height: 46px; padding: 0 14px; border: 1.5px solid #cbd5e1; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none; margin-bottom: 8px;"
+                style="width: 100%; height: 46px; padding: 0 14px; background: #FFFFFF; color: #0F172A; border: 1.5px solid #94A3B8; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none; margin-bottom: 8px;"
               />
               <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 8px;">
                 Where delivery riders will arrive to pick up customer food orders.
@@ -2574,19 +2584,19 @@
                   type="button"
                   class="vnd-addr-chip"
                   onclick="document.getElementById('vnd-setup-address').value = 'Sagamu Campus (OSUTH), Sagamu, Ogun State'"
-                  style="padding: 5px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1e293b;"
+                  style="padding: 6px 12px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1E293B;"
                 >🏥 Sagamu Campus (OSUTH)</button>
                 <button
                   type="button"
                   class="vnd-addr-chip"
                   onclick="document.getElementById('vnd-setup-address').value = 'OOU Main Campus Gate, Ago-Iwoye'"
-                  style="padding: 5px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1e293b;"
+                  style="padding: 6px 12px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1E293B;"
                 >🏫 OOU Main Campus</button>
                 <button
                   type="button"
                   class="vnd-addr-chip"
                   onclick="document.getElementById('vnd-setup-address').value = 'Hospital Road, Sagamu, Ogun State'"
-                  style="padding: 5px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1e293b;"
+                  style="padding: 6px 12px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.76rem; font-weight: 600; cursor: pointer; color: #1E293B;"
                 >🏠 Hospital Road, Sagamu</button>
               </div>
             </div>
@@ -2594,14 +2604,23 @@
             <!-- Error Banner -->
             <div id="vnd-setup-error" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 0.85rem; margin-bottom: 16px;"></div>
 
-            <!-- Submit Button -->
-            <button
-              type="submit"
-              id="vnd-setup-submit-btn"
-              style="width: 100%; height: 50px; background: #000; color: #fff; border: none; border-radius: 14px; font-weight: 700; font-size: 0.98rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;"
-            >
-              <span>Save & Continue to Dashboard ➔</span>
-            </button>
+            <!-- Action Buttons: Save + Skip/Later -->
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+              <button
+                type="submit"
+                id="vnd-setup-submit-btn"
+                style="flex: 1; height: 50px; background: #0C513F; color: #fff; border: none; border-radius: 14px; font-weight: 700; font-size: 0.98rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;"
+              >
+                <span>Save & Continue to Dashboard ➔</span>
+              </button>
+              <button
+                type="button"
+                onclick="Chow45Auth.closeFirstTimeSetup()"
+                style="padding: 0 18px; height: 50px; background: #F1F5F9; color: #475569; border: 1.5px solid #CBD5E1; border-radius: 14px; font-weight: 700; font-size: 0.88rem; cursor: pointer;"
+              >
+                Later
+              </button>
+            </div>
           </form>
         </div>
       </div>

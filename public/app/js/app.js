@@ -144,7 +144,10 @@ const Chow45App = {
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          if (modal.id === 'vendor-first-setup-modal') return;
+          if (modal.id === 'vendor-first-setup-modal' && typeof Chow45Auth !== 'undefined' && Chow45Auth.closeFirstTimeSetup) {
+            Chow45Auth.closeFirstTimeSetup();
+            return;
+          }
           modal.classList.remove('open');
         }
       });

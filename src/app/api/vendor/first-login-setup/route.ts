@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const address = String(body.address ?? "").trim();
     const latitude = body.latitude ? String(body.latitude) : null;
     const longitude = body.longitude ? String(body.longitude) : null;
+    const email = String(body.email ?? "").toLowerCase().trim();
 
     if (!newPassword || newPassword.length < 6) {
       return NextResponse.json(
@@ -27,6 +28,18 @@ export async function POST(request: Request) {
         { error: "Please enter a valid pickup address." },
         { status: 400 }
       );
+    }
+
+    // Fallback: look up user by email if session cookie was not provided
+    if (userId === null && email) {
+      const existingUser = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${email}`)
+        .limit(1);
+      if (existingUser.length > 0) {
+        userId = existingUser[0].id;
+      }
     }
 
     if (userId === null) {

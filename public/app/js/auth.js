@@ -1757,8 +1757,10 @@ const Chow45Auth = {
       return;
     }
 
-    // Server requires setup or setup not done in DB: clear stale local storage flag
-    localStorage.removeItem('chow45_first_setup_done_tolaniakin2022@gmail.com');
+    // Do not show if dismissed during this session
+    if (sessionStorage.getItem('chow45_vendor_setup_dismissed') === 'true') {
+      return;
+    }
 
     const modal = document.getElementById('vendor-first-setup-modal');
     if (!modal) return;
@@ -1772,6 +1774,12 @@ const Chow45Auth = {
     setTimeout(() => {
       modal.classList.add('open');
     }, 250);
+  },
+
+  closeFirstTimeSetup() {
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (modal) modal.classList.remove('open');
+    sessionStorage.setItem('chow45_vendor_setup_dismissed', 'true');
   },
 
   async submitFirstTimeSetup() {

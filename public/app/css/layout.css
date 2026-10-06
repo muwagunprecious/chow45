@@ -944,6 +944,9 @@ a.text-link, .link-btn {
   }
   .modal-body {
     padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
     -webkit-overflow-scrolling: touch;
   }
   .modal-footer {
