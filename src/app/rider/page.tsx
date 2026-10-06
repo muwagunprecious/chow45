@@ -417,10 +417,10 @@ export default function RiderDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF6EB] flex items-center justify-center">
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-[#0C513F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs font-bold text-[#0C513F] uppercase tracking-wider">
+          <div className="w-12 h-12 border-3 border-[#00a205] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-xs font-bold text-[#00a205] uppercase tracking-wider">
             Connecting to Chow45 Dispatch Radar...
           </p>
         </div>
@@ -429,10 +429,10 @@ export default function RiderDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF6EB] text-[#111111] flex flex-col justify-between selection:bg-[#0C513F] selection:text-white font-sans antialiased pb-24">
+    <div className="min-h-screen bg-[#fafafa] text-[#000000] flex flex-col justify-between selection:bg-[#00a205] selection:text-white font-sans antialiased pb-24">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#0C513F] text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl border border-white/20 animate-fade-in flex items-center gap-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#00a205] text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl border border-white/20 animate-fade-in flex items-center gap-2">
           <span>{toastMessage}</span>
         </div>
       )}
@@ -440,17 +440,17 @@ export default function RiderDashboardPage() {
       {/* Completion Reward Modal */}
       {completionReward && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FFFDF6] w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl border border-[#0C513F]/15 animate-scale-up">
+          <div className="bg-[#ffffff] w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl border border-[#00a205]/15 animate-scale-up">
             <div className="w-16 h-16 rounded-3xl bg-green-100 text-green-700 flex items-center justify-center text-3xl mx-auto mb-3 border border-green-200">
               🎉
             </div>
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full border border-green-200">
               Mission Completed
             </span>
-            <h2 className="text-2xl font-black text-[#0C513F] mt-2 mb-1">
+            <h2 className="text-2xl font-black text-[#00a205] mt-2 mb-1">
               ₦{completionReward.toLocaleString()}
             </h2>
-            <p className="text-xs text-[#111111]/70 mb-5">
+            <p className="text-xs text-[#000000]/70 mb-5">
               Credited directly to your Chow45 rider wallet! Keep rolling to maximize your daily payout.
             </p>
             <button
@@ -458,7 +458,7 @@ export default function RiderDashboardPage() {
                 setCompletionReward(null);
                 setActiveTab('radar');
               }}
-              className="w-full py-3.5 rounded-xl bg-[#0C513F] text-white text-xs font-extrabold shadow-lg shadow-[#0C513F]/20 hover:bg-[#0a4334] transition-all"
+              className="w-full py-3.5 rounded-full bg-[#00a205] text-white text-xs font-extrabold shadow-lg shadow-[#00a205]/20 hover:bg-[#008704] transition-all"
             >
               Back to Radar Radar 🚀
             </button>
@@ -467,32 +467,32 @@ export default function RiderDashboardPage() {
       )}
 
       {/* FLOATING CAPSULE HEADER */}
-      <header className="sticky top-0 z-30 bg-[#FAF6EB]/90 backdrop-blur-md border-b border-[#0C513F]/10 px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-30 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#00a205]/10 px-4 py-3 sm:px-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="w-8 h-8 rounded-full bg-[#0C513F] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
+            <span className="w-8 h-8 rounded-full bg-[#00a205] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
               45
             </span>
-            <span className="font-bold text-lg tracking-tight text-[#0C513F]">
+            <span className="font-bold text-lg tracking-tight text-[#00a205]">
               CHOW<span className="text-[#E75A24]">45</span>
             </span>
           </Link>
 
           {/* ONLINE / OFFLINE TOGGLE */}
-          <div className="flex items-center gap-2 bg-[#FFFDF6] px-3 py-1.5 rounded-full border border-[#0C513F]/15 shadow-sm">
+          <div className="flex items-center gap-2 bg-[#ffffff] px-3 py-1.5 rounded-full border border-[#00a205]/15 shadow-sm">
             <span
               className={`w-2.5 h-2.5 rounded-full ${
                 rider?.isOnline ? 'bg-green-500 animate-pulse' : 'bg-neutral-300'
               }`}
             />
-            <span className="text-xs font-extrabold text-[#0C513F]">
+            <span className="text-xs font-extrabold text-[#00a205]">
               {rider?.isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
             <button
               onClick={handleToggleOnline}
               disabled={actionLoading}
               className={`ml-1 w-11 h-6 rounded-full transition-colors relative focus:outline-none ${
-                rider?.isOnline ? 'bg-[#0C513F]' : 'bg-neutral-300'
+                rider?.isOnline ? 'bg-[#00a205]' : 'bg-neutral-300'
               }`}
             >
               <div
@@ -511,16 +511,16 @@ export default function RiderDashboardPage() {
         {activeTab === 'radar' && (
           <div className="space-y-4">
             {/* Live Status Banner */}
-            <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10 shadow-sm flex items-center justify-between">
+            <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#0C513F]/10 flex items-center justify-center text-xl">
+                <div className="w-10 h-10 rounded-full bg-[#00a205]/10 flex items-center justify-center text-xl">
                   {rider?.vehicle?.includes('Bike') ? '🚲' : '🛵'}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#0C513F]">
+                  <h3 className="font-extrabold text-sm text-[#00a205]">
                     {rider?.isOnline ? 'Active Campus Dispatch' : 'You are currently Offline'}
                   </h3>
-                  <p className="text-xs text-[#111111]/60">
+                  <p className="text-xs text-[#000000]/60">
                     {rider?.isOnline
                       ? `Scanning ${rider.institution || 'Campus'} for food runs...`
                       : 'Switch toggle ON above to receive live customer offers.'}
@@ -536,7 +536,7 @@ export default function RiderDashboardPage() {
 
             {/* If Rider has an active delivery while viewing radar */}
             {activeMission && (
-              <div className="bg-[#0C513F] text-white rounded-2xl p-4 shadow-md flex items-center justify-between">
+              <div className="bg-[#00a205] text-white rounded-2xl p-4 shadow-md flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
                     Delivery In Progress
@@ -546,7 +546,7 @@ export default function RiderDashboardPage() {
                 </div>
                 <button
                   onClick={() => setActiveTab('mission')}
-                  className="px-4 py-2 rounded-xl bg-white text-[#0C513F] font-bold text-xs shadow-sm hover:bg-neutral-100"
+                  className="px-4 py-2 rounded-xl bg-white text-[#00a205] font-bold text-xs shadow-sm hover:bg-neutral-100"
                 >
                   View Mission →
                 </button>
@@ -555,79 +555,79 @@ export default function RiderDashboardPage() {
 
             {/* Radar Offers List */}
             {!rider?.isOnline ? (
-              <div className="bg-[#FFFDF6] rounded-3xl p-8 border border-[#0C513F]/10 text-center my-6">
+              <div className="bg-[#ffffff] rounded-3xl p-8 border border-[#00a205]/10 text-center my-6">
                 <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center text-3xl mx-auto mb-3">
                   💤
                 </div>
-                <h3 className="text-base font-bold text-[#111111] mb-1">
+                <h3 className="text-base font-bold text-[#000000] mb-1">
                   Ready to Start Earning?
                 </h3>
-                <p className="text-xs text-[#111111]/70 max-w-xs mx-auto mb-4">
-                  Turn your status switch to <strong className="text-[#0C513F]">ONLINE</strong> to receive nearby cafeteria and restaurant orders.
+                <p className="text-xs text-[#000000]/70 max-w-xs mx-auto mb-4">
+                  Turn your status switch to <strong className="text-[#00a205]">ONLINE</strong> to receive nearby cafeteria and restaurant orders.
                 </p>
                 <button
                   onClick={handleToggleOnline}
-                  className="px-6 py-2.5 rounded-xl bg-[#0C513F] text-white font-bold text-xs shadow-md shadow-[#0C513F]/20"
+                  className="px-6 py-2.5 rounded-full bg-[#00a205] text-white font-bold text-xs shadow-md shadow-[#00a205]/20"
                 >
                   Go Online Now 🟢
                 </button>
               </div>
             ) : offers.length === 0 ? (
-              <div className="bg-[#FFFDF6] rounded-3xl p-8 border border-[#0C513F]/10 text-center my-6">
-                <div className="w-12 h-12 rounded-2xl bg-[#0C513F]/10 flex items-center justify-center text-2xl mx-auto mb-3 animate-pulse">
+              <div className="bg-[#ffffff] rounded-3xl p-8 border border-[#00a205]/10 text-center my-6">
+                <div className="w-12 h-12 rounded-full bg-[#00a205]/10 flex items-center justify-center text-2xl mx-auto mb-3 animate-pulse">
                   📡
                 </div>
-                <h3 className="text-sm font-extrabold text-[#0C513F] mb-1">
+                <h3 className="text-sm font-extrabold text-[#00a205] mb-1">
                   Listening for Orders...
                 </h3>
-                <p className="text-xs text-[#111111]/60 max-w-xs mx-auto">
+                <p className="text-xs text-[#000000]/60 max-w-xs mx-auto">
                   New student cafeteria orders appear here the moment payment clears. Stay in your campus zone!
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F] px-1">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] px-1">
                   Available Delivery Runs ({offers.length})
                 </h2>
                 {offers.map((offer) => (
                   <div
                     key={offer.id}
-                    className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/15 shadow-sm hover:border-[#0C513F]/40 transition-all flex flex-col justify-between gap-3"
+                    className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/15 shadow-sm hover:border-[#00a205]/40 transition-all flex flex-col justify-between gap-3"
                   >
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-[#111111]/60">
+                          <span className="text-xs font-mono font-bold text-[#000000]/60">
                             #{offer.id}
                           </span>
-                          <span className="text-[10px] font-bold bg-[#FAF6EB] text-[#0C513F] px-2 py-0.5 rounded-md border border-[#0C513F]/10">
+                          <span className="text-[10px] font-bold bg-[#fafafa] text-[#00a205] px-2 py-0.5 rounded-md border border-[#00a205]/10">
                             {offer.itemCount} items
                           </span>
                         </div>
-                        <h4 className="font-extrabold text-base text-[#111111] mt-0.5">
+                        <h4 className="font-extrabold text-base text-[#000000] mt-0.5">
                           {offer.storeName}
                         </h4>
-                        <p className="text-xs text-[#111111]/70 flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-[#000000]/70 flex items-center gap-1 mt-0.5">
                           <span>📍 Pickup:</span> <span>{offer.storeAddress}</span>
                         </p>
-                        <p className="text-xs text-[#0C513F] font-medium flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-[#00a205] font-medium flex items-center gap-1 mt-0.5">
                           <span>🎯 Destination:</span> <span>{offer.deliveryAddress}</span>
                         </p>
                       </div>
 
                       <div className="text-right">
-                        <span className="text-[11px] text-[#111111]/50 block">Your Earning</span>
-                        <span className="text-lg font-black text-[#0C513F]">
+                        <span className="text-[11px] text-[#000000]/50 block">Your Earning</span>
+                        <span className="text-lg font-black text-[#00a205]">
                           ₦{offer.deliveryFee.toLocaleString()}
                         </span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#0C513F]/10 flex items-center justify-between gap-2">
+                    <div className="pt-2 border-t border-[#00a205]/10 flex items-center justify-between gap-2">
                       <button
                         onClick={() => handleRejectOffer(offer.id)}
                         disabled={actionLoading}
-                        className="px-4 py-2.5 rounded-xl border border-[#0C513F]/20 text-[#111111]/70 font-bold text-xs hover:bg-[#FAF6EB] transition-colors"
+                        className="px-4 py-2.5 rounded-xl border border-[#00a205]/20 text-[#000000]/70 font-bold text-xs hover:bg-[#fafafa] transition-colors"
                       >
                         Decline
                       </button>
@@ -635,7 +635,7 @@ export default function RiderDashboardPage() {
                       <button
                         onClick={() => handleAcceptOffer(offer.id)}
                         disabled={actionLoading}
-                        className="flex-1 py-2.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-extrabold text-xs shadow-md shadow-[#0C513F]/20 transition-all flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-extrabold text-xs shadow-md shadow-[#00a205]/20 transition-all flex items-center justify-center gap-1.5"
                       >
                         <span>Accept Delivery (₦{offer.deliveryFee.toLocaleString()}) →</span>
                       </button>
@@ -651,19 +651,19 @@ export default function RiderDashboardPage() {
         {activeTab === 'mission' && (
           <div className="space-y-4">
             {!activeMission ? (
-              <div className="bg-[#FFFDF6] rounded-3xl p-8 border border-[#0C513F]/10 text-center my-6">
+              <div className="bg-[#ffffff] rounded-3xl p-8 border border-[#00a205]/10 text-center my-6">
                 <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center text-3xl mx-auto mb-3">
                   📦
                 </div>
-                <h3 className="text-base font-bold text-[#111111] mb-1">
+                <h3 className="text-base font-bold text-[#000000] mb-1">
                   No Active Mission
                 </h3>
-                <p className="text-xs text-[#111111]/70 max-w-xs mx-auto mb-4">
+                <p className="text-xs text-[#000000]/70 max-w-xs mx-auto mb-4">
                   You do not have any delivery assigned right now. Accept an incoming offer on the Radar.
                 </p>
                 <button
                   onClick={() => setActiveTab('radar')}
-                  className="px-6 py-2.5 rounded-xl bg-[#0C513F] text-white font-bold text-xs shadow-md"
+                  className="px-6 py-2.5 rounded-full bg-[#00a205] text-white font-bold text-xs shadow-md"
                 >
                   View Radar Offers →
                 </button>
@@ -671,7 +671,7 @@ export default function RiderDashboardPage() {
             ) : (
               <div className="space-y-4">
                 {/* Mission Header Card */}
-                <div className="bg-[#0C513F] text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+                <div className="bg-[#00a205] text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/20 px-2.5 py-1 rounded-full">
@@ -686,7 +686,7 @@ export default function RiderDashboardPage() {
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase text-white/70 block">Payout</span>
-                      <span className="text-xl font-black text-[#FAF6EB]">
+                      <span className="text-xl font-black text-[#fafafa]">
                         ₦{activeMission.deliveryFee.toLocaleString()}
                       </span>
                     </div>
@@ -707,17 +707,17 @@ export default function RiderDashboardPage() {
                 </div>
 
                 {/* Delivery Items Checklist */}
-                <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F] mb-2">
+                <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] mb-2">
                     Package Line Items ({activeMission.items.length})
                   </h4>
-                  <div className="divide-y divide-[#0C513F]/10 text-xs">
+                  <div className="divide-y divide-[#00a205]/10 text-xs">
                     {activeMission.items.map((item) => (
                       <div key={item.id} className="py-2 flex justify-between items-center">
-                        <span className="font-semibold text-[#111111]">
+                        <span className="font-semibold text-[#000000]">
                           {item.qty}x {item.name}
                         </span>
-                        <span className="text-[#111111]/60">
+                        <span className="text-[#000000]/60">
                           ₦{(item.unitPrice * item.qty).toLocaleString()}
                         </span>
                       </div>
@@ -726,29 +726,29 @@ export default function RiderDashboardPage() {
                 </div>
 
                 {/* Customer Drop-off Card */}
-                <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F] mb-1">
+                <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] mb-1">
                     Customer Drop-Off Destination
                   </h4>
-                  <p className="text-sm font-bold text-[#111111]">
+                  <p className="text-sm font-bold text-[#000000]">
                     {activeMission.customerName}
                   </p>
-                  <p className="text-xs text-[#0C513F] font-medium mt-0.5">
+                  <p className="text-xs text-[#00a205] font-medium mt-0.5">
                     📍 {activeMission.deliveryAddress}
                   </p>
                   {activeMission.deliveryNotes && (
-                    <p className="text-xs text-[#E75A24] font-medium mt-1 bg-[#FAF6EB] p-2 rounded-lg">
+                    <p className="text-xs text-[#E75A24] font-medium mt-1 bg-[#fafafa] p-2 rounded-lg">
                       Note: {activeMission.deliveryNotes}
                     </p>
                   )}
 
                   {/* Customer Phone (revealed for assigned rider) */}
                   {activeMission.customerPhone && (
-                    <div className="mt-3 pt-2 border-t border-[#0C513F]/10 flex items-center justify-between">
-                      <span className="text-xs text-[#111111]/70">Customer Phone:</span>
+                    <div className="mt-3 pt-2 border-t border-[#00a205]/10 flex items-center justify-between">
+                      <span className="text-xs text-[#000000]/70">Customer Phone:</span>
                       <a
                         href={`tel:${activeMission.customerPhone}`}
-                        className="px-3 py-1.5 rounded-lg bg-[#0C513F]/10 text-[#0C513F] font-bold text-xs flex items-center gap-1.5 hover:bg-[#0C513F]/20 transition-colors"
+                        className="px-3 py-1.5 rounded-lg bg-[#00a205]/10 text-[#00a205] font-bold text-xs flex items-center gap-1.5 hover:bg-[#00a205]/20 transition-colors"
                       >
                         <span>📞</span> <span>Call {activeMission.customerPhone}</span>
                       </a>
@@ -757,8 +757,8 @@ export default function RiderDashboardPage() {
                 </div>
 
                 {/* STEP-BY-STEP PROGRESSION ACTIONS */}
-                <div className="bg-[#FFFDF6] rounded-2xl p-5 border border-[#0C513F]/15 shadow-sm space-y-3">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F]">
+                <div className="bg-[#ffffff] rounded-2xl p-5 border border-[#00a205]/15 shadow-sm space-y-3">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205]">
                     Mission Status Action
                   </h4>
 
@@ -767,7 +767,7 @@ export default function RiderDashboardPage() {
                     <button
                       onClick={() => handleUpdateDeliveryStatus('RIDER_HEADING_TO_STORE')}
                       disabled={actionLoading}
-                      className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-extrabold text-xs shadow-md shadow-[#0C513F]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-extrabold text-xs shadow-md shadow-[#00a205]/20 flex items-center justify-center gap-2"
                     >
                       <span>🛵 I am Heading to Restaurant →</span>
                     </button>
@@ -778,7 +778,7 @@ export default function RiderDashboardPage() {
                     <button
                       onClick={() => handleUpdateDeliveryStatus('RIDER_AT_STORE')}
                       disabled={actionLoading}
-                      className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-extrabold text-xs shadow-md shadow-[#0C513F]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-extrabold text-xs shadow-md shadow-[#00a205]/20 flex items-center justify-center gap-2"
                     >
                       <span>📍 I Have Arrived at the Restaurant →</span>
                     </button>
@@ -789,7 +789,7 @@ export default function RiderDashboardPage() {
                     <button
                       onClick={() => handleUpdateDeliveryStatus('PICKED_UP')}
                       disabled={actionLoading}
-                      className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-extrabold text-xs shadow-md shadow-[#0C513F]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-extrabold text-xs shadow-md shadow-[#00a205]/20 flex items-center justify-center gap-2"
                     >
                       <span>🍔 Food Picked Up! En Route to Drop-off →</span>
                     </button>
@@ -800,7 +800,7 @@ export default function RiderDashboardPage() {
                     <button
                       onClick={() => handleUpdateDeliveryStatus('RIDER_NEARBY')}
                       disabled={actionLoading}
-                      className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-extrabold text-xs shadow-md shadow-[#0C513F]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-extrabold text-xs shadow-md shadow-[#00a205]/20 flex items-center justify-center gap-2"
                     >
                       <span>🎯 Arrived at Customer Location →</span>
                     </button>
@@ -809,11 +809,11 @@ export default function RiderDashboardPage() {
                   {/* STAGE 5: PIN ENTRY & FINAL DELIVERY CONFIRMATION */}
                   {(activeMission.status === 'RIDER_NEARBY' || activeMission.status === 'OUT_FOR_DELIVERY') && (
                     <form onSubmit={handleVerifyPinAndComplete} className="space-y-3 pt-2">
-                      <div className="p-3.5 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-center">
-                        <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                      <div className="p-3.5 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-center">
+                        <label className="block text-xs font-bold text-[#00a205] mb-1">
                           Ask Customer for 4-Digit Delivery PIN
                         </label>
-                        <p className="text-[11px] text-[#111111]/70 mb-2">
+                        <p className="text-[11px] text-[#000000]/70 mb-2">
                           Displayed on the customer&apos;s active order tracker screen.
                         </p>
                         <input
@@ -822,7 +822,7 @@ export default function RiderDashboardPage() {
                           value={enteredPin}
                           onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
                           placeholder="••••"
-                          className="w-36 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-2.5 rounded-xl bg-[#FFFDF6] border-2 border-[#0C513F] text-[#0C513F] focus:outline-none"
+                          className="w-36 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-2.5 rounded-xl bg-[#ffffff] border-2 border-[#00a205] text-[#00a205] focus:outline-none"
                         />
                       </div>
 
@@ -833,7 +833,7 @@ export default function RiderDashboardPage() {
                       <button
                         type="submit"
                         disabled={actionLoading || enteredPin.length !== 4}
-                        className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] disabled:opacity-50 text-white font-black text-xs shadow-lg shadow-[#0C513F]/20 flex items-center justify-center gap-2"
+                        className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] disabled:opacity-50 text-white font-black text-xs shadow-lg shadow-[#00a205]/20 flex items-center justify-center gap-2"
                       >
                         {actionLoading ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -853,14 +853,14 @@ export default function RiderDashboardPage() {
         {activeTab === 'wallet' && (
           <div className="space-y-4">
             {/* Balance Card */}
-            <div className="bg-[#0C513F] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+            <div className="bg-[#00a205] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
               <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">
                 Rider Earnings Ledger
               </span>
 
               <div className="mt-4">
                 <span className="text-xs text-white/70 block">Available Balance</span>
-                <h2 className="text-3xl font-black text-[#FAF6EB]">
+                <h2 className="text-3xl font-black text-[#fafafa]">
                   ₦{wallet.available.toLocaleString()}
                 </h2>
               </div>
@@ -882,28 +882,28 @@ export default function RiderDashboardPage() {
                   setShowWithdrawModal(true);
                 }}
                 disabled={wallet.available < 1000}
-                className="mt-5 w-full py-3 rounded-xl bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#0C513F] font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                className="mt-5 w-full py-3 rounded-xl bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#00a205] font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
               >
                 <span>Request Payout to Bank 🏦</span>
               </button>
             </div>
 
             {/* Saved Bank Accounts */}
-            <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
+            <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F]">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205]">
                   Payout Bank Accounts
                 </h3>
                 <button
                   onClick={() => setShowBankModal(true)}
-                  className="text-xs font-bold text-[#0C513F] hover:underline"
+                  className="text-xs font-bold text-[#00a205] hover:underline"
                 >
                   + Add Account
                 </button>
               </div>
 
               {bankAccounts.length === 0 ? (
-                <div className="p-3 text-center bg-[#FAF6EB] rounded-xl text-xs text-[#111111]/60">
+                <div className="p-3 text-center bg-[#fafafa] rounded-xl text-xs text-[#000000]/60">
                   No bank account linked. Add one to enable fast withdrawals.
                 </div>
               ) : (
@@ -911,11 +911,11 @@ export default function RiderDashboardPage() {
                   {bankAccounts.map((acc) => (
                     <div
                       key={acc.id}
-                      className="p-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/10 flex items-center justify-between"
+                      className="p-3 rounded-xl bg-[#fafafa] border border-[#00a205]/10 flex items-center justify-between"
                     >
                       <div>
-                        <p className="font-bold text-xs text-[#111111]">{acc.bankName}</p>
-                        <p className="text-[11px] font-mono text-[#111111]/70">
+                        <p className="font-bold text-xs text-[#000000]">{acc.bankName}</p>
+                        <p className="text-[11px] font-mono text-[#000000]/70">
                           {acc.accountNumber} • {acc.accountName}
                         </p>
                       </div>
@@ -931,24 +931,24 @@ export default function RiderDashboardPage() {
             </div>
 
             {/* Ledger Transactions */}
-            <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F] mb-3">
+            <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] mb-3">
                 Financial Transaction Trail
               </h3>
 
               {transactions.length === 0 ? (
-                <p className="text-xs text-[#111111]/50 text-center py-4">
+                <p className="text-xs text-[#000000]/50 text-center py-4">
                   No transactions yet. Complete deliveries to see your earnings history.
                 </p>
               ) : (
-                <div className="divide-y divide-[#0C513F]/10 text-xs">
+                <div className="divide-y divide-[#00a205]/10 text-xs">
                   {transactions.map((tx) => (
                     <div key={tx.id} className="py-2.5 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-[#111111]">
+                        <p className="font-bold text-[#000000]">
                           {tx.description || tx.type.replace(/_/g, ' ')}
                         </p>
-                        <p className="text-[10px] text-[#111111]/50">
+                        <p className="text-[10px] text-[#000000]/50">
                           {new Date(tx.createdAt).toLocaleDateString()} at{' '}
                           {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
@@ -984,8 +984,8 @@ export default function RiderDashboardPage() {
         {/* PROFILE TAB */}
         {activeTab === 'profile' && (
           <div className="space-y-4">
-            <div className="bg-[#FFFDF6] rounded-3xl p-6 border border-[#0C513F]/10 shadow-sm text-center">
-              <div className="w-20 h-20 rounded-full bg-[#FAF6EB] border-2 border-[#0C513F] flex items-center justify-center text-3xl mx-auto mb-3 overflow-hidden shadow-sm">
+            <div className="bg-[#ffffff] rounded-3xl p-6 border border-[#00a205]/10 shadow-sm text-center">
+              <div className="w-20 h-20 rounded-full bg-[#fafafa] border-2 border-[#00a205] flex items-center justify-center text-3xl mx-auto mb-3 overflow-hidden shadow-sm">
                 {rider?.avatar ? (
                   <img
                     src={rider.avatar}
@@ -996,8 +996,8 @@ export default function RiderDashboardPage() {
                   <span>👤</span>
                 )}
               </div>
-              <h2 className="text-lg font-black text-[#0C513F]">{rider?.name}</h2>
-              <p className="text-xs text-[#111111]/70">{rider?.email}</p>
+              <h2 className="text-lg font-black text-[#00a205]">{rider?.name}</h2>
+              <p className="text-xs text-[#000000]/70">{rider?.email}</p>
 
               <div className="mt-3 flex items-center justify-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-bold border border-green-200">
@@ -1011,39 +1011,39 @@ export default function RiderDashboardPage() {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                <span className="text-[11px] text-[#111111]/60 block">Today&apos;s Earnings</span>
-                <span className="text-xl font-black text-[#0C513F]">
+              <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                <span className="text-[11px] text-[#000000]/60 block">Today&apos;s Earnings</span>
+                <span className="text-xl font-black text-[#00a205]">
                   ₦{stats.todayEarnings.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                <span className="text-[11px] text-[#111111]/60 block">Today&apos;s Drops</span>
-                <span className="text-xl font-black text-[#0C513F]">{stats.todayTrips} runs</span>
+              <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                <span className="text-[11px] text-[#000000]/60 block">Today&apos;s Drops</span>
+                <span className="text-xl font-black text-[#00a205]">{stats.todayTrips} runs</span>
               </div>
-              <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                <span className="text-[11px] text-[#111111]/60 block">Total Completed</span>
-                <span className="text-xl font-black text-[#0C513F]">{stats.allTimeTrips} drops</span>
+              <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                <span className="text-[11px] text-[#000000]/60 block">Total Completed</span>
+                <span className="text-xl font-black text-[#00a205]">{stats.allTimeTrips} drops</span>
               </div>
-              <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10">
-                <span className="text-[11px] text-[#111111]/60 block">Vehicle</span>
+              <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
+                <span className="text-[11px] text-[#000000]/60 block">Vehicle</span>
                 <span className="text-sm font-bold text-[#E75A24]">{rider?.vehicle}</span>
               </div>
             </div>
 
             {/* Account Details */}
-            <div className="bg-[#FFFDF6] rounded-2xl p-4 border border-[#0C513F]/10 text-xs space-y-2">
-              <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                <span className="text-[#111111]/60">Campus Base:</span>
+            <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10 text-xs space-y-2">
+              <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                <span className="text-[#000000]/60">Campus Base:</span>
                 <span className="font-bold">{rider?.institution}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                <span className="text-[#111111]/60">Phone:</span>
+              <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                <span className="text-[#000000]/60">Phone:</span>
                 <span className="font-semibold">{rider?.phone}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-[#111111]/60">Verification:</span>
-                <span className="font-mono font-bold text-[#0C513F]">
+                <span className="text-[#000000]/60">Verification:</span>
+                <span className="font-mono font-bold text-[#00a205]">
                   {rider?.identityMethod} ({rider?.identityNumber})
                 </span>
               </div>
@@ -1062,20 +1062,20 @@ export default function RiderDashboardPage() {
       {/* WITHDRAWAL MODAL */}
       {showWithdrawModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FFFDF6] w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[#0C513F]/15 animate-scale-up">
+          <div className="bg-[#ffffff] w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[#00a205]/15 animate-scale-up">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-black text-base text-[#0C513F]">Withdraw Earnings</h3>
+              <h3 className="font-black text-base text-[#00a205]">Withdraw Earnings</h3>
               <button
                 onClick={() => setShowWithdrawModal(false)}
-                className="text-xs font-bold text-[#111111]/50 hover:text-[#111111]"
+                className="text-xs font-bold text-[#000000]/50 hover:text-[#000000]"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-xs text-[#111111]/70 mb-3">
+            <p className="text-xs text-[#000000]/70 mb-3">
               Available to withdraw:{' '}
-              <strong className="text-[#0C513F]">₦{wallet.available.toLocaleString()}</strong>
+              <strong className="text-[#00a205]">₦{wallet.available.toLocaleString()}</strong>
             </p>
 
             {withdrawError && (
@@ -1084,7 +1084,7 @@ export default function RiderDashboardPage() {
 
             <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                <label className="block text-xs font-bold text-[#00a205] mb-1">
                   Amount in Naira (Min. ₦1,000)
                 </label>
                 <input
@@ -1094,14 +1094,14 @@ export default function RiderDashboardPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="e.g. 5000"
-                  className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#0C513F]"
+                  className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#00a205]"
                 />
               </div>
 
               {bankAccounts.length > 0 && (
-                <div className="p-3 bg-[#FAF6EB] rounded-xl text-xs">
-                  <span className="text-[10px] text-[#111111]/50 block">Destination Bank</span>
-                  <span className="font-bold text-[#0C513F]">
+                <div className="p-3 bg-[#fafafa] rounded-xl text-xs">
+                  <span className="text-[10px] text-[#000000]/50 block">Destination Bank</span>
+                  <span className="font-bold text-[#00a205]">
                     {bankAccounts[0].bankName} ({bankAccounts[0].accountNumber})
                   </span>
                 </div>
@@ -1111,14 +1111,14 @@ export default function RiderDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setShowWithdrawModal(false)}
-                  className="flex-1 py-3 rounded-xl border border-[#0C513F]/20 text-xs font-bold"
+                  className="flex-1 py-3 rounded-xl border border-[#00a205]/20 text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl bg-[#0C513F] text-white text-xs font-bold shadow-md shadow-[#0C513F]/20"
+                  className="flex-1 py-3 rounded-full bg-[#00a205] text-white text-xs font-bold shadow-md shadow-[#00a205]/20"
                 >
                   {actionLoading ? 'Processing...' : 'Confirm'}
                 </button>
@@ -1131,12 +1131,12 @@ export default function RiderDashboardPage() {
       {/* ADD BANK ACCOUNT MODAL */}
       {showBankModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FFFDF6] w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[#0C513F]/15 animate-scale-up">
+          <div className="bg-[#ffffff] w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-[#00a205]/15 animate-scale-up">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-black text-base text-[#0C513F]">Add Bank Account</h3>
+              <h3 className="font-black text-base text-[#00a205]">Add Bank Account</h3>
               <button
                 onClick={() => setShowBankModal(false)}
-                className="text-xs font-bold text-[#111111]/50 hover:text-[#111111]"
+                className="text-xs font-bold text-[#000000]/50 hover:text-[#000000]"
               >
                 ✕
               </button>
@@ -1148,13 +1148,13 @@ export default function RiderDashboardPage() {
 
             <form onSubmit={handleSaveBankAccount} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                <label className="block text-xs font-bold text-[#00a205] mb-1">
                   Bank Name
                 </label>
                 <select
                   value={newBankName}
                   onChange={(e) => setNewBankName(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-xs font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-xs font-medium"
                 >
                   <option value="Opay">OPay Digital Services</option>
                   <option value="Palmpay">PalmPay</option>
@@ -1169,7 +1169,7 @@ export default function RiderDashboardPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                <label className="block text-xs font-bold text-[#00a205] mb-1">
                   Account Number (10 Digits)
                 </label>
                 <input
@@ -1179,12 +1179,12 @@ export default function RiderDashboardPage() {
                   value={newAccNumber}
                   onChange={(e) => setNewAccNumber(e.target.value.replace(/\D/g, ''))}
                   placeholder="e.g. 8012345678"
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-xs font-mono"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-xs font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                <label className="block text-xs font-bold text-[#00a205] mb-1">
                   Account Name (As on Bank Account)
                 </label>
                 <input
@@ -1193,7 +1193,7 @@ export default function RiderDashboardPage() {
                   value={newAccName}
                   onChange={(e) => setNewAccName(e.target.value)}
                   placeholder="e.g. Samuel Olawale Adeleke"
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-xs"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-xs"
                 />
               </div>
 
@@ -1201,14 +1201,14 @@ export default function RiderDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setShowBankModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#0C513F]/20 text-xs font-bold"
+                  className="flex-1 py-2.5 rounded-xl border border-[#00a205]/20 text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-2.5 rounded-xl bg-[#0C513F] text-white text-xs font-bold shadow-md shadow-[#0C513F]/20"
+                  className="flex-1 py-2.5 rounded-full bg-[#00a205] text-white text-xs font-bold shadow-md shadow-[#00a205]/20"
                 >
                   Save Account
                 </button>
@@ -1219,14 +1219,14 @@ export default function RiderDashboardPage() {
       )}
 
       {/* FIXED BOTTOM NAVIGATION BAR */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#FAF6EB]/95 backdrop-blur-lg border-t border-[#0C513F]/15 py-2 px-4 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#fafafa]/95 backdrop-blur-lg border-t border-[#00a205]/15 py-2 px-4 shadow-lg">
         <div className="max-w-md mx-auto grid grid-cols-4 gap-1">
           <button
             onClick={() => setActiveTab('radar')}
             className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
               activeTab === 'radar'
-                ? 'text-[#0C513F] font-black scale-105'
-                : 'text-[#111111]/50 font-medium hover:text-[#0C513F]'
+                ? 'text-[#00a205] font-black scale-105'
+                : 'text-[#000000]/50 font-medium hover:text-[#00a205]'
             }`}
           >
             <span className="text-xl">📡</span>
@@ -1237,8 +1237,8 @@ export default function RiderDashboardPage() {
             onClick={() => setActiveTab('mission')}
             className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all relative ${
               activeTab === 'mission'
-                ? 'text-[#0C513F] font-black scale-105'
-                : 'text-[#111111]/50 font-medium hover:text-[#0C513F]'
+                ? 'text-[#00a205] font-black scale-105'
+                : 'text-[#000000]/50 font-medium hover:text-[#00a205]'
             }`}
           >
             <span className="text-xl">🛵</span>
@@ -1252,8 +1252,8 @@ export default function RiderDashboardPage() {
             onClick={() => setActiveTab('wallet')}
             className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
               activeTab === 'wallet'
-                ? 'text-[#0C513F] font-black scale-105'
-                : 'text-[#111111]/50 font-medium hover:text-[#0C513F]'
+                ? 'text-[#00a205] font-black scale-105'
+                : 'text-[#000000]/50 font-medium hover:text-[#00a205]'
             }`}
           >
             <span className="text-xl">💰</span>
@@ -1264,8 +1264,8 @@ export default function RiderDashboardPage() {
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
               activeTab === 'profile'
-                ? 'text-[#0C513F] font-black scale-105'
-                : 'text-[#111111]/50 font-medium hover:text-[#0C513F]'
+                ? 'text-[#00a205] font-black scale-105'
+                : 'text-[#000000]/50 font-medium hover:text-[#00a205]'
             }`}
           >
             <span className="text-xl">👤</span>

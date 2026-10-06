@@ -1169,13 +1169,13 @@
   transition: all 0.12s ease;
 }
 .vnd-cat-chip:hover {
-  border-color: #0C513F;
-  color: #0C513F;
+  border-color: #00a205;
+  color: #00a205;
 }
 .vnd-cat-chip.active {
-  background: #0C513F;
+  background: #00a205;
   color: #FFFFFF;
-  border-color: #0C513F;
+  border-color: #00a205;
 }
 
 /* ── Section Dividers: Available & Out of stock (Point 2) ── */
@@ -1338,7 +1338,7 @@
 .vnd-fc-price {
   font-size: 1.05rem;
   font-weight: 800;
-  color: #0C513F;
+  color: #00a205;
   margin-bottom: 2px;
 }
 .vnd-fc-unit {
@@ -1390,8 +1390,8 @@
   transition: all 0.12s ease;
 }
 .vnd-fc-btn-edit:hover {
-  border-color: #0C513F;
-  color: #0C513F;
+  border-color: #00a205;
+  color: #00a205;
 }
 .vnd-fc-btn-toggle {
   flex: 1.3;
@@ -1499,7 +1499,7 @@
   overflow: hidden;
 }
 .vnd-photo-dropzone:hover {
-  border-color: #0C513F;
+  border-color: #00a205;
   background: #F3F4F6;
 }
 .vnd-photo-icon {
@@ -1566,7 +1566,7 @@
   border-color: #9CA3AF;
 }
 .vnd-price-type-card.selected {
-  border-color: #0C513F;
+  border-color: #00a205;
   background: #E8F6F0;
 }
 .vnd-pt-icon {
@@ -1601,7 +1601,7 @@
   padding-left: 32px !important;
   font-size: 1.15rem !important;
   font-weight: 700 !important;
-  color: #0C513F !important;
+  color: #00a205 !important;
 }
 
 /* Extras Choice Grid (Points 11–18) */
@@ -1624,7 +1624,7 @@
   border-color: #9CA3AF;
 }
 .vnd-choice-card.selected {
-  border-color: #0C513F;
+  border-color: #00a205;
   background: #E8F6F0;
 }
 .vnd-choice-emoji {
@@ -1667,8 +1667,8 @@
 }
 .vnd-btn-add-extra-pill {
   background: #FFFFFF;
-  border: 1.5px solid #0C513F;
-  color: #0C513F;
+  border: 1.5px solid #00a205;
+  color: #00a205;
   font-family: inherit;
   font-size: 0.76rem;
   font-weight: 700;
@@ -1679,7 +1679,7 @@
   transition: all 0.12s ease;
 }
 .vnd-btn-add-extra-pill:hover {
-  background: #0C513F;
+  background: #00a205;
   color: #FFFFFF;
 }
 
@@ -1716,7 +1716,7 @@
 .vnd-extra-price {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0C513F;
+  color: #00a205;
 }
 .vnd-extra-remove {
   background: transparent;
@@ -1732,7 +1732,7 @@
 
 .vnd-quick-extra-box {
   background: #FFFFFF;
-  border: 1.5px solid #0C513F;
+  border: 1.5px solid #00a205;
   border-radius: 12px;
   padding: 12px;
   margin-top: 12px;
@@ -1827,7 +1827,7 @@
 .vnd-review-price {
   font-size: 1.15rem;
   font-weight: 800;
-  color: #0C513F;
+  color: #00a205;
   margin-bottom: 10px;
 }
 .vnd-review-extras-box {
@@ -1914,7 +1914,7 @@
   transition: all 0.15s ease;
 }
 .vnd-quick-card:hover {
-  border-color: #0C513F;
+  border-color: #00a205;
   transform: translateY(-2px);
 }
 .vnd-quick-icon {
@@ -1933,7 +1933,7 @@
   margin-left: auto;
   font-size: 1.2rem;
   font-weight: 800;
-  color: #0C513F;
+  color: #00a205;
 }
 
 /* Mobile Media Queries (Point 39) */

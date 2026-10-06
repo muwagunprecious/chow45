@@ -1110,10 +1110,10 @@
 .custom-size-price {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #0C513F;
+  color: #00a205;
 }
 .custom-size-card.selected .custom-size-price {
-  color: var(--c-primary-dark, #0C513F);
+  color: var(--c-primary-dark, #00a205);
 }
 
 /* The total is withheld until a size is picked, so the button reads as
@@ -1160,7 +1160,7 @@
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--vnd-green-dark, #0C513F);
+  color: var(--vnd-green-dark, #00a205);
   background: var(--vnd-mint, #E8F6F0);
   border: 1.5px solid transparent;
   border-radius: var(--radius-pill);
@@ -1169,7 +1169,7 @@
   cursor: pointer;
 }
 .vnd-size-preset-chip:hover {
-  border-color: var(--vnd-green, #0C513F);
+  border-color: var(--vnd-green, #00a205);
 }
 
 /* Two inputs plus a remove button cannot share one row at 320px without the

@@ -49,19 +49,19 @@ export default function RiderLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6EB] text-[#111111] flex flex-col justify-between selection:bg-[#0C513F] selection:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#fafafa] text-[#000000] flex flex-col justify-between selection:bg-[#00a205] selection:text-white font-sans antialiased">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#FAF6EB]/90 backdrop-blur-md border-b border-[#0C513F]/10 px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-30 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#00a205]/10 px-4 py-3 sm:px-6">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="w-8 h-8 rounded-full bg-[#0C513F] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
+            <span className="w-8 h-8 rounded-full bg-[#00a205] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
               45
             </span>
-            <span className="font-bold text-lg tracking-tight text-[#0C513F]">
+            <span className="font-bold text-lg tracking-tight text-[#00a205]">
               CHOW<span className="text-[#E75A24]">45</span>
             </span>
           </Link>
-          <span className="text-xs font-semibold text-[#0C513F]/70 bg-[#0C513F]/5 px-2.5 py-1 rounded-full border border-[#0C513F]/10">
+          <span className="text-xs font-semibold text-[#00a205]/70 bg-[#00a205]/5 px-2.5 py-1 rounded-full border border-[#00a205]/10">
             Rider Portal
           </span>
         </div>
@@ -69,15 +69,15 @@ export default function RiderLoginPage() {
 
       {/* Login Card */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-md bg-[#FFFDF6] rounded-3xl border border-[#0C513F]/10 shadow-xl shadow-[#0C513F]/5 p-6 sm:p-8">
+        <div className="w-full max-w-md bg-[#ffffff] rounded-3xl border border-[#00a205]/10 shadow-xl shadow-[#00a205]/5 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#0C513F]/10 text-[#0C513F] flex items-center justify-center text-3xl mx-auto mb-3">
+            <div className="w-14 h-14 rounded-full bg-[#00a205]/10 text-[#00a205] flex items-center justify-center text-3xl mx-auto mb-3">
               🛵
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#0C513F]">
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#00a205]">
               Welcome Back, Rider
             </h1>
-            <p className="text-xs text-[#111111]/70 mt-1">
+            <p className="text-xs text-[#000000]/70 mt-1">
               Sign in to access your delivery radar, active missions, and wallet.
             </p>
           </div>
@@ -93,7 +93,7 @@ export default function RiderLoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-[#0C513F] mb-1">
+              <label className="block text-xs font-bold text-[#00a205] mb-1">
                 Email Address
               </label>
               <input
@@ -102,13 +102,13 @@ export default function RiderLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. rider@chow45.com"
-                className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-[#0C513F]">
+                <label className="block text-xs font-bold text-[#00a205]">
                   Password
                 </label>
               </div>
@@ -118,14 +118,14 @@ export default function RiderLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-bold text-sm shadow-md shadow-[#0C513F]/20 transition-all flex items-center justify-center gap-2 mt-2"
+              className="w-full py-3.5 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-bold text-sm shadow-md shadow-[#00a205]/20 transition-all flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
                 <>
@@ -138,10 +138,10 @@ export default function RiderLoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-[#0C513F]/10 text-center">
-            <p className="text-xs text-[#111111]/70">
+          <div className="mt-6 pt-5 border-t border-[#00a205]/10 text-center">
+            <p className="text-xs text-[#000000]/70">
               New to the Chow45 dispatch fleet?{' '}
-              <Link href="/rider/register" className="font-bold text-[#0C513F] hover:underline">
+              <Link href="/rider/register" className="font-bold text-[#00a205] hover:underline">
                 Apply to Deliver
               </Link>
             </p>
@@ -149,7 +149,7 @@ export default function RiderLoginPage() {
         </div>
       </main>
 
-      <footer className="py-4 text-center text-xs text-[#111111]/50 border-t border-[#0C513F]/10">
+      <footer className="py-4 text-center text-xs text-[#000000]/50 border-t border-[#00a205]/10">
         Chow45 Dispatch • Instant Payouts & Reliable Campus Logistics
       </footer>
     </div>

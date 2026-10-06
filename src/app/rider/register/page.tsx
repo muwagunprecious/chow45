@@ -175,25 +175,25 @@ export default function RiderRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6EB] text-[#111111] flex flex-col justify-between selection:bg-[#0C513F] selection:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#fafafa] text-[#000000] flex flex-col justify-between selection:bg-[#00a205] selection:text-white font-sans antialiased">
       {/* Branded Header */}
-      <header className="sticky top-0 z-30 bg-[#FAF6EB]/90 backdrop-blur-md border-b border-[#0C513F]/10 px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-30 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#00a205]/10 px-4 py-3 sm:px-6">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="w-8 h-8 rounded-full bg-[#0C513F] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
+            <span className="w-8 h-8 rounded-full bg-[#00a205] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
               45
             </span>
-            <span className="font-bold text-lg tracking-tight text-[#0C513F]">
+            <span className="font-bold text-lg tracking-tight text-[#00a205]">
               CHOW<span className="text-[#E75A24]">45</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-[#0C513F]/70 bg-[#0C513F]/5 px-2.5 py-1 rounded-full border border-[#0C513F]/10">
+            <span className="text-xs font-semibold text-[#00a205]/70 bg-[#00a205]/5 px-2.5 py-1 rounded-full border border-[#00a205]/10">
               Rider Dispatch
             </span>
             <Link
               href="/rider/login"
-              className="text-xs font-bold text-[#0C513F] hover:underline"
+              className="text-xs font-bold text-[#00a205] hover:underline"
             >
               Sign In
             </Link>
@@ -203,10 +203,10 @@ export default function RiderRegisterPage() {
 
       {/* Main Multi-Step Container */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-xl bg-[#FFFDF6] rounded-3xl border border-[#0C513F]/10 shadow-xl shadow-[#0C513F]/5 p-6 sm:p-8">
+        <div className="w-full max-w-xl bg-[#ffffff] rounded-3xl border border-[#00a205]/10 shadow-xl shadow-[#00a205]/5 p-6 sm:p-8">
           {/* Progress Indicator */}
           <div className="mb-6">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#0C513F]/70 mb-2">
+            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#00a205]/70 mb-2">
               <span>Step {step} of 4</span>
               <span>
                 {step === 1 && 'Account Details'}
@@ -215,9 +215,9 @@ export default function RiderRegisterPage() {
                 {step === 4 && 'Pledge & Submit'}
               </span>
             </div>
-            <div className="w-full bg-[#FAF6EB] rounded-full h-2 overflow-hidden border border-[#0C513F]/10">
+            <div className="w-full bg-[#fafafa] rounded-full h-2 overflow-hidden border border-[#00a205]/10">
               <div
-                className="bg-[#0C513F] h-2 transition-all duration-300 rounded-full"
+                className="bg-[#00a205] h-2 transition-all duration-300 rounded-full"
                 style={{ width: `${(step / 4) * 100}%` }}
               />
             </div>
@@ -225,13 +225,13 @@ export default function RiderRegisterPage() {
 
           {/* Heading */}
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0C513F]">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#00a205]">
               {step === 1 && 'Join the Chow45 Fleet 🚀'}
               {step === 2 && 'Your Wheels & Campus Hub'}
               {step === 3 && 'Verification & Security'}
               {step === 4 && 'Review & Dispatch Pledge'}
             </h1>
-            <p className="text-sm text-[#111111]/70 mt-1">
+            <p className="text-sm text-[#000000]/70 mt-1">
               {step === 1 && 'Earn up to ₦60,000+ weekly delivering meals to fellow students and staff.'}
               {step === 2 && 'Tell us how you roll and where you prefer to fulfill orders.'}
               {step === 3 && 'Select NIN or Matriculation Number to protect food packages & community trust.'}
@@ -253,7 +253,7 @@ export default function RiderRegisterPage() {
             {step === 1 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Full Legal Name
                   </label>
                   <input
@@ -262,12 +262,12 @@ export default function RiderRegisterPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Samuel Olawale Adeleke"
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Email Address
                   </label>
                   <input
@@ -276,12 +276,12 @@ export default function RiderRegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. samuel.adeleke@gmail.com"
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     WhatsApp / Phone Number
                   </label>
                   <input
@@ -290,12 +290,12 @@ export default function RiderRegisterPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. 08012345678"
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Create Password
                   </label>
                   <input
@@ -304,7 +304,7 @@ export default function RiderRegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm"
                   />
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function RiderRegisterPage() {
             {step === 2 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-2">
+                  <label className="block text-xs font-bold text-[#00a205] mb-2">
                     Select Your Delivery Vehicle
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -325,14 +325,14 @@ export default function RiderRegisterPage() {
                         onClick={() => setVehicle(v.id)}
                         className={`text-left p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
                           vehicle === v.id
-                            ? 'bg-[#0C513F] text-white border-[#0C513F] shadow-md shadow-[#0C513F]/20'
-                            : 'bg-[#FAF6EB] text-[#111111] border-[#0C513F]/15 hover:border-[#0C513F]/40'
+                            ? 'bg-[#00a205] text-white border-[#00a205] shadow-md shadow-[#00a205]/20'
+                            : 'bg-[#fafafa] text-[#000000] border-[#00a205]/15 hover:border-[#00a205]/40'
                         }`}
                       >
                         <span className="text-2xl">{v.icon}</span>
                         <div>
                           <p className="font-bold text-sm leading-tight">{v.label}</p>
-                          <p className={`text-xs mt-0.5 ${vehicle === v.id ? 'text-white/80' : 'text-[#111111]/60'}`}>
+                          <p className={`text-xs mt-0.5 ${vehicle === v.id ? 'text-white/80' : 'text-[#000000]/60'}`}>
                             {v.desc}
                           </p>
                         </div>
@@ -342,7 +342,7 @@ export default function RiderRegisterPage() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Primary University / Campus Hub
                   </label>
                   <select
@@ -351,7 +351,7 @@ export default function RiderRegisterPage() {
                       setInstitution(e.target.value);
                       setLocation(e.target.value);
                     }}
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm font-medium"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm font-medium"
                   >
                     {CAMPUSES.map((c) => (
                       <option key={c} value={c}>
@@ -367,7 +367,7 @@ export default function RiderRegisterPage() {
             {step === 3 && (
               <div className="space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-2">
+                  <label className="block text-xs font-bold text-[#00a205] mb-2">
                     Identity Verification Method
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -376,12 +376,12 @@ export default function RiderRegisterPage() {
                       onClick={() => setIdentityMethod('NIN')}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         identityMethod === 'NIN'
-                          ? 'bg-[#0C513F] text-white border-[#0C513F] font-bold'
-                          : 'bg-[#FAF6EB] text-[#111111] border-[#0C513F]/20 font-semibold'
+                          ? 'bg-[#00a205] text-white border-[#00a205] font-bold'
+                          : 'bg-[#fafafa] text-[#000000] border-[#00a205]/20 font-semibold'
                       }`}
                     >
                       <span className="block text-sm">National ID (NIN)</span>
-                      <span className={`text-[10px] ${identityMethod === 'NIN' ? 'text-white/80' : 'text-[#111111]/60'}`}>
+                      <span className={`text-[10px] ${identityMethod === 'NIN' ? 'text-white/80' : 'text-[#000000]/60'}`}>
                         All Nigerian Citizens
                       </span>
                     </button>
@@ -391,12 +391,12 @@ export default function RiderRegisterPage() {
                       onClick={() => setIdentityMethod('MATRIC')}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         identityMethod === 'MATRIC'
-                          ? 'bg-[#0C513F] text-white border-[#0C513F] font-bold'
-                          : 'bg-[#FAF6EB] text-[#111111] border-[#0C513F]/20 font-semibold'
+                          ? 'bg-[#00a205] text-white border-[#00a205] font-bold'
+                          : 'bg-[#fafafa] text-[#000000] border-[#00a205]/20 font-semibold'
                       }`}
                     >
                       <span className="block text-sm">Matriculation No.</span>
-                      <span className={`text-[10px] ${identityMethod === 'MATRIC' ? 'text-white/80' : 'text-[#111111]/60'}`}>
+                      <span className={`text-[10px] ${identityMethod === 'MATRIC' ? 'text-white/80' : 'text-[#000000]/60'}`}>
                         Enrolled Students
                       </span>
                     </button>
@@ -404,7 +404,7 @@ export default function RiderRegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     {identityMethod === 'NIN'
                       ? 'National Identification Number (11 Digits)'
                       : 'Campus Matriculation Number'}
@@ -417,19 +417,19 @@ export default function RiderRegisterPage() {
                     placeholder={
                       identityMethod === 'NIN' ? 'e.g. 12345678901' : 'e.g. SCI/2021/0452'
                     }
-                    className="w-full px-4 py-3 rounded-xl bg-[#FAF6EB] border border-[#0C513F]/20 text-[#111111] placeholder-[#111111]/40 focus:outline-none focus:ring-2 focus:ring-[#0C513F] text-sm font-mono"
+                    className="w-full px-4 py-3 rounded-xl bg-[#fafafa] border border-[#00a205]/20 text-[#000000] placeholder-[#000000]/40 focus:outline-none focus:ring-2 focus:ring-[#00a205] text-sm font-mono"
                   />
-                  <p className="text-[11px] text-[#111111]/60 mt-1">
+                  <p className="text-[11px] text-[#000000]/60 mt-1">
                     🔒 Kept strictly confidential and encrypted. Used only for rider background check.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0C513F] mb-1">
+                  <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Clear Rider Face Profile Photo
                   </label>
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-[#FAF6EB] border border-[#0C513F]/20 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-[#fafafa] border border-[#00a205]/20 flex items-center justify-center overflow-hidden shrink-0">
                       {avatarPreview ? (
                         <img
                           src={avatarPreview}
@@ -450,11 +450,11 @@ export default function RiderRegisterPage() {
                       />
                       <label
                         htmlFor="photo-upload"
-                        className="inline-block px-4 py-2 rounded-xl bg-[#0C513F]/10 hover:bg-[#0C513F]/15 border border-[#0C513F]/20 text-[#0C513F] font-bold text-xs cursor-pointer transition-colors"
+                        className="inline-block px-4 py-2 rounded-full bg-[#00a205]/10 hover:bg-[#00a205]/15 border border-[#00a205]/20 text-[#00a205] font-bold text-xs cursor-pointer transition-colors"
                       >
                         {avatarPreview ? 'Change Photo' : 'Upload Headshot'}
                       </label>
-                      <p className="text-[11px] text-[#111111]/60 mt-1">
+                      <p className="text-[11px] text-[#000000]/60 mt-1">
                         A recognizable headshot so students and restaurant vendors can identify you.
                       </p>
                     </div>
@@ -466,40 +466,40 @@ export default function RiderRegisterPage() {
             {/* STEP 4: REVIEW & DISPATCH PLEDGE */}
             {step === 4 && (
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-[#FAF6EB] border border-[#0C513F]/15 space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                    <span className="text-[#111111]/60">Rider Name:</span>
-                    <span className="font-bold text-[#0C513F]">{name}</span>
+                <div className="p-4 rounded-2xl bg-[#fafafa] border border-[#00a205]/15 space-y-2 text-xs">
+                  <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                    <span className="text-[#000000]/60">Rider Name:</span>
+                    <span className="font-bold text-[#00a205]">{name}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                    <span className="text-[#111111]/60">Contact Email:</span>
+                  <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                    <span className="text-[#000000]/60">Contact Email:</span>
                     <span className="font-semibold">{email}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                    <span className="text-[#111111]/60">Phone:</span>
+                  <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                    <span className="text-[#000000]/60">Phone:</span>
                     <span className="font-semibold">{phone}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                    <span className="text-[#111111]/60">Vehicle:</span>
+                  <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                    <span className="text-[#000000]/60">Vehicle:</span>
                     <span className="font-bold text-[#E75A24]">{vehicle}</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-[#0C513F]/10">
-                    <span className="text-[#111111]/60">Campus Hub:</span>
+                  <div className="flex justify-between py-1 border-b border-[#00a205]/10">
+                    <span className="text-[#000000]/60">Campus Hub:</span>
                     <span className="font-semibold">{institution}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-[#111111]/60">Verification:</span>
-                    <span className="font-mono font-bold text-[#0C513F]">
+                    <span className="text-[#000000]/60">Verification:</span>
+                    <span className="font-mono font-bold text-[#00a205]">
                       {identityMethod}: {identityNumber}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#0C513F]/5 border border-[#0C513F]/15">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#0C513F] mb-1.5 flex items-center gap-1.5">
+                <div className="p-4 rounded-full bg-[#00a205]/5 border border-[#00a205]/15">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] mb-1.5 flex items-center gap-1.5">
                     <span>🛡️</span> Chow45 Dispatch & Food Safety Pledge
                   </h3>
-                  <ul className="text-xs text-[#111111]/80 space-y-1 list-disc list-inside">
+                  <ul className="text-xs text-[#000000]/80 space-y-1 list-disc list-inside">
                     <li>I will handle meal packages with care and maintain food hygiene.</li>
                     <li>I will promptly confirm deliveries using the customer&apos;s 4-digit PIN.</li>
                     <li>I will treat cafeteria staff and campus students with courtesy.</li>
@@ -509,9 +509,9 @@ export default function RiderRegisterPage() {
                       type="checkbox"
                       checked={agreedToTerms}
                       onChange={(e) => setAgreedToTerms(e.target.checked)}
-                      className="mt-0.5 rounded border-[#0C513F]/30 text-[#0C513F] focus:ring-[#0C513F] h-4 w-4"
+                      className="mt-0.5 rounded border-[#00a205]/30 text-[#00a205] focus:ring-[#00a205] h-4 w-4"
                     />
-                    <span className="text-xs font-bold text-[#0C513F]">
+                    <span className="text-xs font-bold text-[#00a205]">
                       I accept the terms and promise to fulfill deliveries responsibly.
                     </span>
                   </label>
@@ -526,14 +526,14 @@ export default function RiderRegisterPage() {
                   type="button"
                   onClick={prevStep}
                   disabled={loading}
-                  className="px-5 py-3 rounded-xl border border-[#0C513F]/20 text-[#0C513F] font-bold text-xs hover:bg-[#FAF6EB] transition-colors"
+                  className="px-5 py-3 rounded-xl border border-[#00a205]/20 text-[#00a205] font-bold text-xs hover:bg-[#fafafa] transition-colors"
                 >
                   ← Back
                 </button>
               ) : (
                 <Link
                   href="/rider/login"
-                  className="text-xs font-bold text-[#0C513F] hover:underline"
+                  className="text-xs font-bold text-[#00a205] hover:underline"
                 >
                   Already registered?
                 </Link>
@@ -543,7 +543,7 @@ export default function RiderRegisterPage() {
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-6 py-3 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] text-white font-bold text-xs shadow-md shadow-[#0C513F]/20 transition-all ml-auto"
+                  className="px-6 py-3 rounded-full bg-[#00a205] hover:bg-[#008704] text-white font-bold text-xs shadow-md shadow-[#00a205]/20 transition-all ml-auto"
                 >
                   Continue →
                 </button>
@@ -551,7 +551,7 @@ export default function RiderRegisterPage() {
                 <button
                   type="submit"
                   disabled={loading || !agreedToTerms}
-                  className="px-7 py-3 rounded-xl bg-[#0C513F] hover:bg-[#0a4334] disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-[#0C513F]/20 transition-all ml-auto flex items-center gap-2"
+                  className="px-7 py-3 rounded-full bg-[#00a205] hover:bg-[#008704] disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-[#00a205]/20 transition-all ml-auto flex items-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -569,7 +569,7 @@ export default function RiderRegisterPage() {
       </main>
 
       {/* Footer Note */}
-      <footer className="py-4 text-center text-xs text-[#111111]/50 border-t border-[#0C513F]/10">
+      <footer className="py-4 text-center text-xs text-[#000000]/50 border-t border-[#00a205]/10">
         Chow45 Campus Logistics & Food Delivery Operations • Powered by Student Riders
       </footer>
     </div>

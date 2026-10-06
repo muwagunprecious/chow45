@@ -286,7 +286,7 @@
               <!-- Rider Dispatch Profile Row -->
               <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #F1F5F9;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="width: 46px; height: 46px; border-radius: 50%; background: #FAF6EB; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                  <div style="width: 46px; height: 46px; border-radius: 50%; background: #fafafa; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
                     🛵
                   </div>
                   <div>
@@ -334,7 +334,7 @@
                 <span style="display: flex; align-items: center; gap: 8px;">
                   <span>💬</span> <span id="track-order-note-display">Add Order Note</span>
                 </span>
-                <span id="track-store-name" style="font-weight: 700; color: #0C513F;"></span>
+                <span id="track-store-name" style="font-weight: 700; color: #00a205;"></span>
               </div>
             </div>
           </div>
@@ -596,7 +596,7 @@
                     <div>
                       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                         <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase;">Pickup / Kitchen Location</label>
-                        <button type="button" onclick="Chow45Auth._captureLiveLocation('vnd-settings-address', 'Pickup address')" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;">📍 GPS Location</button>
+                        <button type="button" onclick="Chow45Auth._captureLiveLocation('vnd-settings-address', 'Pickup address')" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #00a205; cursor: pointer; padding: 0;">📍 GPS Location</button>
                       </div>
                       <input type="text" id="vnd-settings-address" placeholder="e.g. Sagamu Campus (OSUTH), Sagamu" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none; margin-bottom: 8px;" />
                       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -612,7 +612,7 @@
                     </div>
 
                     <div style="display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap;">
-                      <button type="submit" id="vnd-save-settings-btn" class="vnd-btn vnd-btn-primary" style="padding: 10px 20px; font-weight: 700; cursor: pointer; background: #0C513F; color: #FFF; border: none; border-radius: 10px;">
+                      <button type="submit" id="vnd-save-settings-btn" class="vnd-btn vnd-btn-primary" style="padding: 10px 20px; font-weight: 700; cursor: pointer; background: #00a205; color: #FFF; border: none; border-radius: 10px;">
                         Save Store Profile
                       </button>
                       <button type="button" class="vendor-register-link" onclick="VendorController.openRegistrationModal()">Register New Store +</button>
@@ -1040,19 +1040,19 @@
               <div id="custom-portion-scoop" class="custom-portion-card" onclick="CustomerController.selectCustomPortion('SCOOP')">
                 <div style="font-size: 1.3rem;">🥄</div>
                 <div style="font-weight: 700; font-size: 0.88rem; margin: 2px 0;">Per Scoop</div>
-                <div id="custom-portion-scoop-price" style="font-size: 0.85rem; color: #0C513F; font-weight: 800;">₦500</div>
+                <div id="custom-portion-scoop-price" style="font-size: 0.85rem; color: #00a205; font-weight: 800;">₦500</div>
               </div>
               <div id="custom-portion-plate" class="custom-portion-card selected" onclick="CustomerController.selectCustomPortion('PLATE')">
                 <div style="font-size: 1.3rem;">🍽️</div>
                 <div style="font-weight: 700; font-size: 0.88rem; margin: 2px 0;">Per Plate</div>
-                <div id="custom-portion-plate-price" style="font-size: 0.85rem; color: #0C513F; font-weight: 800;">₦2,000</div>
+                <div id="custom-portion-plate-price" style="font-size: 0.85rem; color: #00a205; font-weight: 800;">₦2,000</div>
               </div>
             </div>
           </div>
 
           <!-- Single Portion Tag (when only scoop or only plate) -->
           <div id="custom-portion-single-wrap" style="display: none; margin-bottom: 14px;">
-            <div id="custom-portion-single-badge" style="display: inline-flex; align-items: center; gap: 6px; background: #E8F6F0; color: #0C513F; font-weight: 700; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px;"></div>
+            <div id="custom-portion-single-badge" style="display: inline-flex; align-items: center; gap: 6px; background: #E8F6F0; color: #00a205; font-weight: 700; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px;"></div>
           </div>
 
           <!-- Size Selector (per-piece items that come in sizes) -->
@@ -1256,20 +1256,20 @@
         <!-- Streamlined Floating Confirmation Bar -->
         <footer id="picker-confirm-card" class="picker-confirm-card" style="padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); background: #FFFFFF; box-shadow: 0 -8px 24px rgba(0,0,0,0.12); border-top: 1px solid var(--c-border-subtle, #E6DEC8); display: flex; align-items: center; justify-content: space-between; gap: 14px; z-index: 30;">
           <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-            <div class="picker-check-icon" style="width: 38px; height: 38px; min-width: 38px; border-radius: 50%; background: #E8F6F0; color: #0C513F; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            <div class="picker-check-icon" style="width: 38px; height: 38px; min-width: 38px; border-radius: 50%; background: #E8F6F0; color: #00a205; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
               📍
             </div>
             <div style="min-width: 0; flex: 1;">
               <div id="picker-address-text" class="picker-address-text" style="font-size: 0.94rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 Selecting location...
               </div>
-              <div id="picker-zone-status" class="picker-zone-status ok" style="font-size: 0.78rem; color: #0C513F; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <div id="picker-zone-status" class="picker-zone-status ok" style="font-size: 0.78rem; color: #00a205; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 Ready to confirm
               </div>
             </div>
           </div>
 
-          <button type="button" id="picker-confirm-btn" class="cta-primary-btn picker-confirm-btn" onclick="Chow45LocationPicker.confirmLocation()" style="flex-shrink: 0; padding: 13px 24px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; width: auto; min-width: 160px; cursor: pointer; background: #0C513F; color: #FFFFFF;">
+          <button type="button" id="picker-confirm-btn" class="cta-primary-btn picker-confirm-btn" onclick="Chow45LocationPicker.confirmLocation()" style="flex-shrink: 0; padding: 13px 24px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; width: auto; min-width: 160px; cursor: pointer; background: #00a205; color: #FFFFFF;">
             Confirm Location ✓
           </button>
         </footer>
@@ -1294,10 +1294,10 @@
 
         <div class="modal-body" style="padding: 20px 22px;">
           <!-- Slot Badge banner -->
-          <div id="save-place-slot-banner" style="display: flex; align-items: center; gap: 12px; background: #FAF6EB; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(12,81,63,0.18);">
+          <div id="save-place-slot-banner" style="display: flex; align-items: center; gap: 12px; background: #fafafa; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(12,81,63,0.18);">
             <span id="save-place-slot-icon" style="font-size: 1.8rem;">🏫</span>
             <div style="flex: 1; min-width: 0;">
-              <strong id="save-place-slot-name" style="display: block; font-size: 0.95rem; color: #0C513F;">Campus Address</strong>
+              <strong id="save-place-slot-name" style="display: block; font-size: 0.95rem; color: #00a205;">Campus Address</strong>
               <small id="save-place-slot-hint" style="font-size: 0.8rem; color: #6E6D66;">e.g. OOU Main Campus Gate, Ago-Iwoye</small>
             </div>
           </div>
@@ -1307,7 +1307,7 @@
             <div class="checkout-input-group" style="margin-bottom: 14px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label class="checkout-label" for="save-place-address-input" style="font-weight: 700; font-size: 0.85rem; color: #1F2937;">Address / Campus Landmark</label>
-                <button type="button" onclick="Chow45LocationPicker.useCurrentLocationForSavePlace()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <button type="button" onclick="Chow45LocationPicker.useCurrentLocationForSavePlace()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #00a205; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                   📍 <span>Use GPS location</span>
                 </button>
               </div>
@@ -1338,7 +1338,7 @@
 
             <!-- Action buttons: Cancel & Save -->
             <div style="display: flex; gap: 10px; margin-top: 10px;">
-              <button type="button" class="modal-cancel-btn" onclick="Chow45LocationPicker.closeSavePlaceModal()" style="flex: 1; padding: 13px 16px; border-radius: 12px; border: 1.5px solid #E6DEC8; background: #FAF6EB; color: #383834; font-weight: 700; font-size: 0.92rem; cursor: pointer; transition: background 0.15s ease;">
+              <button type="button" class="modal-cancel-btn" onclick="Chow45LocationPicker.closeSavePlaceModal()" style="flex: 1; padding: 13px 16px; border-radius: 12px; border: 1.5px solid #E6DEC8; background: #fafafa; color: #383834; font-weight: 700; font-size: 0.92rem; cursor: pointer; transition: background 0.15s ease;">
                 Cancel
               </button>
               <button type="submit" id="save-place-confirm-btn" class="cta-primary-btn" style="flex: 1.6; padding: 13px 18px; border-radius: 12px; font-weight: 800; font-size: 0.92rem; cursor: pointer;">
@@ -1498,7 +1498,7 @@
               <div class="modal-title" id="vnd-flow-modal-title">Add Food</div>
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <div class="vnd-flow-step-tag" id="vnd-flow-step-tag">Step 1 of 6 · Food Details</div>
-                <div id="vnd-draft-status-pill" style="display: none; align-items: center; gap: 4px; font-size: 0.72rem; color: #0C513F; background: #E8F6F0; padding: 2px 8px; border-radius: 999px; font-weight: 700;">
+                <div id="vnd-draft-status-pill" style="display: none; align-items: center; gap: 4px; font-size: 0.72rem; color: #00a205; background: #E8F6F0; padding: 2px 8px; border-radius: 999px; font-weight: 700;">
                   <span style="font-size: 0.65rem;">🟢</span> Draft auto-saved
                 </div>
               </div>
@@ -2076,7 +2076,7 @@
             <div id="auth-password-alert" class="auth-alert error" style="display: none;"></div>
 
             <!-- Email Banner with Change button -->
-            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 14px; border: 1px solid rgba(12,81,63,0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 14px; border: 1px solid rgba(12,81,63,0.15);">
               <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
                 <span style="font-size: 1rem;">✉️</span>
                 <div style="overflow: hidden;">
@@ -2084,7 +2084,7 @@
                   <strong id="auth-password-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
                 </div>
               </div>
-              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #00a205; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
             </div>
 
             <form onsubmit="event.preventDefault(); Chow45Auth.handlePasswordSubmit();">
@@ -2119,7 +2119,7 @@
             </div>
 
             <!-- Email banner with Change button -->
-            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
               <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
                 <span style="font-size: 1rem;">✉️</span>
                 <div style="overflow: hidden;">
@@ -2127,15 +2127,15 @@
                   <strong id="auth-cust-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
                 </div>
               </div>
-              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #00a205; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
             </div>
 
             <!-- Account Type Switcher: Customer vs Vendor -->
             <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #0C513F; color: #fff; border: 1px solid #0C513F; cursor: default;">
+              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #00a205; color: #fff; border: 1px solid #00a205; cursor: default;">
                 🛍️ Order Food
               </button>
-              <button type="button" onclick="Chow45Auth.showVendorStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #FAF6EB; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
+              <button type="button" onclick="Chow45Auth.showVendorStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #fafafa; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
                 🍳 Sell Food (Vendor) →
               </button>
             </div>
@@ -2198,7 +2198,7 @@
             </div>
 
             <!-- Email banner with Change button -->
-            <div style="display: flex; align-items: center; justify-content: space-between; background: #FAF6EB; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #fafafa; padding: 10px 14px; border-radius: 12px; margin-top: 12px; margin-bottom: 12px; border: 1px solid rgba(12,81,63,0.15);">
               <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
                 <span style="font-size: 1rem;">✉️</span>
                 <div style="overflow: hidden;">
@@ -2206,15 +2206,15 @@
                   <strong id="auth-vnd-email-display" style="font-size: 0.88rem; color: #111111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></strong>
                 </div>
               </div>
-              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #0C513F; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
+              <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.78rem; font-weight: 700; color: #00a205; cursor: pointer; text-decoration: underline; flex-shrink: 0; padding-left: 8px;">Change</button>
             </div>
 
             <!-- Account Type Switcher: Customer vs Vendor -->
             <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-              <button type="button" onclick="Chow45Auth.showCustomerStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #FAF6EB; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
+              <button type="button" onclick="Chow45Auth.showCustomerStep()" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: #fafafa; color: #383834; border: 1px solid #E6DEC8; cursor: pointer;">
                 🛍️ Order Food (Customer) ←
               </button>
-              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #0C513F; color: #fff; border: 1px solid #0C513F; cursor: default;">
+              <button type="button" style="flex: 1; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; background: #00a205; color: #fff; border: 1px solid #00a205; cursor: default;">
                 🍳 Sell Food (Vendor) ✓
               </button>
             </div>
@@ -2375,13 +2375,13 @@
               <div style="margin-bottom: 14px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                   <label style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase;">Default Delivery Address</label>
-                  <button type="button" onclick="Chow45Auth.captureProfileAddress()" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;">📍 Use Current Location</button>
+                  <button type="button" onclick="Chow45Auth.captureProfileAddress()" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #00a205; cursor: pointer; padding: 0;">📍 Use Current Location</button>
                 </div>
                 <input type="text" id="account-edit-address" placeholder="e.g. OSUTH Gate 2, Sagamu" style="width: 100%; height: 40px; padding: 0 12px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; box-sizing: border-box; outline: none;" />
               </div>
 
               <div style="display: flex; gap: 8px;">
-                <button type="button" class="vnd-btn vnd-btn-primary" onclick="Chow45Auth.saveProfileChanges()" style="flex: 1; height: 42px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; cursor: pointer; background: #0C513F; color: #FFF; border: none;">
+                <button type="button" class="vnd-btn vnd-btn-primary" onclick="Chow45Auth.saveProfileChanges()" style="flex: 1; height: 42px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; cursor: pointer; background: #00a205; color: #FFF; border: none;">
                   Save Profile Changes
                 </button>
                 <button type="button" onclick="Chow45Auth.toggleEditProfile(false)" style="height: 42px; padding: 0 14px; font-size: 0.85rem; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFF; color: #64748B; cursor: pointer;">
@@ -2412,7 +2412,7 @@
               <button id="account-vendor-dash-btn" class="account-menu-item" style="display: none; background: #E8F6F0;" onclick="window.location.href='/vendor';">
                 <span class="item-icon">🏪</span>
                 <div class="item-text">
-                  <strong style="color: #0C513F;">Vendor Dashboard</strong>
+                  <strong style="color: #00a205;">Vendor Dashboard</strong>
                   <small>Manage your food, menu & orders</small>
                 </div>
                 <span class="item-arrow" style="color: #00B978;">→</span>
@@ -2426,7 +2426,7 @@
               <img id="account-vnd-avatar" src="/logo.png" alt="Store Avatar" style="width: 56px; height: 56px; border-radius: 14px; object-fit: cover; border: 2px solid #00B978; background: #FFF;" />
               <div class="account-details">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
-                  <h3 id="account-vnd-title" class="account-name" style="color: #0C513F;">Your Kitchen</h3>
+                  <h3 id="account-vnd-title" class="account-name" style="color: #00a205;">Your Kitchen</h3>
                   <span id="account-vnd-status-badge" class="account-badge" style="background: #DCFCE7; color: #15803D;">● OPEN</span>
                 </div>
                 <p id="account-vnd-phone-text" class="account-contact">+234 812 450 4500</p>
@@ -2498,9 +2498,9 @@
       <div class="modal-sheet vendor-first-setup-sheet" style="max-width: 480px; max-height: 90vh; display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; background: #ffffff; box-shadow: 0 25px 60px rgba(0,0,0,0.35);">
         
         <!-- Header with close button -->
-        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 20px 24px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; background: #FFFDF6;">
+        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 20px 24px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; background: #ffffff;">
           <div>
-            <div class="modal-title" style="font-size: 1.25rem; font-weight: 800; color: #0C513F; display: flex; align-items: center; gap: 8px;">
+            <div class="modal-title" style="font-size: 1.25rem; font-weight: 800; color: #00a205; display: flex; align-items: center; gap: 8px;">
               <span>🔐</span> Set Your Password & Location
             </div>
             <p style="font-size: 0.86rem; color: #475569; margin: 6px 0 0 0; line-height: 1.45;">
@@ -2563,7 +2563,7 @@
                 <button
                   type="button"
                   onclick="Chow45Auth._captureLiveLocation('vnd-setup-address', 'Pickup address')"
-                  style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;"
+                  style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #00a205; cursor: pointer; padding: 0;"
                 >📍 GPS Location</button>
               </div>
               <input
@@ -2609,7 +2609,7 @@
               <button
                 type="submit"
                 id="vnd-setup-submit-btn"
-                style="flex: 1; height: 50px; background: #0C513F; color: #fff; border: none; border-radius: 14px; font-weight: 700; font-size: 0.98rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;"
+                style="flex: 1; height: 50px; background: #00a205; color: #fff; border: none; border-radius: 14px; font-weight: 700; font-size: 0.98rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;"
               >
                 <span>Save & Continue to Dashboard ➔</span>
               </button>

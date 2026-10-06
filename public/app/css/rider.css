@@ -1,18 +1,18 @@
 /* ==========================================================================
    CHOW45 RIDER DISPATCH & DELIVERY PORTAL STYLES
    Adopts Chow45 Landing Page Brand Identity:
-   - Forest Green (#0C513F), Mint (#E4F7EC), Warm Paper (#FFFDF6), Cream (#FAF6EB)
+   - Forest Green (#00a205), Mint (#E4F7EC), Warm Paper (#ffffff), Cream (#fafafa)
    - Yellow (#FFC928), Orange (#FF5E3A), High-Contrast Ink (#111111)
    - Pill Navbars, Capsule Badges, Retro Drop Shadows, Plus Jakarta Sans
    ========================================================================== */
 
 :root {
-  --brand-green: #0C513F;
-  --brand-green-dark: #073B2E;
+  --brand-green: #00a205;
+  --brand-green-dark: #008704;
   --brand-green-light: #E4F7EC;
   --brand-green-bright: #00B978;
-  --brand-cream: #FAF6EB;
-  --brand-paper: #FFFDF6;
+  --brand-cream: #fafafa;
+  --brand-paper: #ffffff;
   --brand-yellow: #FFC928;
   --brand-yellow-pastel: #FFF2B2;
   --brand-orange: #FF5E3A;
@@ -20,7 +20,7 @@
   --brand-ink-soft: #383834;
   --brand-muted: #6E6D66;
   --brand-border: 1.5px solid rgba(12, 81, 63, 0.14);
-  --brand-border-strong: 2px solid #0C513F;
+  --brand-border-strong: 2px solid #00a205;
   --brand-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
   --brand-shadow-pill: 0 4px 16px rgba(12, 81, 63, 0.12);
   --brand-shadow-retro: 6px 8px 0 rgba(12, 81, 63, 0.15);
