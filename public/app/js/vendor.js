@@ -1040,6 +1040,101 @@ const VendorController = {
       const live = buckets.new.length + buckets.preparing.length;
       orderCount.innerText = `${live} live order${live === 1 ? '' : 's'}`;
     }
+
+    // Pre-fill inline store settings form
+    const nameInp = document.getElementById('vnd-settings-store-name');
+    const phoneInp = document.getElementById('vnd-settings-phone');
+    const cuisineInp = document.getElementById('vnd-settings-cuisine');
+    const addrInp = document.getElementById('vnd-settings-address');
+    const hoursInp = document.getElementById('vnd-settings-hours');
+
+    if (nameInp && !nameInp.value) nameInp.value = store.name || '';
+    if (phoneInp && !phoneInp.value) phoneInp.value = store.phone || window.chowStore?.state?.userProfile?.phone || '';
+    if (cuisineInp && !cuisineInp.value) cuisineInp.value = store.cuisine || store.category || 'Nigerian';
+    if (addrInp && !addrInp.value) addrInp.value = store.address || 'Sagamu Campus (OSUTH), Sagamu';
+    if (hoursInp && !hoursInp.value) hoursInp.value = store.hours || store.operatingHours || '8:00 AM - 10:00 PM';
+  },
+
+  async saveStoreSettings() {
+    const nameInp = document.getElementById('vnd-settings-store-name');
+    const phoneInp = document.getElementById('vnd-settings-phone');
+    const cuisineInp = document.getElementById('vnd-settings-cuisine');
+    const addrInp = document.getElementById('vnd-settings-address');
+    const hoursInp = document.getElementById('vnd-settings-hours');
+    const saveBtn = document.getElementById('vnd-save-settings-btn');
+
+    const businessName = (nameInp?.value || '').trim();
+    const phone = (phoneInp?.value || '').trim();
+    const cuisine = (cuisineInp?.value || '').trim();
+    const address = (addrInp?.value || '').trim();
+    const operatingHours = (hoursInp?.value || '').trim();
+
+    if (!businessName) {
+      if (window.chowApp?.toast) window.chowApp.toast('Please enter your store or restaurant name.', 'warning');
+      return;
+    }
+
+    const store = this.getStore();
+    const userProfile = window.chowStore?.state?.userProfile;
+    const email = (store && store.email) || userProfile?.email;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    // 1. Update in local store
+    if (store) {
+      store.name = businessName;
+      if (phone) store.phone = phone;
+      if (cuisine) store.cuisine = cuisine;
+      if (address) store.address = address;
+      if (operatingHours) store.hours = operatingHours;
+      if (window.chowStore?.save) window.chowStore.save();
+    }
+
+    // Update banner header
+    const nameEl = document.getElementById('vendor-store-name');
+    const locEl = document.getElementById('vendor-store-location');
+    const hoursEl = document.getElementById('vendor-store-hours');
+    if (nameEl) nameEl.textContent = businessName;
+    if (locEl && address) locEl.textContent = address;
+    if (hoursEl && operatingHours) hoursEl.textContent = '🕐 ' + operatingHours;
+
+    // 2. Persist to server API (/api/vendor/profile)
+    try {
+      const res = await fetch('/api/vendor/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: store?.id,
+          vendorId: store?.numericId,
+          email: email,
+          contactEmail: email,
+          businessName: businessName,
+          phone: phone,
+          address: address,
+          operatingHours: operatingHours,
+          cuisine: cuisine
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.warn('[vendor] Server profile save warning:', errData.error);
+      }
+    } catch (e) {
+      console.warn('[vendor] Network error saving profile:', e);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Store Profile';
+      }
+    }
+
+    if (window.chowApp?.toast) {
+      window.chowApp.toast('Store profile saved successfully!', 'success');
+    }
   },
 
   async handleStoreBannerUpload(e) {

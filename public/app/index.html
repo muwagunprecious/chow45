@@ -574,13 +574,53 @@
                   <h3>Store Profile & Hours</h3>
                 </div>
                 <div class="vnd-store-details-wrap">
-                  <p class="vnd-muted" style="margin-bottom: 14px;">Keep your restaurant details and delivery pickup point up to date.</p>
-                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="vendor-register-link" onclick="VendorController.openRegistrationModal()">Register New Store +</button>
-                    <button type="button" class="vnd-btn vnd-btn-secondary" onclick="Chow45Auth.openAccountModal()" style="color: #e11d48; border-color: #fecdd3; background: #fff1f2; font-weight: 700; cursor: pointer;">
-                      🚪 Profile &amp; Sign Out
-                    </button>
-                  </div>
+                  <p class="vnd-muted" style="margin-bottom: 16px;">Update your restaurant name, customer contact phone, delivery pickup address, and operating hours.</p>
+
+                  <form onsubmit="event.preventDefault(); VendorController.saveStoreSettings();" style="display: flex; flex-direction: column; gap: 14px;">
+                    <div>
+                      <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Store / Kitchen Name</label>
+                      <input type="text" id="vnd-settings-store-name" placeholder="e.g. Mama Put Kitchen" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none;" />
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                      <div>
+                        <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Contact Phone</label>
+                        <input type="tel" id="vnd-settings-phone" placeholder="e.g. 08124504500" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none;" />
+                      </div>
+                      <div>
+                        <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Cuisine / Category</label>
+                        <input type="text" id="vnd-settings-cuisine" placeholder="e.g. Nigerian, Rice, Swallow" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none;" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                        <label style="font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase;">Pickup / Kitchen Location</label>
+                        <button type="button" onclick="Chow45Auth._captureLiveLocation('vnd-settings-address', 'Pickup address')" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;">📍 GPS Location</button>
+                      </div>
+                      <input type="text" id="vnd-settings-address" placeholder="e.g. Sagamu Campus (OSUTH), Sagamu" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none; margin-bottom: 8px;" />
+                      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'Sagamu Campus (OSUTH), Sagamu, Ogun State'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏥 Sagamu (OSUTH)</button>
+                        <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'OOU Main Campus Gate, Ago-Iwoye'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏫 OOU Main Campus</button>
+                        <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'Hospital Road, Sagamu, Ogun State'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏠 Hospital Road</button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Operating Hours</label>
+                      <input type="text" id="vnd-settings-hours" placeholder="e.g. 8:00 AM - 10:00 PM" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none;" />
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap;">
+                      <button type="submit" id="vnd-save-settings-btn" class="vnd-btn vnd-btn-primary" style="padding: 10px 20px; font-weight: 700; cursor: pointer; background: #0C513F; color: #FFF; border: none; border-radius: 10px;">
+                        Save Store Profile
+                      </button>
+                      <button type="button" class="vendor-register-link" onclick="VendorController.openRegistrationModal()">Register New Store +</button>
+                      <button type="button" class="vnd-btn vnd-btn-secondary" onclick="Chow45Auth.openAccountModal()" style="color: #e11d48; border-color: #fecdd3; background: #fff1f2; font-weight: 700; cursor: pointer; margin-left: auto;">
+                        🚪 Sign Out
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -2289,61 +2329,162 @@
 
     <!-- Modal 10: User Account & Profile Sheet -->
     <div id="account-modal" class="modal-backdrop">
-      <div class="modal-sheet" style="max-width: 440px;">
+      <div class="modal-sheet" style="max-width: 460px;">
         <div class="modal-header">
-          <div class="modal-title">My Account</div>
+          <div class="modal-title" id="account-modal-header-title">My Profile</div>
           <button class="modal-close-btn" onclick="document.getElementById('account-modal').classList.remove('open')">✕</button>
         </div>
-        <div class="modal-body">
-          <div class="account-card-header">
-            <div class="account-avatar" id="account-avatar-char">P</div>
-            <div class="account-details">
-              <h3 id="account-display-name" class="account-name">Precious M.</h3>
-              <p id="account-display-email" class="account-contact">precious@chow45.com</p>
-              <p id="account-display-phone" class="account-contact">+234 812 450 4500</p>
-              <span id="account-role-badge" class="account-badge customer">Customer</span>
+        <div class="modal-body" style="padding: 16px 20px 24px;">
+
+          <!-- SECTION A: CUSTOMER PROFILE -->
+          <div id="account-customer-section">
+            <div class="account-card-header">
+              <div class="account-avatar" id="account-avatar-char">C</div>
+              <div class="account-details">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <h3 id="account-display-name" class="account-name">Customer</h3>
+                  <span id="account-role-badge" class="account-badge customer">Customer</span>
+                </div>
+                <p id="account-display-email" class="account-contact">customer@chow45.com</p>
+                <p id="account-display-phone" class="account-contact">+234 812 450 4500</p>
+                <p id="account-display-address" class="account-contact" style="color: #64748B; font-size: 0.76rem;">📍 <span id="account-display-address-text">No delivery address set</span></p>
+              </div>
+            </div>
+
+            <!-- Profile Action Toggle: Edit Profile -->
+            <div style="margin-bottom: 16px;">
+              <button type="button" class="account-edit-toggle-btn" onclick="Chow45Auth.toggleEditProfile()" style="width: 100%; padding: 10px 14px; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 12px; font-weight: 700; font-size: 0.85rem; color: #1E293B; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+                <span id="account-edit-toggle-icon">✏️</span> <span id="account-edit-toggle-label">Edit Personal Profile</span>
+              </button>
+            </div>
+
+            <!-- Inline Edit Profile Form (collapsible) -->
+            <div id="account-profile-edit-form" style="display: none; background: #FFF; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+              <h4 style="font-size: 0.88rem; font-weight: 800; color: #0F172A; margin: 0 0 12px;">Update Your Information</h4>
+              
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Full Name</label>
+                <input type="text" id="account-edit-name" placeholder="Your full name" style="width: 100%; height: 40px; padding: 0 12px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; box-sizing: border-box; outline: none;" />
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Phone Number</label>
+                <input type="tel" id="account-edit-phone" placeholder="e.g. 08123456789" style="width: 100%; height: 40px; padding: 0 12px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; box-sizing: border-box; outline: none;" />
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                  <label style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase;">Default Delivery Address</label>
+                  <button type="button" onclick="Chow45Auth.captureProfileAddress()" style="background: none; border: none; font-size: 0.74rem; font-weight: 700; color: #0C513F; cursor: pointer; padding: 0;">📍 Use Current Location</button>
+                </div>
+                <input type="text" id="account-edit-address" placeholder="e.g. OSUTH Gate 2, Sagamu" style="width: 100%; height: 40px; padding: 0 12px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; box-sizing: border-box; outline: none;" />
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="vnd-btn vnd-btn-primary" onclick="Chow45Auth.saveProfileChanges()" style="flex: 1; height: 42px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; cursor: pointer; background: #0C513F; color: #FFF; border: none;">
+                  Save Profile Changes
+                </button>
+                <button type="button" onclick="Chow45Auth.toggleEditProfile(false)" style="height: 42px; padding: 0 14px; font-size: 0.85rem; font-weight: 600; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFF; color: #64748B; cursor: pointer;">
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <div class="account-menu-list">
+              <button class="account-menu-item" onclick="Chow45App.openLocationModal(); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">📍</span>
+                <div class="item-text">
+                  <strong>Saved Delivery Locations</strong>
+                  <small id="account-locations-count">Campus, Home, Work</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+
+              <button class="account-menu-item" onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">🛍️</span>
+                <div class="item-text">
+                  <strong>Order History & Receipts</strong>
+                  <small>View past orders and order status</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+
+              <button id="account-vendor-dash-btn" class="account-menu-item" style="display: none; background: #E8F6F0;" onclick="window.location.href='/vendor';">
+                <span class="item-icon">🏪</span>
+                <div class="item-text">
+                  <strong style="color: #0C513F;">Vendor Dashboard</strong>
+                  <small>Manage your food, menu & orders</small>
+                </div>
+                <span class="item-arrow" style="color: #00B978;">→</span>
+              </button>
             </div>
           </div>
 
-          <div class="account-menu-list">
-            <button class="account-menu-item" onclick="Chow45App.openLocationModal(); document.getElementById('account-modal').classList.remove('open');">
-              <span class="item-icon">📍</span>
-              <div class="item-text">
-                <strong>Saved Delivery Locations</strong>
-                <small id="account-locations-count">Campus, Home, Work</small>
+          <!-- SECTION B: VENDOR STORE PROFILE -->
+          <div id="account-vendor-section" style="display: none;">
+            <div class="account-card-header" style="background: linear-gradient(135deg, #F0FDF4 0%, #E8F6F0 100%); border-color: #A7F3D0;">
+              <img id="account-vnd-avatar" src="/logo.png" alt="Store Avatar" style="width: 56px; height: 56px; border-radius: 14px; object-fit: cover; border: 2px solid #00B978; background: #FFF;" />
+              <div class="account-details">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+                  <h3 id="account-vnd-title" class="account-name" style="color: #0C513F;">Your Kitchen</h3>
+                  <span id="account-vnd-status-badge" class="account-badge" style="background: #DCFCE7; color: #15803D;">● OPEN</span>
+                </div>
+                <p id="account-vnd-phone-text" class="account-contact">+234 812 450 4500</p>
+                <p id="account-vnd-email-text" class="account-contact">vendor@chow45.com</p>
+                <p id="account-vnd-address-text" class="account-contact" style="color: #0F766E; font-size: 0.76rem;">📍 Sagamu Campus (OSUTH)</p>
               </div>
-              <span class="item-arrow">→</span>
-            </button>
+            </div>
 
-            <button class="account-menu-item" onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');">
-              <span class="item-icon">🛍️</span>
-              <div class="item-text">
-                <strong>Order History</strong>
-                <small>View past orders & receipts</small>
-              </div>
-              <span class="item-arrow">→</span>
-            </button>
+            <div class="account-menu-list">
+              <button class="account-menu-item" onclick="VendorController.switchSubTab('store'); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">⚙️</span>
+                <div class="item-text">
+                  <strong>Store Profile & Hours</strong>
+                  <small>Update location, hours, name & photo</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
 
-            <button class="account-menu-item" onclick="CustomerController.openCart(); document.getElementById('account-modal').classList.remove('open');">
-              <span class="item-icon">🛒</span>
-              <div class="item-text">
-                <strong>My Cart</strong>
-                <small>View active cart items</small>
-              </div>
-              <span class="item-arrow">→</span>
-            </button>
+              <button class="account-menu-item" onclick="VendorController.switchSubTab('food'); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">🍗</span>
+                <div class="item-text">
+                  <strong>Manage Food & Menu</strong>
+                  <small>Add, edit & restock your menu items</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
 
-            <button id="account-vendor-dash-btn" class="account-menu-item" style="display: none; background: #E8F6F0;" onclick="window.location.href='/vendor';">
-              <span class="item-icon">🏪</span>
-              <div class="item-text">
-                <strong style="color: #0C513F;">Vendor Dashboard</strong>
-                <small>Manage your food, menu & orders</small>
-              </div>
-              <span class="item-arrow" style="color: #00B978;">→</span>
-            </button>
+              <button class="account-menu-item" onclick="VendorController.switchSubTab('orders'); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">📋</span>
+                <div class="item-text">
+                  <strong>Active Orders</strong>
+                  <small>Live incoming customer orders</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+
+              <button class="account-menu-item" onclick="VendorController.switchSubTab('money'); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">💰</span>
+                <div class="item-text">
+                  <strong>Earnings & Payouts</strong>
+                  <small>View balance, withdraw & payout history</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+
+              <button class="account-menu-item" onclick="window.location.href='/app'; document.getElementById('account-modal').classList.remove('open');" style="background: #F8FAFC;">
+                <span class="item-icon">🛒</span>
+                <div class="item-text">
+                  <strong>Switch to Customer Marketplace</strong>
+                  <small>Browse & order food like a customer</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+            </div>
           </div>
 
-          <div class="account-logout-wrap" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--c-border-subtle, #f1f5f9);">
+          <!-- Common Sign Out -->
+          <div class="account-logout-wrap" style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--c-border-subtle, #f1f5f9);">
             <button class="account-logout-btn" onclick="Chow45Auth.signOut()" style="width: 100%; padding: 13px 18px; background: #fff1f2; border: 1.5px solid #fda4af; border-radius: 14px; color: #e11d48; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;">
               🚪 Sign Out of Chow45
             </button>

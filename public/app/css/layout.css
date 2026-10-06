@@ -494,7 +494,9 @@ a.text-link, .link-btn {
   font-weight: 600;
   color: var(--c-text-muted);
   cursor: pointer;
-  padding: 6px 12px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
   border-radius: var(--radius-md);
   transition: all var(--transition-snappy);
   position: relative;
@@ -1638,6 +1640,11 @@ a.text-link, .link-btn {
   color: var(--c-text-muted);
   font-weight: 700;
   font-size: 0.9rem;
+}
+
+.account-edit-toggle-btn:hover {
+  background: #F1F5F9 !important;
+  border-color: #94A3B8 !important;
 }
 
 .account-logout-wrap {

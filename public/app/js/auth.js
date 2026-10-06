@@ -216,36 +216,184 @@ const Chow45Auth = {
     if (!modal) return;
 
     const user = this.getUser();
-    const nameEl = document.getElementById('account-display-name');
-    const emailEl = document.getElementById('account-display-email');
-    const phoneEl = document.getElementById('account-display-phone');
-    const badgeEl = document.getElementById('account-role-badge');
-    const avatarEl = document.getElementById('account-avatar-char');
-    const locsCountEl = document.getElementById('account-locations-count');
+    const isVendor = (user.role === 'vendor') ||
+      window.location.pathname.startsWith('/vendor') ||
+      (window.chowStore?.state?.currentRole === 'vendor');
 
-    if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
-    if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
-    if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
-    if (badgeEl) {
-      badgeEl.textContent = user.role === 'vendor' ? 'Food Vendor' : 'Customer';
-      badgeEl.className = `account-badge ${user.role === 'vendor' ? 'vendor' : 'customer'}`;
-    }
-    if (avatarEl) {
-      const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
-      avatarEl.textContent = initial || 'C';
-    }
+    const headerTitle = document.getElementById('account-modal-header-title');
+    const custSec = document.getElementById('account-customer-section');
+    const vndSec = document.getElementById('account-vendor-section');
 
-    if (locsCountEl && user.savedAddresses) {
-      const count = user.savedAddresses.length;
-      locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
-    }
+    if (isVendor) {
+      if (headerTitle) headerTitle.textContent = 'Vendor Store Profile';
+      if (custSec) custSec.style.display = 'none';
+      if (vndSec) vndSec.style.display = 'block';
 
-    const vendorBtn = document.getElementById('account-vendor-dash-btn');
-    if (vendorBtn) {
-      vendorBtn.style.display = user.role === 'vendor' ? 'flex' : 'none';
+      const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
+        ? window.VendorController.getStore()
+        : null;
+
+      const storeName = store?.name || user.name || 'Your Kitchen';
+      const storePhone = store?.phone || user.phone || '+234 812 450 4500';
+      const storeEmail = store?.email || store?.contactEmail || user.email || 'vendor@chow45.com';
+      const storeAddress = store?.address || 'Sagamu Campus (OSUTH), Sagamu';
+      const isOpen = store ? store.isOpen !== false : true;
+
+      const vndTitleEl = document.getElementById('account-vnd-title');
+      const vndStatusBadge = document.getElementById('account-vnd-status-badge');
+      const vndPhoneEl = document.getElementById('account-vnd-phone-text');
+      const vndEmailEl = document.getElementById('account-vnd-email-text');
+      const vndAddrEl = document.getElementById('account-vnd-address-text');
+      const vndAvatarEl = document.getElementById('account-vnd-avatar');
+
+      if (vndTitleEl) vndTitleEl.textContent = storeName;
+      if (vndStatusBadge) {
+        vndStatusBadge.textContent = isOpen ? '● OPEN' : '○ CLOSED';
+        vndStatusBadge.style.background = isOpen ? '#DCFCE7' : '#FEE2E2';
+        vndStatusBadge.style.color = isOpen ? '#15803D' : '#B91C1C';
+      }
+      if (vndPhoneEl) vndPhoneEl.textContent = storePhone;
+      if (vndEmailEl) vndEmailEl.textContent = storeEmail;
+      if (vndAddrEl) vndAddrEl.textContent = '📍 ' + storeAddress;
+      if (vndAvatarEl && store?.image) {
+        vndAvatarEl.src = store.image;
+      }
+    } else {
+      if (headerTitle) headerTitle.textContent = 'My Profile';
+      if (custSec) custSec.style.display = 'block';
+      if (vndSec) vndSec.style.display = 'none';
+
+      const nameEl = document.getElementById('account-display-name');
+      const emailEl = document.getElementById('account-display-email');
+      const phoneEl = document.getElementById('account-display-phone');
+      const badgeEl = document.getElementById('account-role-badge');
+      const avatarEl = document.getElementById('account-avatar-char');
+      const locsCountEl = document.getElementById('account-locations-count');
+      const addrTextEl = document.getElementById('account-display-address-text');
+
+      const currentAddress = user.address ||
+        window.chowStore?.state?.selectedLocation?.formattedAddress ||
+        window.chowStore?.state?.selectedLocation?.name ||
+        '';
+
+      if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
+      if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
+      if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
+      if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
+
+      if (badgeEl) {
+        badgeEl.textContent = 'Customer';
+        badgeEl.className = 'account-badge customer';
+      }
+      if (avatarEl) {
+        const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
+        avatarEl.textContent = initial || 'C';
+      }
+
+      if (locsCountEl && user.savedAddresses) {
+        const count = user.savedAddresses.length;
+        locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
+      }
+
+      const vendorBtn = document.getElementById('account-vendor-dash-btn');
+      if (vendorBtn) {
+        vendorBtn.style.display = (user.role === 'vendor' || user.storeId) ? 'flex' : 'none';
+      }
+
+      // Pre-fill edit inputs
+      const editName = document.getElementById('account-edit-name');
+      const editPhone = document.getElementById('account-edit-phone');
+      const editAddr = document.getElementById('account-edit-address');
+      if (editName) editName.value = user.name || '';
+      if (editPhone) editPhone.value = user.phone || '';
+      if (editAddr) editAddr.value = currentAddress || '';
     }
 
     modal.classList.add('open');
+  },
+
+  toggleEditProfile(forceState) {
+    const form = document.getElementById('account-profile-edit-form');
+    const label = document.getElementById('account-edit-toggle-label');
+    const icon = document.getElementById('account-edit-toggle-icon');
+    if (!form) return;
+
+    const willShow = forceState !== undefined ? forceState : (form.style.display === 'none' || !form.style.display);
+    form.style.display = willShow ? 'block' : 'none';
+
+    if (label) label.textContent = willShow ? 'Close Edit Form' : 'Edit Personal Profile';
+    if (icon) icon.textContent = willShow ? '✕' : '✏️';
+  },
+
+  async captureProfileAddress() {
+    await this._captureLiveLocation('account-edit-address', 'Delivery Address');
+  },
+
+  async saveProfileChanges() {
+    const editName = document.getElementById('account-edit-name');
+    const editPhone = document.getElementById('account-edit-phone');
+    const editAddr = document.getElementById('account-edit-address');
+
+    const newName = (editName?.value || '').trim();
+    const newPhone = (editPhone?.value || '').trim();
+    const newAddress = (editAddr?.value || '').trim();
+
+    if (!newName) {
+      if (window.chowApp?.toast) window.chowApp.toast('Please enter your full name', 'warning');
+      return;
+    }
+
+    const user = this.getUser();
+    user.name = newName;
+    if (newPhone) user.phone = newPhone;
+    if (newAddress) user.address = newAddress;
+
+    if (window.chowStore?.state) {
+      window.chowStore.state.userProfile = Object.assign({}, window.chowStore.state.userProfile || {}, user);
+      if (newAddress) {
+        window.chowStore.state.selectedLocation = {
+          name: newAddress,
+          formattedAddress: newAddress,
+          type: 'current',
+          isUserSelected: true
+        };
+      }
+      if (typeof window.chowStore.save === 'function') window.chowStore.save();
+    }
+
+    // Persist in localStorage
+    try {
+      const session = {
+        token: 'chow45_session_' + Date.now(),
+        user: user,
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+    } catch (e) {}
+
+    // Persist to server API
+    try {
+      await fetch('/api/customer/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: newName,
+          phone: newPhone,
+          address: newAddress
+        })
+      });
+    } catch (e) {
+      console.warn('[auth] Could not sync customer profile to server:', e);
+    }
+
+    this.toggleEditProfile(false);
+    this.updateUI();
+    this.openAccountModal();
+
+    if (window.chowApp?.toast) {
+      window.chowApp.toast('Profile updated successfully!', 'success');
+    }
   },
 
   // -------------------------------------------------------------
