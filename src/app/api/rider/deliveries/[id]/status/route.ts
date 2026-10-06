@@ -16,7 +16,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireRider(request, false);
+  const auth = await requireRider(request, true);
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: auth.message },

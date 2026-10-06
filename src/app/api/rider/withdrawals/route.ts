@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireRider(request, false);
+  const auth = await requireRider(request, true);
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: auth.message },

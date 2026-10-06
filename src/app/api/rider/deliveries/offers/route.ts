@@ -6,7 +6,7 @@ import { vendors } from "@/db/schema/vendors";
 import { requireRider } from "@/lib/session";
 
 export async function GET(request: Request) {
-  const auth = await requireRider(request, false);
+  const auth = await requireRider(request, true);
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: auth.message },

@@ -7,7 +7,7 @@ import { requireRider } from "@/lib/session";
 import { toLat, toCoord } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const auth = await requireRider(request, false);
+  const auth = await requireRider(request, true);
   if (!auth.ok) {
     return NextResponse.json(
       { error: auth.error, message: auth.message },
@@ -47,6 +47,8 @@ export async function POST(request: Request) {
   const patch: Record<string, unknown> = {
     isOnline,
     isAvailable,
+    applicationStatus: "APPROVED",
+    approvalStatus: "APPROVED",
     lastSeenAt: new Date(),
     updatedAt: new Date(),
   };
