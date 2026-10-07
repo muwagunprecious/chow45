@@ -26,6 +26,29 @@ import { canTransition, STATUS_NOTES, type Actor } from "@/lib/order-status";
 
 type Ctx = RouteContext<"/api/orders/[id]">;
 
+export async function GET(request: Request, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const orderId = String(id);
+
+    const found = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    const order = found[0];
+    if (!order) {
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      order: {
+        ...order,
+        pointsAwarded: order.status === "DELIVERED" ? 0.7 : 0,
+      },
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: Request, ctx: Ctx) {
   const userId = await currentUserId(request);
   if (userId === null) {

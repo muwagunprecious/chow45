@@ -137,6 +137,7 @@ export async function POST(
     success: true,
     message: `Delivery successfully confirmed! ₦${riderEarnings.toLocaleString()} has been credited to your wallet.`,
     earnedAmount: riderEarnings,
+    pointsAwarded: 0.7,
     wallet: {
       available: updatedWallet?.available ?? wallet.available + riderEarnings,
       totalEarned: updatedWallet?.totalEarned ?? wallet.totalEarned + riderEarnings,

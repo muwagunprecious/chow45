@@ -1269,18 +1269,18 @@ const CustomerController = {
 
     // 3. Populate and show Order Confirmed screen (matches media_1790893923594.png)
     this.lastConfirmedOrderId = newOrder.id;
-    const basePts = Math.round((newOrder.total || 4500) * 0.6);
-    const bonusPts = Math.round((newOrder.total || 4500) * 0.3);
-    const totalPts = basePts + bonusPts;
+    const basePts = 0.5;
+    const bonusPts = 0.2;
+    const totalPts = 0.7;
 
     const ptsPill = document.getElementById('confirmed-points-pill');
-    if (ptsPill) ptsPill.innerText = `+${totalPts.toLocaleString()} points`;
+    if (ptsPill) ptsPill.innerText = `+${totalPts} points`;
     const ptsBase = document.getElementById('confirmed-points-base');
-    if (ptsBase) ptsBase.innerText = `+ ${basePts.toLocaleString()} pts`;
+    if (ptsBase) ptsBase.innerText = `+ ${basePts} pts`;
     const ptsBonus = document.getElementById('confirmed-points-bonus');
-    if (ptsBonus) ptsBonus.innerText = `+ ${bonusPts.toLocaleString()} pts`;
+    if (ptsBonus) ptsBonus.innerText = `+ ${bonusPts} pts`;
     const ptsTotal = document.getElementById('confirmed-points-total');
-    if (ptsTotal) ptsTotal.innerText = `+ ${totalPts.toLocaleString()} pts`;
+    if (ptsTotal) ptsTotal.innerText = `+ ${totalPts} pts`;
 
     // Hide other views, display Order Confirmed screen
     const homeSec = document.getElementById('customer-home-section');
@@ -1364,6 +1364,68 @@ const CustomerController = {
       window.chowMap.renderDeliveryMission(order, store, location);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Start live tracking poll to detect when rider enters code and completes delivery
+    this.startTrackingPoll(orderId);
+  },
+
+  startTrackingPoll(orderId) {
+    if (this._trackingPollInterval) {
+      clearInterval(this._trackingPollInterval);
+      this._trackingPollInterval = null;
+    }
+
+    const poll = async () => {
+      if (!orderId) return;
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.order && data.order.status) {
+          const currentOrder = window.chowStore.state.orders.find(o => o.id === orderId);
+          const wasDelivered = currentOrder && currentOrder.status === 'DELIVERED';
+
+          if (currentOrder && currentOrder.status !== data.order.status) {
+            window.chowStore.advanceOrderStatus(orderId, data.order.status, {
+              riderId: data.order.riderId,
+              riderName: data.order.riderName
+            });
+            this.updateTrackingStatusUI(data.order);
+          }
+
+          // Immediately when code is given to rider and verified, order is complete:
+          if (data.order.status === 'DELIVERED') {
+            this.stopTrackingPoll();
+
+            if (!wasDelivered) {
+              // Award 0.7 points to customer profile
+              if (window.chowStore && window.chowStore.state) {
+                if (!window.chowStore.state.userProfile) window.chowStore.state.userProfile = {};
+                const currentPts = Number(window.chowStore.state.userProfile.points || 0);
+                window.chowStore.state.userProfile.points = parseFloat((currentPts + 0.7).toFixed(1));
+                window.chowStore.save();
+              }
+
+              if (window.chowApp && window.chowApp.toast) {
+                window.chowApp.toast('🎉 Order completed! +0.7 points awarded to your account.', 'success');
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // silent
+      }
+    };
+
+    poll();
+    this._trackingPollInterval = setInterval(poll, 2500);
+  },
+
+  stopTrackingPoll() {
+    if (this._trackingPollInterval) {
+      clearInterval(this._trackingPollInterval);
+      this._trackingPollInterval = null;
+    }
   },
 
   updateTrackingStatusUI(order) {
@@ -1523,6 +1585,7 @@ const CustomerController = {
   },
 
   closeTracking() {
+    this.stopTrackingPoll();
     const trackSec = document.getElementById('customer-tracking-section');
     if (trackSec) trackSec.style.display = 'none';
     const confirmedSec = document.getElementById('customer-order-confirmed-section');
