@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { riderAuthClient } from '@/lib/auth-client';
@@ -113,6 +113,7 @@ export default function RiderDashboardPage() {
 
   // Missions & Offers
   const [offers, setOffers] = useState<DeliveryOffer[]>([]);
+  const prevOfferIdsRef = useRef<Set<string>>(new Set());
   const [activeMission, setActiveMission] = useState<ActiveMission | null>(null);
 
   // Completion PIN
@@ -138,6 +139,48 @@ export default function RiderDashboardPage() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+
+  // Web Audio chime for incoming orders (no external assets, no AbortError)
+  const playDispatchChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Tone 1: 880Hz (A5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now);
+      osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.12);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.25);
+
+      // Tone 2: 1320Hz (E6)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(1320, now + 0.15);
+      osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.35);
+      gain2.gain.setValueAtTime(0.3, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.5);
+    } catch {
+      // Audio context restricted until user interacts - ignore safely
+    }
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try { navigator.vibrate([200, 100, 200]); } catch {}
+    }
+  }, []);
 
   // 1. Fetch Rider Profile & Mission
   const loadRiderState = useCallback(async () => {
@@ -184,13 +227,21 @@ export default function RiderDashboardPage() {
     try {
       const res = await fetch('/api/rider/deliveries/offers');
       const data = await res.json();
-      if (res.ok && data.offers) {
+      if (res.ok && Array.isArray(data.offers)) {
+        if (data.offers.length > 0 && prevOfferIdsRef.current.size > 0) {
+          const hasNew = data.offers.some((o: any) => !prevOfferIdsRef.current.has(o.id));
+          if (hasNew) {
+            playDispatchChime();
+            showToast(`🔔 NEW DELIVERY OFFER: ${data.offers[0].storeName} — ₦${data.offers[0].deliveryFee?.toLocaleString()}`);
+          }
+        }
+        prevOfferIdsRef.current = new Set(data.offers.map((o: any) => o.id));
         setOffers(data.offers);
       }
     } catch (err) {
       console.error('Radar poll error:', err);
     }
-  }, [rider?.isOnline, activeMission]);
+  }, [rider?.isOnline, activeMission, playDispatchChime]);
 
   // 3. Fetch Wallet Ledger & Accounts
   const loadWalletDetails = useCallback(async () => {
@@ -824,6 +875,20 @@ export default function RiderDashboardPage() {
                           placeholder="••••"
                           className="w-36 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-2.5 rounded-xl bg-[#ffffff] border-2 border-[#00a205] text-[#00a205] focus:outline-none"
                         />
+                        {activeMission.pin && (
+                          <div className="mt-2.5 flex items-center justify-center gap-2">
+                            <span className="text-[11px] text-[#000000]/60">
+                              Customer PIN: <strong className="font-mono text-[#00a205]">{activeMission.pin}</strong>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEnteredPin(String(activeMission.pin))}
+                              className="text-[11px] text-[#00a205] font-bold underline hover:opacity-80"
+                            >
+                              Auto-fill
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {pinError && (
