@@ -1221,16 +1221,39 @@ const CustomerController = {
       deliveryLocation: window.chowStore.state.selectedLocation || null
     });
 
-    // 2. Perform Payment Verification API call
+    // 2. Persist order to database and verify payment in one shot
     const payRef = 'PAY_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     try {
       const verifyRes = await fetch('/api/payments/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           orderId: newOrder.id,
           reference: payRef,
-          amount: newOrder.total
+          amount: newOrder.total,
+          // Pass full order so the server can persist it to PostgreSQL
+          // (riders query the DB — they cannot see localStorage orders)
+          order: {
+            id: newOrder.id,
+            storeId: newOrder.storeId,
+            storeName: newOrder.storeName,
+            customerName: newOrder.customerName,
+            customerPhone: newOrder.customerPhone,
+            deliveryAddress: newOrder.deliveryAddress,
+            deliveryNotes: newOrder.deliveryNotes,
+            deliveryLocation: newOrder.deliveryLocation || null,
+            paymentMethod: newOrder.paymentMethod,
+            subtotal: newOrder.subtotal,
+            serviceFee: newOrder.serviceFee,
+            deliveryFee: newOrder.deliveryFee,
+            total: newOrder.total,
+            pin: newOrder.pin,
+            routeDistanceMeters: newOrder.routeDistanceMeters || null,
+            estimatedDurationSeconds: newOrder.estimatedDurationSeconds || null,
+            items: newOrder.items || [],
+            status: 'PENDING_PAYMENT'
+          }
         })
       });
       if (verifyRes.ok) {
