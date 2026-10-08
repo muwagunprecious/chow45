@@ -808,7 +808,7 @@ export default function MarketingPage() {
                     <button
                       type="submit"
                       className="w-full sm:w-2/3 py-3 rounded-full bg-black text-white text-sm font-semibold hover:bg-neutral-800 transition min-h-[48px]"
-                    >
+                    > 
                       Submit Details
                     </button>
                   </div>
