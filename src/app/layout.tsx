@@ -38,6 +38,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: APP_URL,
   },
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     type: "website",
     url: APP_URL,
@@ -46,8 +51,8 @@ export const metadata: Metadata = {
       "Fast, reliable food delivery in Sagamu and OOU Sagamu campus. Order meals from your favourite campus spots and local restaurants.",
     images: [
       {
-        url: `${APP_URL}/hero-campus.svg`,
-        alt: "Chow45 Campus Food Delivery in Sagamu and OOU",
+        url: `${APP_URL}/logo.png`,
+        alt: "Chow45 Food Delivery Logo",
       },
     ],
     siteName: "Chow45",
@@ -58,7 +63,7 @@ export const metadata: Metadata = {
     title: "Chow45 | Food Delivery in Sagamu & OOU Sagamu Campus",
     description:
       "Fast food delivery in Sagamu and OOU Sagamu campus. Discover campus canteens and get meals delivered straight to you.",
-    images: [`${APP_URL}/hero-campus.svg`],
+    images: [`${APP_URL}/logo.png`],
   },
   robots: {
     index: true,
@@ -72,9 +77,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} antialiased`}
     >
-      <body className="min-h-screen bg-brand-paper text-brand-ink flex flex-col">
+      <body suppressHydrationWarning className="min-h-screen bg-brand-paper text-brand-ink flex flex-col">
         {children}
       </body>
     </html>

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema/users";
+import { vendors } from "@/db/schema/vendors";
 
 /**
  * Looks up an email address so the sign-in flow can decide whether to ask for a
@@ -10,19 +11,13 @@ import { users } from "@/db/schema/users";
  * which role-specific sign-in endpoint to use afterwards.
  *
  * Response shape:
- *   { exists: false }                        -> new account, start onboarding
- *   { exists: true, role: "USER" }           -> sign in, land on /app
- *   { exists: true, role: "VENDOR" }         -> sign in, land on /vendor
- *
- * Note: this endpoint reveals whether an email is registered. That is required
- * by the "enter email, then password" UX. The rate limit below keeps it from
- * being used to bulk-enumerate accounts.
+ *   { exists: false }                        -> new account, start onboarding / registration
+ *   { exists: true, role: "USER" }           -> existing user account, ask for password
+ *   { exists: true, role: "VENDOR" }         -> existing vendor account, ask for password
  */
 
-// Simple in-memory throttle. Redis is optional in this project, so a per
-// process counter is used instead; it resets whenever the server restarts.
 const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 20;
+const MAX_PER_WINDOW = 30;
 const hits = new Map<string, { count: number; resetAt: number }>();
 
 function rateLimited(key: string) {
@@ -65,23 +60,49 @@ export async function POST(request: Request) {
         );
     }
 
-    // Emails are stored lowercased by Better Auth, so normalise before matching.
     const normalised = email.trim().toLowerCase();
 
-    const found = await db
+    // 1. Check users table
+    const userMatches = await db
         .select({ id: users.id, role: users.role })
         .from(users)
-        .where(eq(users.email, normalised))
+        .where(sql`LOWER(${users.email}) = ${normalised}`)
         .limit(1);
 
-    const match = found[0];
+    if (userMatches.length === 0) {
+        // Also check if vendors table has a record with contactEmail that is linked to a user
+        const vendorMatches = await db
+            .select({ id: vendors.id, userId: vendors.userId })
+            .from(vendors)
+            .where(sql`LOWER(${vendors.contactEmail}) = ${normalised}`)
+            .limit(1);
 
-    if (!match) {
+        if (vendorMatches.length > 0 && vendorMatches[0].userId) {
+            return NextResponse.json({
+                exists: true,
+                role: "VENDOR",
+            });
+        }
+
         return NextResponse.json({ exists: false });
+    }
+
+    const user = userMatches[0];
+    let isVendor = user.role?.toUpperCase() === "VENDOR";
+
+    if (!isVendor) {
+        const linked = await db
+            .select({ id: vendors.id })
+            .from(vendors)
+            .where(eq(vendors.userId, user.id))
+            .limit(1);
+        if (linked.length > 0) {
+            isVendor = true;
+        }
     }
 
     return NextResponse.json({
         exists: true,
-        role: match.role === "VENDOR" ? "VENDOR" : "USER",
+        role: isVendor ? "VENDOR" : "USER",
     });
 }

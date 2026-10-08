@@ -106,7 +106,23 @@ function createAuth(role: Role) {
          *
          * Used by Better Auth when generating URLs.
          */
-        baseURL: process.env.NEXT_PUBLIC_APP_URL,
+        baseURL: process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")),
+
+        /**
+         * Trusted origins for CSRF validation.
+         */
+        trustedOrigins: [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "https://*.vercel.app",
+            "https://chow45.vercel.app",
+            "https://*.chow45.com",
+            "https://chow45.com",
+            "https://www.chow45.com",
+            process.env.NEXT_PUBLIC_APP_URL,
+            process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+            process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null,
+        ].filter(Boolean) as string[],
 
         /**
          * Secret used by Better Auth for signing/encrypting
@@ -824,7 +840,8 @@ export const userAuth = createAuth("USER");
  * Only accounts with role = VENDOR are allowed through this instance.
  */
 export const vendorAuth = createAuth("VENDOR");
-
+ 
+ 
 /**
  * RIDER authentication instance.
  *
@@ -833,5 +850,4 @@ export const vendorAuth = createAuth("VENDOR");
  *
  * Only accounts with role = RIDER are allowed through this instance.
  */
-
 export const riderAuth = createAuth("RIDER");

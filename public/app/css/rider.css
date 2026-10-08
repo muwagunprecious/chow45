@@ -1,88 +1,450 @@
 /* ==========================================================================
-   CHOW45 RIDER DISPATCH & DELIVERY STYLES
-   Live delivery feed, turn-by-turn simulation, 4-digit drop-off PIN
+   CHOW45 RIDER DISPATCH & DELIVERY PORTAL STYLES
+   Adopts Chow45 Landing Page Brand Identity:
+   - Forest Green (#00a205), Mint (#E4F7EC), Warm Paper (#ffffff), Cream (#fafafa)
+   - Yellow (#FFC928), Orange (#FF5E3A), High-Contrast Ink (#111111)
+   - Pill Navbars, Capsule Badges, Retro Drop Shadows, Plus Jakarta Sans
    ========================================================================== */
 
-.rider-dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-20);
+:root {
+  --brand-green: #00a205;
+  --brand-green-dark: #008704;
+  --brand-green-light: #E4F7EC;
+  --brand-green-bright: #00B978;
+  --brand-cream: #fafafa;
+  --brand-paper: #ffffff;
+  --brand-yellow: #FFC928;
+  --brand-yellow-pastel: #FFF2B2;
+  --brand-orange: #FF5E3A;
+  --brand-ink: #111111;
+  --brand-ink-soft: #383834;
+  --brand-muted: #6E6D66;
+  --brand-border: 1.5px solid rgba(12, 81, 63, 0.14);
+  --brand-border-strong: 2px solid #00a205;
+  --brand-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+  --brand-shadow-pill: 0 4px 16px rgba(12, 81, 63, 0.12);
+  --brand-shadow-retro: 6px 8px 0 rgba(12, 81, 63, 0.15);
+  --brand-radius-card: 28px;
+  --brand-radius-inner: 20px;
+  --brand-radius-pill: 999px;
 }
 
-/* Rider Top Bar & Online Toggle */
-.rider-status-bar {
-  background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-16) var(--space-20);
+#view-rider {
+  background: var(--brand-paper);
+  min-height: 100vh;
+  padding: 10px 0 100px;
+}
+
+/* -------------------------------------------------------------
+   1. FLOATING BRANDED CAPSULE HEADER (Matches Landing Page)
+   ------------------------------------------------------------- */
+.rider-landing-header {
+  position: sticky;
+  top: 14px;
+  z-index: 100;
+  max-width: 960px;
+  margin: 0 auto 20px;
+  padding: 0 16px;
+}
+
+.rider-landing-nav {
+  background: #FFFFFF;
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  box-shadow: var(--brand-shadow);
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.rider-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rider-logo-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--brand-radius-pill);
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border: 1px solid rgba(12, 81, 63, 0.2);
+  box-shadow: 0 4px 14px rgba(12, 81, 63, 0.08);
+  transition: transform 0.2s ease;
+  text-decoration: none;
+}
+.rider-logo-pill:hover {
+  transform: translateY(-1px);
+}
+.rider-logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.rider-flag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  background: #FFFFFF;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+.campus-tag {
+  background: var(--brand-green-light);
+  color: var(--brand-green);
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: var(--brand-radius-pill);
+  padding: 2px 8px;
+  letter-spacing: 0.02em;
+}
+
+.rider-dispatch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(12, 81, 63, 0.07);
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-green);
+  letter-spacing: 0.04em;
+}
+
+.rider-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.rider-nav-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-ink);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.rider-nav-link:hover {
+  color: var(--brand-green);
+}
+
+.rider-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rider-duty-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--brand-radius-pill);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.rider-duty-pill.online {
+  background: var(--brand-green-light);
+  color: var(--brand-green);
+  border: 1.5px solid rgba(12, 81, 63, 0.28);
+}
+.rider-duty-pill.offline {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1.5px solid #CBD5E1;
+}
+.duty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-green-bright);
+  display: inline-block;
+  box-shadow: 0 0 6px var(--brand-green-bright);
+}
+.duty-dot.offline {
+  background: #94A3B8;
   box-shadow: none;
 }
+
+.rider-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand-ink);
+  color: #FFFFFF;
+  border-radius: var(--brand-radius-pill);
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.rider-profile-pill:hover {
+  background: #252522;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* -------------------------------------------------------------
+   2. DASHBOARD MAIN CONTAINER
+   ------------------------------------------------------------- */
+.rider-dashboard {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* -------------------------------------------------------------
+   3. RIDER STATUS BAR & HERO CARD (Chow45 Cream + Retro Shadow)
+   ------------------------------------------------------------- */
+.rider-status-bar {
+  background: var(--brand-cream);
+  border: 2px solid var(--brand-green);
+  border-radius: var(--brand-radius-card);
+  padding: 22px 26px;
+  box-shadow: var(--brand-shadow-retro);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .rider-info-group {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: 16px;
+}
+
+.rider-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
 }
 .rider-profile-img {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--c-primary);
+  border: 3px solid var(--brand-green);
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(12, 81, 63, 0.12);
 }
-.rider-name-heading {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
+.rider-avatar-pulse-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--brand-green-bright);
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 8px var(--brand-green-bright);
+}
+
+.rider-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.rider-official-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-green);
+  background: rgba(12, 81, 63, 0.08);
+  border-radius: var(--brand-radius-pill);
+  padding: 2px 8px;
+}
+.rider-campus-subtag {
+  font-size: 10px;
   font-weight: 700;
+  color: var(--brand-muted);
 }
+
+.rider-name-heading {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--brand-ink);
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
 .rider-vehicle-type {
-  font-size: 0.78rem;
-  color: var(--c-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand-ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #FFFFFF;
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  padding: 3px 10px;
+  margin-top: 5px;
 }
 
 .rider-online-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-8);
-  background: var(--c-primary-surface);
-  color: var(--c-primary);
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--brand-green);
+  color: var(--brand-green);
+  border-radius: var(--brand-radius-pill);
+  padding: 10px 20px;
   font-size: 0.85rem;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(12, 81, 63, 0.08);
+  user-select: none;
+}
+.rider-online-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(12, 81, 63, 0.15);
+}
+.rider-online-toggle.offline {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #64748B;
+  box-shadow: none;
 }
 
-/* Available Jobs Radar */
+/* -------------------------------------------------------------
+   4. RIDER EARNINGS & TRIP KPI GRID
+   ------------------------------------------------------------- */
+.vendor-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  background: #FFFFFF;
+  border: var(--brand-border);
+  border-radius: 24px;
+  padding: 20px 22px;
+  box-shadow: var(--brand-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(12, 81, 63, 0.09);
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--brand-muted);
+  margin-bottom: 6px;
+}
+.kpi-val {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: var(--brand-green);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+/* -------------------------------------------------------------
+   5. AVAILABLE DELIVERIES RADAR FEED
+   ------------------------------------------------------------- */
 .jobs-feed-container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: 16px;
 }
+
 .feed-header-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
 }
-.live-radar-badge {
-  display: flex;
+
+.rider-section-eyebrow {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--c-primary);
-  background: var(--c-primary-surface);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--brand-green);
+  background: rgba(12, 81, 63, 0.08);
+  border-radius: var(--brand-radius-pill);
+  padding: 3px 10px;
+  margin: 0 0 6px 0;
+}
+.eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-orange);
+  box-shadow: 0 0 6px var(--brand-orange);
+}
+
+.section-title {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--brand-ink);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.live-radar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand-green-light);
+  color: var(--brand-green);
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: var(--brand-radius-pill);
+  padding: 5px 12px;
+  border: 1.5px solid rgba(12, 81, 63, 0.2);
 }
 .radar-pulse-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--c-primary);
+  background: var(--brand-orange);
+  box-shadow: 0 0 8px var(--brand-orange);
+  animation: pulseDot 1.6s infinite ease-in-out;
+}
+.radar-pulse-dot.offline {
+  background: #94A3B8;
   box-shadow: none;
-  animation: pulseDot 1.5s infinite;
+  animation: none;
 }
 
 @keyframes pulseDot {
@@ -91,20 +453,22 @@
   100% { transform: scale(0.9); opacity: 0.8; }
 }
 
+/* Job Card */
 .job-card {
-  background: var(--c-bg-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-20);
-  box-shadow: none;
+  background: #FFFFFF;
+  border: var(--brand-border);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: var(--brand-shadow);
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
-  transition: all var(--transition-snappy);
+  gap: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .job-card:hover {
-  border-color: var(--c-accent);
-  box-shadow: none;
+  border-color: var(--brand-green);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(12, 81, 63, 0.1);
 }
 
 .job-payout-row {
@@ -113,65 +477,71 @@
   justify-content: space-between;
 }
 .payout-tag {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--c-primary);
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: var(--brand-green);
+  letter-spacing: -0.02em;
 }
 .distance-badge {
-  background: var(--c-bg-subtle);
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  color: var(--c-text-secondary);
+  background: var(--brand-cream);
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-ink);
 }
 
 .route-stop-line {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-12);
+  gap: 12px;
   position: relative;
 }
 .stop-icon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 .stop-pickup {
-  background: var(--c-primary-surface);
-  color: var(--c-primary);
+  background: var(--brand-green-light);
+  color: var(--brand-green);
+  border: 2px solid var(--brand-green);
 }
 .stop-dropoff {
-  background: var(--c-secondary-soft);
-  color: var(--c-secondary);
+  background: var(--brand-yellow-pastel);
+  color: var(--brand-ink);
+  border: 2px solid var(--brand-ink);
 }
 .stop-details {
   flex: 1;
 }
 .stop-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--c-text-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--brand-ink);
 }
 .stop-address {
-  font-size: 0.78rem;
-  color: var(--c-text-secondary);
+  font-size: 0.82rem;
+  color: var(--brand-muted);
+  line-height: 1.35;
 }
 
 .accept-job-btn {
-  background: var(--c-primary);
-  color: white;
+  background: var(--brand-green);
+  color: #FFFFFF;
   border: none;
-  padding: 12px;
-  border-radius: var(--radius-pill);
-  font-size: 0.92rem;
+  border-radius: var(--brand-radius-pill);
+  padding: 14px 24px;
+  font-size: 0.95rem;
   font-weight: 800;
   cursor: pointer;
   width: 100%;
@@ -179,131 +549,29 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background var(--transition-snappy);
+  box-shadow: 0 6px 18px rgba(12, 81, 63, 0.22);
+  transition: all 0.2s ease;
 }
 .accept-job-btn:hover {
-  background: var(--c-primary-light);
+  background: var(--brand-green-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(12, 81, 63, 0.3);
 }
 
 /* -------------------------------------------------------------
-   Rider Active Mission Navigation Panel
+   6. ACTIVE MISSION SCREEN (Landing Page Card Style)
    ------------------------------------------------------------- */
 .active-mission-card {
-  background: var(--c-bg-surface);
-  border: 2px solid var(--c-accent);
-  border-radius: var(--radius-xl);
-  padding: var(--space-20);
-  box-shadow: var(--shadow-md);
+  background: #FFFFFF;
+  border: 2.5px solid var(--brand-green);
+  border-radius: var(--brand-radius-card);
+  padding: 24px;
+  box-shadow: var(--brand-shadow-retro);
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: 18px;
 }
 
-.mission-phase-badge {
-  background: var(--c-accent-soft);
-  color: #7A5100;
-  font-size: 0.8rem;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-}
-
-.mission-step-btn {
-  background: var(--c-primary);
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: var(--radius-pill);
-  font-size: 1rem;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.mission-step-btn:hover {
-  background: var(--c-primary-light);
-}
-
-/* PIN Entry Input */
-.pin-input-group {
-  display: flex;
-  gap: var(--space-8);
-  justify-content: center;
-  margin: var(--space-12) 0;
-}
-.pin-digit-box {
-  width: 48px;
-  height: 56px;
-  border: 2px solid var(--c-border);
-  border-radius: var(--radius-md);
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-family: monospace;
-}
-.pin-digit-box:focus {
-  border-color: var(--c-primary);
-  outline: none;
-}
-
-/* -------------------------------------------------------------
-   Mobile Optimization for Rider Portal
-   ------------------------------------------------------------- */
-@media (max-width: 640px) {
-  .rider-status-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px;
-  }
-  .rider-info-group {
-    gap: 10px;
-  }
-  .rider-profile-img {
-    width: 42px;
-    height: 42px;
-  }
-  .rider-name-heading {
-    font-size: 1.05rem;
-  }
-  .rider-online-toggle {
-    width: 100%;
-    justify-content: center;
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-
-  .job-card {
-    padding: 14px;
-    gap: 10px;
-  }
-  .payout-tag {
-    font-size: 1.2rem;
-  }
-  .accept-job-btn {
-    padding: 12px;
-    font-size: 0.86rem;
-  }
-
-  .active-mission-card {
-    padding: 14px;
-    gap: 12px;
-  }
-  .mission-step-btn {
-    padding: 12px;
-    font-size: 0.92rem;
-  }
-}
-
-/* -------------------------------------------------------------
-   Active Mission Stops & Order Manifest Styling
-   ------------------------------------------------------------- */
 .mission-top-header {
   display: flex;
   justify-content: space-between;
@@ -311,194 +579,327 @@
 }
 
 .mission-live-indicator {
-  font-size: 0.7rem;
+  background: rgba(255, 94, 58, 0.1);
+  color: var(--brand-orange);
+  border: 1.5px solid rgba(255, 94, 58, 0.25);
+  border-radius: var(--brand-radius-pill);
+  padding: 4px 12px;
+  font-size: 11px;
   font-weight: 800;
-  color: #10B981;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .mission-order-badge {
-  font-family: monospace;
+  font-family: 'Space Grotesk', monospace;
   font-weight: 800;
-  color: var(--c-primary);
-  background: var(--c-primary-surface);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
+  color: var(--brand-green);
+  background: var(--brand-green-light);
+  border: 1px solid rgba(12, 81, 63, 0.2);
+  border-radius: var(--brand-radius-pill);
+  padding: 4px 12px;
   font-size: 0.85rem;
 }
 
 .mission-stops-card {
-  background: var(--c-bg-subtle);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  background: var(--brand-cream);
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-inner);
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .mission-stop-block {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
-
 .mission-stop-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   flex-shrink: 0;
   margin-top: 2px;
 }
-
 .mission-stop-body {
   flex: 1;
 }
-
 .mission-stop-type {
-  font-size: 0.72rem;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--c-text-muted);
+  letter-spacing: 0.1em;
+  color: var(--brand-green);
+  text-transform: uppercase;
   margin-bottom: 2px;
 }
-
 .mission-stop-name {
-  font-size: 0.96rem;
+  font-size: 1rem;
   font-weight: 800;
-  color: var(--c-text-primary);
+  color: var(--brand-ink);
   margin-bottom: 2px;
 }
-
 .mission-stop-address {
   font-size: 0.84rem;
-  color: var(--c-text-secondary);
-  line-height: 1.35;
-}
-
-.mission-stop-contact {
-  margin-top: 6px;
+  color: var(--brand-ink-soft);
+  line-height: 1.4;
 }
 
 .mission-contact-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--c-primary);
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--brand-green);
   background: #FFFFFF;
-  border: 1px solid var(--c-border);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
+  border: var(--brand-border);
+  padding: 5px 14px;
+  border-radius: var(--brand-radius-pill);
   text-decoration: none;
-  transition: all var(--transition-snappy);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  margin-top: 6px;
 }
 .mission-contact-btn:hover {
-  background: var(--c-primary-surface);
-  border-color: var(--c-primary);
+  background: var(--brand-green-light);
+  border-color: var(--brand-green);
+  transform: translateY(-1px);
 }
 
 .mission-stop-divider {
   height: 1px;
-  background: var(--c-border);
-  margin: 2px 0 2px 40px;
+  background: rgba(12, 81, 63, 0.12);
+  margin: 2px 0 2px 46px;
 }
 
 .mission-notes-box {
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
-  color: #92400E;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  margin-top: 6px;
+  background: var(--brand-yellow-pastel);
+  border: 1px solid rgba(255, 201, 40, 0.4);
+  color: #7A5100;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 /* Order Manifest Card */
 .mission-manifest-card {
   background: #FFFFFF;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-inner);
+  padding: 18px;
 }
-
 .mission-manifest-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--c-border);
+  border-bottom: 1px solid rgba(12, 81, 63, 0.1);
 }
-
 .mission-manifest-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-
 .mission-manifest-item {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   font-size: 0.88rem;
 }
-
 .mission-manifest-item-main {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   flex: 1;
 }
-
 .mission-manifest-item-qty {
   font-weight: 800;
-  color: var(--c-primary);
-  background: var(--c-primary-surface);
-  padding: 1px 6px;
-  border-radius: 4px;
+  color: var(--brand-green);
+  background: var(--brand-green-light);
+  padding: 2px 7px;
+  border-radius: 6px;
   font-size: 0.8rem;
   flex-shrink: 0;
 }
-
-.mission-manifest-item-text {
-  flex: 1;
-}
-
 .mission-manifest-item-name {
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--brand-ink);
 }
-
 .mission-manifest-item-addons {
   font-size: 0.78rem;
-  color: var(--c-text-muted);
+  color: var(--brand-muted);
   margin-top: 2px;
 }
-
 .mission-manifest-item-price {
   font-weight: 700;
-  color: var(--c-text-secondary);
-  font-size: 0.84rem;
+  color: var(--brand-ink-soft);
+  font-size: 0.85rem;
   margin-left: 8px;
 }
-
 .mission-manifest-footer {
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid var(--c-border);
+  border-top: 1px solid rgba(12, 81, 63, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+/* Mapbox Mission Map */
+.rider-mission-map {
+  border-radius: var(--brand-radius-inner);
+  border: 2px solid var(--brand-green);
+  overflow: hidden;
+  height: 240px;
+  position: relative;
+}
+#rider-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.rider-mission-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.rider-mission-stat {
+  background: var(--brand-cream);
+  border: var(--brand-border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.rs-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-muted);
+  margin-bottom: 2px;
+}
+.rs-value {
+  font-family: 'Plus Jakarta Sans', var(--font-display), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--brand-green);
+}
+
+.mission-step-btn {
+  background: var(--brand-green);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--brand-radius-pill);
+  padding: 16px 24px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(12, 81, 63, 0.25);
+  transition: all 0.2s ease;
+}
+.mission-step-btn:hover {
+  background: var(--brand-green-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(12, 81, 63, 0.32);
+}
+
+/* PIN Entry Input in Modal */
+.pin-input-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 16px 0;
+}
+.pin-digit-box {
+  width: 52px;
+  height: 60px;
+  border: 2px solid rgba(12, 81, 63, 0.2);
+  border-radius: 16px;
+  text-align: center;
+  font-size: 1.7rem;
+  font-weight: 900;
+  font-family: 'Space Grotesk', monospace;
+  color: var(--brand-ink);
+  background: #FFFFFF;
+  transition: all 0.2s ease;
+}
+.pin-digit-box:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px rgba(12, 81, 63, 0.15);
+  outline: none;
+}
+
+/* -------------------------------------------------------------
+   7. RIDER BOTTOM NAVIGATION BAR (Mobile Capsule)
+   ------------------------------------------------------------- */
+.bottom-nav[data-nav-for="rider"] {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: var(--brand-border);
+  border-radius: var(--brand-radius-pill);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  max-width: 440px;
+  margin: 0 auto 12px;
+  padding: 6px 12px;
+}
+.bottom-nav[data-nav-for="rider"] .nav-tab.active {
+  background: var(--brand-green-light);
+  color: var(--brand-green);
+  border-radius: var(--brand-radius-pill);
+  font-weight: 800;
+}
+
+/* -------------------------------------------------------------
+   8. RESPONSIVE BREAKPOINTS
+   ------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .rider-nav-links {
+    display: none;
+  }
+  .rider-dispatch-badge {
+    display: none;
+  }
+  .rider-status-bar {
+    padding: 16px;
+    gap: 14px;
+  }
+  .rider-info-group {
+    gap: 12px;
+  }
+  .rider-profile-img {
+    width: 48px;
+    height: 48px;
+  }
+  .rider-name-heading {
+    font-size: 1.15rem;
+  }
+  .rider-online-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  .vendor-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

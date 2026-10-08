@@ -146,7 +146,7 @@ const RiderController = {
             <div class="route-stop-line">
               <span class="stop-icon stop-dropoff">D</span>
               <div class="stop-details">
-                <div class="stop-title">${order.customerName} (${order.deliveryAddress})</div>
+                <div class="stop-title">Customer near ${order.deliveryAddress ? order.deliveryAddress.split(',')[0] : 'Delivery Area'}</div>
                 <div class="stop-address">${(order.items || []).length} item(s) • Total order ${formatNaira(order.total)}</div>
               </div>
             </div>
@@ -393,7 +393,7 @@ const RiderController = {
     this.pendingCompletionOrderId = null;
   },
 
-  submitPinAndComplete() {
+  async submitPinAndComplete() {
     const orderId = this.pendingCompletionOrderId || (this.activeOrder ? this.activeOrder.id : null);
     if (!orderId || !this.activeOrder) return;
 
@@ -409,16 +409,39 @@ const RiderController = {
       return;
     }
 
-    if (enteredPin !== String(this.activeOrder.pin)) {
-      if (errEl) {
-        errEl.innerText = 'Incorrect PIN code! Please ask the customer for their 4-digit code.';
-        errEl.style.display = 'block';
+    // Call server PIN verification endpoint
+    try {
+      const res = await fetch(`/api/orders/${orderId}/verify-delivery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: enteredPin })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (errEl) {
+          errEl.innerText = data.error || 'Incorrect PIN code! Please ask the customer for their 4-digit code.';
+          errEl.style.display = 'block';
+        }
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+        return;
       }
-      if (input) {
-        input.value = '';
-        input.focus();
+    } catch (e) {
+      // Local check fallback in offline/demo environment
+      if (enteredPin !== String(this.activeOrder.pin)) {
+        if (errEl) {
+          errEl.innerText = 'Incorrect PIN code! Please ask the customer for their 4-digit code.';
+          errEl.style.display = 'block';
+        }
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+        return;
       }
-      return;
     }
 
     // Success!
@@ -431,6 +454,46 @@ const RiderController = {
 
     const fee = this.activeOrder.deliveryFee || 800;
     window.chowApp.toast(`Delivery #${orderId} completed! ₦${fee.toLocaleString()} added to your wallet 💰`, 'success');
+  },
+
+  toggleOnlineStatus() {
+    const rider = this.getRider();
+    if (!rider) return;
+    rider.online = !rider.online;
+
+    const headerDuty = document.getElementById('rider-header-duty-toggle');
+    const headerText = document.getElementById('rider-duty-text');
+    const cardToggle = document.querySelector('.rider-online-toggle');
+
+    if (rider.online) {
+      if (headerDuty) {
+        headerDuty.classList.remove('offline');
+        headerDuty.classList.add('online');
+      }
+      if (headerText) headerText.innerText = 'On Duty';
+      if (cardToggle) {
+        cardToggle.classList.remove('offline');
+        cardToggle.classList.add('online');
+        cardToggle.innerHTML = '<span class="radar-pulse-dot"></span><span>ONLINE & READY</span>';
+      }
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('You are now ONLINE. Campus deliveries will appear on your radar.', 'success');
+      }
+    } else {
+      if (headerDuty) {
+        headerDuty.classList.remove('online');
+        headerDuty.classList.add('offline');
+      }
+      if (headerText) headerText.innerText = 'Off Duty';
+      if (cardToggle) {
+        cardToggle.classList.remove('online');
+        cardToggle.classList.add('offline');
+        cardToggle.innerHTML = '<span class="radar-pulse-dot offline"></span><span>OFFLINE</span>';
+      }
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('You are now OFFLINE. Radar is paused.', 'info');
+      }
+    }
   }
 };
 

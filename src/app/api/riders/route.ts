@@ -7,21 +7,23 @@ export async function GET(req: Request){
     try{
         const { searchParams } = new URL(req.url);
         const location = searchParams.get("location")?.toLowerCase().trim();
+        const showAll = searchParams.get("all") === "true" || searchParams.get("status") === "all";
 
-        const conditions = [
-            eq(riders.isOnline, true),
-            eq(riders.isAvailable, true),
-        ];
+        const conditions = [];
+        if (!showAll) {
+            conditions.push(eq(riders.isOnline, true));
+            conditions.push(eq(riders.isAvailable, true));
+        }
 
         //Filtering by location
-        if(location){
+        if(location && location !== "all"){
             conditions.push(ilike(riders.location, `%${location}%`));
         }
 
         const onlineRiders = await db
         .select()
         .from(riders)
-        .where(and(...conditions));
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
         return NextResponse.json({ 
             success: true,

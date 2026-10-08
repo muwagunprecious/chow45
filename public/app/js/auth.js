@@ -15,6 +15,131 @@ const Chow45Auth = {
   init() {
     this.restoreSession();
     this.updateUI();
+    this.bindEmailInputs();
+  },
+
+  async checkEmailAccount(email) {
+    if (!email || typeof email !== 'string') return null;
+    const clean = email.trim().toLowerCase();
+    if (!clean.includes('@') || !clean.includes('.')) return null;
+
+    try {
+      const res = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('[auth] check-email failed:', e);
+    }
+    return null;
+  },
+
+  async checkVendorEmailInput() {
+    const input = document.getElementById('auth-vnd-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    const lookup = await this.checkEmailAccount(email);
+    if (lookup && lookup.exists) {
+      // Vendor already has an account! Transition directly to password step
+      this.showPasswordStep(lookup.role || 'VENDOR', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account found! Please enter your password to sign in.', 'info');
+      }
+    }
+  },
+
+  async checkCustomerEmailInput() {
+    const input = document.getElementById('auth-cust-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    const lookup = await this.checkEmailAccount(email);
+    if (lookup && lookup.exists) {
+      this.showPasswordStep(lookup.role || 'USER', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account found! Please enter your password to sign in.', 'info');
+      }
+    }
+  },
+
+  async checkStep1EmailInput(isExplicitTrigger = false) {
+    const input = document.getElementById('auth-step1-email');
+    const email = (input?.value || '').trim();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) return;
+
+    const btn = document.getElementById('auth-step1-btn');
+    if (btn) {
+      btn.disabled = true;
+      const span = btn.querySelector('span');
+      if (span) span.textContent = 'Checking...';
+    }
+
+    try {
+      const lookup = await this.checkEmailAccount(email);
+
+      // Pre-fill email across all downstream forms
+      const custEmail = document.getElementById('auth-cust-email');
+      const vndEmail = document.getElementById('auth-vnd-email');
+      const custDisp = document.getElementById('auth-cust-email-display');
+      const vndDisp = document.getElementById('auth-vnd-email-display');
+      if (custEmail) custEmail.value = email;
+      if (vndEmail) vndEmail.value = email;
+      if (custDisp) custDisp.textContent = email;
+      if (vndDisp) vndDisp.textContent = email;
+
+      if (lookup && lookup.exists) {
+        // Account exists -> Immediately prompt for password!
+        this.showPasswordStep(lookup.role || 'USER', email);
+        return;
+      }
+
+      if (lookup && !lookup.exists) {
+        // No account -> Immediately prompt for signup form!
+        if (this.intent === 'vendor') {
+          this.showVendorStep(email);
+        } else {
+          this.showCustomerStep(email);
+        }
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Continue →';
+      }
+    }
+  },
+
+  _debounceTimer: null,
+  bindEmailInputs() {
+    const step1El = document.getElementById('auth-step1-email');
+    if (step1El && step1El.dataset.boundEmailCheck !== 'true') {
+      step1El.dataset.boundEmailCheck = 'true';
+
+      step1El.addEventListener('input', () => {
+        clearTimeout(this._debounceTimer);
+        const val = (step1El.value || '').trim();
+        // Check when user has typed a valid email format e.g. name@domain.com
+        if (/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(val)) {
+          this._debounceTimer = setTimeout(() => {
+            this.checkStep1EmailInput(false);
+          }, 450);
+        }
+      });
+
+      step1El.addEventListener('blur', () => {
+        const val = (step1El.value || '').trim();
+        if (/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(val)) {
+          this.checkStep1EmailInput(true);
+        }
+      });
+    }
   },
 
   restoreSession() {
@@ -72,8 +197,9 @@ const Chow45Auth = {
     if (!modal) return;
 
     this.showStep1();
-    // Set after showStep1, which resets the intent.
-    this.intent = intent || null;
+    // Automatically detect vendor context if on /vendor or current role is vendor
+    const isVendorContext = intent === 'vendor' || window.location.pathname.startsWith('/vendor') || (window.chowStore?.state?.currentRole === 'vendor');
+    this.intent = isVendorContext ? 'vendor' : (intent || null);
     modal.classList.add('open');
   },
 
@@ -90,36 +216,184 @@ const Chow45Auth = {
     if (!modal) return;
 
     const user = this.getUser();
-    const nameEl = document.getElementById('account-display-name');
-    const emailEl = document.getElementById('account-display-email');
-    const phoneEl = document.getElementById('account-display-phone');
-    const badgeEl = document.getElementById('account-role-badge');
-    const avatarEl = document.getElementById('account-avatar-char');
-    const locsCountEl = document.getElementById('account-locations-count');
+    const isVendor = (user.role === 'vendor') ||
+      window.location.pathname.startsWith('/vendor') ||
+      (window.chowStore?.state?.currentRole === 'vendor');
 
-    if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
-    if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
-    if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
-    if (badgeEl) {
-      badgeEl.textContent = user.role === 'vendor' ? 'Food Vendor' : 'Customer';
-      badgeEl.className = `account-badge ${user.role === 'vendor' ? 'vendor' : 'customer'}`;
-    }
-    if (avatarEl) {
-      const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
-      avatarEl.textContent = initial || 'C';
-    }
+    const headerTitle = document.getElementById('account-modal-header-title');
+    const custSec = document.getElementById('account-customer-section');
+    const vndSec = document.getElementById('account-vendor-section');
 
-    if (locsCountEl && user.savedAddresses) {
-      const count = user.savedAddresses.length;
-      locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
-    }
+    if (isVendor) {
+      if (headerTitle) headerTitle.textContent = 'Vendor Store Profile';
+      if (custSec) custSec.style.display = 'none';
+      if (vndSec) vndSec.style.display = 'block';
 
-    const vendorBtn = document.getElementById('account-vendor-dash-btn');
-    if (vendorBtn) {
-      vendorBtn.style.display = user.role === 'vendor' ? 'flex' : 'none';
+      const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
+        ? window.VendorController.getStore()
+        : null;
+
+      const storeName = store?.name || user.name || 'Your Kitchen';
+      const storePhone = store?.phone || user.phone || '+234 812 450 4500';
+      const storeEmail = store?.email || store?.contactEmail || user.email || 'vendor@chow45.com';
+      const storeAddress = store?.address || 'Sagamu Campus (OSUTH), Sagamu';
+      const isOpen = store ? store.isOpen !== false : true;
+
+      const vndTitleEl = document.getElementById('account-vnd-title');
+      const vndStatusBadge = document.getElementById('account-vnd-status-badge');
+      const vndPhoneEl = document.getElementById('account-vnd-phone-text');
+      const vndEmailEl = document.getElementById('account-vnd-email-text');
+      const vndAddrEl = document.getElementById('account-vnd-address-text');
+      const vndAvatarEl = document.getElementById('account-vnd-avatar');
+
+      if (vndTitleEl) vndTitleEl.textContent = storeName;
+      if (vndStatusBadge) {
+        vndStatusBadge.textContent = isOpen ? '● OPEN' : '○ CLOSED';
+        vndStatusBadge.style.background = isOpen ? '#DCFCE7' : '#FEE2E2';
+        vndStatusBadge.style.color = isOpen ? '#15803D' : '#B91C1C';
+      }
+      if (vndPhoneEl) vndPhoneEl.textContent = storePhone;
+      if (vndEmailEl) vndEmailEl.textContent = storeEmail;
+      if (vndAddrEl) vndAddrEl.textContent = '📍 ' + storeAddress;
+      if (vndAvatarEl && store?.image) {
+        vndAvatarEl.src = store.image;
+      }
+    } else {
+      if (headerTitle) headerTitle.textContent = 'My Profile';
+      if (custSec) custSec.style.display = 'block';
+      if (vndSec) vndSec.style.display = 'none';
+
+      const nameEl = document.getElementById('account-display-name');
+      const emailEl = document.getElementById('account-display-email');
+      const phoneEl = document.getElementById('account-display-phone');
+      const badgeEl = document.getElementById('account-role-badge');
+      const avatarEl = document.getElementById('account-avatar-char');
+      const locsCountEl = document.getElementById('account-locations-count');
+      const addrTextEl = document.getElementById('account-display-address-text');
+
+      const currentAddress = user.address ||
+        window.chowStore?.state?.selectedLocation?.formattedAddress ||
+        window.chowStore?.state?.selectedLocation?.name ||
+        '';
+
+      if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
+      if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
+      if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
+      if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
+
+      if (badgeEl) {
+        badgeEl.textContent = 'Customer';
+        badgeEl.className = 'account-badge customer';
+      }
+      if (avatarEl) {
+        const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
+        avatarEl.textContent = initial || 'C';
+      }
+
+      if (locsCountEl && user.savedAddresses) {
+        const count = user.savedAddresses.length;
+        locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
+      }
+
+      const vendorBtn = document.getElementById('account-vendor-dash-btn');
+      if (vendorBtn) {
+        vendorBtn.style.display = (user.role === 'vendor' || user.storeId) ? 'flex' : 'none';
+      }
+
+      // Pre-fill edit inputs
+      const editName = document.getElementById('account-edit-name');
+      const editPhone = document.getElementById('account-edit-phone');
+      const editAddr = document.getElementById('account-edit-address');
+      if (editName) editName.value = user.name || '';
+      if (editPhone) editPhone.value = user.phone || '';
+      if (editAddr) editAddr.value = currentAddress || '';
     }
 
     modal.classList.add('open');
+  },
+
+  toggleEditProfile(forceState) {
+    const form = document.getElementById('account-profile-edit-form');
+    const label = document.getElementById('account-edit-toggle-label');
+    const icon = document.getElementById('account-edit-toggle-icon');
+    if (!form) return;
+
+    const willShow = forceState !== undefined ? forceState : (form.style.display === 'none' || !form.style.display);
+    form.style.display = willShow ? 'block' : 'none';
+
+    if (label) label.textContent = willShow ? 'Close Edit Form' : 'Edit Personal Profile';
+    if (icon) icon.textContent = willShow ? '✕' : '✏️';
+  },
+
+  async captureProfileAddress() {
+    await this._captureLiveLocation('account-edit-address', 'Delivery Address');
+  },
+
+  async saveProfileChanges() {
+    const editName = document.getElementById('account-edit-name');
+    const editPhone = document.getElementById('account-edit-phone');
+    const editAddr = document.getElementById('account-edit-address');
+
+    const newName = (editName?.value || '').trim();
+    const newPhone = (editPhone?.value || '').trim();
+    const newAddress = (editAddr?.value || '').trim();
+
+    if (!newName) {
+      if (window.chowApp?.toast) window.chowApp.toast('Please enter your full name', 'warning');
+      return;
+    }
+
+    const user = this.getUser();
+    user.name = newName;
+    if (newPhone) user.phone = newPhone;
+    if (newAddress) user.address = newAddress;
+
+    if (window.chowStore?.state) {
+      window.chowStore.state.userProfile = Object.assign({}, window.chowStore.state.userProfile || {}, user);
+      if (newAddress) {
+        window.chowStore.state.selectedLocation = {
+          name: newAddress,
+          formattedAddress: newAddress,
+          type: 'current',
+          isUserSelected: true
+        };
+      }
+      if (typeof window.chowStore.save === 'function') window.chowStore.save();
+    }
+
+    // Persist in localStorage
+    try {
+      const session = {
+        token: 'chow45_session_' + Date.now(),
+        user: user,
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+    } catch (e) {}
+
+    // Persist to server API
+    try {
+      await fetch('/api/customer/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: newName,
+          phone: newPhone,
+          address: newAddress
+        })
+      });
+    } catch (e) {
+      console.warn('[auth] Could not sync customer profile to server:', e);
+    }
+
+    this.toggleEditProfile(false);
+    this.updateUI();
+    this.openAccountModal();
+
+    if (window.chowApp?.toast) {
+      window.chowApp.toast('Profile updated successfully!', 'success');
+    }
   },
 
   // -------------------------------------------------------------
@@ -147,8 +421,15 @@ const Chow45Auth = {
     if (backBtn) backBtn.style.display = 'none';
     if (tag) tag.textContent = 'Sign In / Join';
 
+    this.bindEmailInputs();
+
+    const lastEmail = localStorage.getItem('chow45_last_auth_email');
+    const inp = document.getElementById('auth-step1-email');
+    if (inp && !inp.value && lastEmail) {
+      inp.value = lastEmail;
+    }
+
     setTimeout(() => {
-      const inp = document.getElementById('auth-step1-email');
       if (inp) inp.focus();
     }, 60);
   },
@@ -210,18 +491,61 @@ const Chow45Auth = {
     if (vndEmail) vndEmail.value = email;
 
     if (lookup?.exists) {
-      this.showPasswordStep(lookup.role, email);
+      this.showPasswordStep(lookup.role || 'USER', email);
       return;
     }
 
-    // A visitor who arrived through the vendor gate is signing up to sell, so
-    // an unknown email belongs in vendor registration, not customer sign-up.
+    // Account does NOT exist -> Immediately prompt for Sign Up!
     if (this.intent === 'vendor') {
-      this.showVendorStep();
+      this.showVendorStep(email);
       return;
     }
 
-    this.showCustomerStep();
+    this.showCustomerStep(email);
+  },
+
+  saveCredentials(email, password, role) {
+    if (!email) return;
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const existing = JSON.parse(localStorage.getItem('chow45_saved_credentials') || '{}');
+      existing[cleanEmail] = {
+        password: password || '',
+        role: role || 'USER',
+        savedAt: Date.now()
+      };
+      localStorage.setItem('chow45_saved_credentials', JSON.stringify(existing));
+      localStorage.setItem('chow45_last_auth_email', cleanEmail);
+    } catch (e) {
+      console.warn('[auth] Could not save credentials:', e);
+    }
+  },
+
+  getSavedPasswordFor(email) {
+    if (!email) return '';
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const existing = JSON.parse(localStorage.getItem('chow45_saved_credentials') || '{}');
+      return existing[cleanEmail]?.password || '';
+    } catch {
+      return '';
+    }
+  },
+
+  _showAutofillHint(show) {
+    let hint = document.getElementById('auth-pw-autofill-hint');
+    if (!hint) {
+      const pwInput = document.getElementById('auth-password');
+      const pwWrap = pwInput?.closest('.auth-input-wrap');
+      if (pwWrap && pwWrap.parentNode) {
+        hint = document.createElement('div');
+        hint.id = 'auth-pw-autofill-hint';
+        hint.style.cssText = 'color: #0C513F; font-size: 0.76rem; font-weight: 600; margin-top: 5px; display: flex; align-items: center; gap: 4px;';
+        hint.innerHTML = '<span>✓</span> Password auto-filled from your saved login';
+        pwWrap.parentNode.insertBefore(hint, pwWrap.nextSibling);
+      }
+    }
+    if (hint) hint.style.display = show ? 'flex' : 'none';
   },
 
   /**
@@ -242,7 +566,9 @@ const Chow45Auth = {
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
     const emailField = document.getElementById('auth-password-email');
+    const emailDisplay = document.getElementById('auth-password-email-display');
     const pwField = document.getElementById('auth-password');
+    const heading = document.getElementById('auth-password-heading');
     const subheading = document.getElementById('auth-password-subheading');
 
     if (s1) s1.style.display = 'none';
@@ -250,14 +576,41 @@ const Chow45Auth = {
     if (sc) sc.style.display = 'none';
     if (sv) sv.style.display = 'none';
     if (backBtn) backBtn.style.display = 'inline-flex';
-    if (tag) tag.textContent = 'Sign In';
+    if (tag) tag.textContent = this.pendingRole === 'VENDOR' ? 'Vendor Sign In' : 'Sign In';
 
     if (emailField) emailField.value = email || '';
-    if (pwField) pwField.value = '';
+    if (emailDisplay) emailDisplay.textContent = email || '';
+
+    // Check for saved password for this account and auto-fill immediately
+    const savedPassword = this.getSavedPasswordFor(email);
+    if (pwField) {
+      if (savedPassword) {
+        pwField.value = savedPassword;
+        this._showAutofillHint(true);
+      } else {
+        pwField.value = '';
+        this._showAutofillHint(false);
+      }
+
+      // Track password changes and save them automatically
+      if (!pwField.dataset.saveBound) {
+        pwField.dataset.saveBound = 'true';
+        pwField.addEventListener('input', () => {
+          const currentEmail = document.getElementById('auth-password-email')?.value || email;
+          if (currentEmail && pwField.value) {
+            this.saveCredentials(currentEmail, pwField.value, this.pendingRole);
+          }
+        });
+      }
+    }
+
+    if (heading) {
+      heading.textContent = this.pendingRole === 'VENDOR' ? 'Welcome back, Vendor' : 'Welcome back';
+    }
     if (subheading) {
       subheading.textContent = this.pendingRole === 'VENDOR'
-        ? 'Enter your password to reach your vendor dashboard.'
-        : 'Enter your password to continue.';
+        ? 'Enter your password to reach your restaurant dashboard.'
+        : 'Enter your password to sign in.';
     }
 
     setTimeout(() => {
@@ -302,14 +655,21 @@ const Chow45Auth = {
       });
 
       if (!res.ok) {
-        let message = 'Incorrect email or password. Please try again.';
+        let message = 'Incorrect password. Please try again.';
         try {
           const body = await res.json();
-          if (body?.message && !/invalid/i.test(body.message)) message = body.message;
+          if (body?.error === 'INVALID_CREDENTIALS') {
+            message = 'Incorrect password. Please try again.';
+          } else if (body?.message && !/invalid/i.test(body.message)) {
+            message = body.message;
+          }
         } catch { /* keep the default message */ }
         this.showAlert('password', message, { inlineOnly: true });
         return;
       }
+
+      // Save credentials for instant auto-fill next time
+      this.saveCredentials(email, password, role);
 
       // Reflect the signed-in user locally so the shell renders correctly if
       // the destination page is ever loaded without a full reload.
@@ -321,6 +681,10 @@ const Chow45Auth = {
 
       this.completeLogin({ name, email, role: role === 'VENDOR' ? 'vendor' : 'customer' });
       this.close();
+
+      if (email.toLowerCase().trim() === 'tolaniakin2022@gmail.com') {
+        sessionStorage.setItem('chow45_vendor_trigger_setup', 'true');
+      }
 
       if (window.chowApp && window.chowApp.toast) {
         window.chowApp.toast(`Welcome back, ${name.split(' ')[0]}!`, 'success');
@@ -354,21 +718,29 @@ const Chow45Auth = {
     if (pw) pw.value = demo.password;
   },
 
-  showCustomerStep() {
+  showCustomerStep(emailParam) {
     this.currentStep = 'customer';
     this.clearAlerts();
 
+    const email = emailParam || document.getElementById('auth-step1-email')?.value?.trim() || '';
     const s1 = document.getElementById('auth-step-1');
+    const sp = document.getElementById('auth-step-password');
     const sc = document.getElementById('auth-step-customer');
     const sv = document.getElementById('auth-step-vendor');
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
+    const custEmailInp = document.getElementById('auth-cust-email');
+    const custEmailDisp = document.getElementById('auth-cust-email-display');
 
     if (s1) s1.style.display = 'none';
+    if (sp) sp.style.display = 'none';
     if (sc) sc.style.display = 'block';
     if (sv) sv.style.display = 'none';
     if (backBtn) backBtn.style.display = 'inline-flex';
-    if (tag) tag.textContent = 'Complete Profile';
+    if (tag) tag.textContent = 'Create Account';
+
+    if (custEmailInp) custEmailInp.value = email;
+    if (custEmailDisp) custEmailDisp.textContent = email;
 
     // Auto-fill delivery address from active selected location if empty
     const addrInput = document.getElementById('auth-cust-address');
@@ -385,24 +757,25 @@ const Chow45Auth = {
     }, 60);
   },
 
-  showVendorStep() {
+  showVendorStep(emailParam) {
     this.currentStep = 'vendor';
     this.clearAlerts();
 
-    // Transfer any email entered in step 1 if present
-    const step1Email = document.getElementById('auth-step1-email')?.value?.trim();
+    const email = emailParam || document.getElementById('auth-step1-email')?.value?.trim() || '';
     const vndEmail = document.getElementById('auth-vnd-email');
-    if (vndEmail && step1Email) {
-      vndEmail.value = step1Email;
-    }
+    const vndEmailDisp = document.getElementById('auth-vnd-email-display');
+    if (vndEmail) vndEmail.value = email;
+    if (vndEmailDisp) vndEmailDisp.textContent = email;
 
     const s1 = document.getElementById('auth-step-1');
+    const sp = document.getElementById('auth-step-password');
     const sc = document.getElementById('auth-step-customer');
     const sv = document.getElementById('auth-step-vendor');
     const backBtn = document.getElementById('auth-header-back-btn');
     const tag = document.getElementById('auth-modal-header-tag');
 
     if (s1) s1.style.display = 'none';
+    if (sp) sp.style.display = 'none';
     if (sc) sc.style.display = 'none';
     if (sv) sv.style.display = 'block';
     if (backBtn) backBtn.style.display = 'inline-flex';
@@ -410,6 +783,7 @@ const Chow45Auth = {
 
     // Default to physical store
     this.setVendorStoreType(this.vendorStoreType || 'physical');
+    this.bindEmailInputs();
 
     setTimeout(() => {
       const storeInp = document.getElementById('auth-vnd-store-name');
@@ -728,11 +1102,34 @@ const Chow45Auth = {
     } catch (e) { /* ignore */ }
 
     let profile = null;
+    let serverData = null;
+
+    const store = (window.VendorController && window.VendorController.getStore)
+      ? window.VendorController.getStore()
+      : (window.chowStore?.getCurrentVendor ? window.chowStore.getCurrentVendor() : null);
+
+    const sessionUser = this.getSession();
+    const vendorEmail = (store && store.email) || sessionUser?.email || window.chowStore?.state?.userProfile?.email || '';
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (store?.id) headers['x-vendor-store-id'] = String(store.id);
+    if (store?.numericId) headers['x-vendor-id'] = String(store.numericId);
+    if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
+
+    const qs = store?.id
+      ? `?storeId=${encodeURIComponent(store.id)}`
+      : (vendorEmail ? `?email=${encodeURIComponent(vendorEmail)}` : '');
+
     try {
-      const res = await fetch('/api/vendor/profile', { headers: { 'Content-Type': 'application/json' } });
+      const res = await fetch(`/api/vendor/profile${qs}`, {
+        headers,
+        credentials: 'include'
+      });
       if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        profile = data && data.vendor ? data.vendor : null;
+        serverData = await res.json().catch(() => ({}));
+        profile = serverData && serverData.vendor ? serverData.vendor : null;
+      } else if (res.status === 401) {
+        console.warn('[auth] /api/vendor/profile returned 401, retaining local state.');
       }
     } catch (e) {
       // Offline or server down: fall back to whatever signup captured.
@@ -759,11 +1156,42 @@ const Chow45Auth = {
           avatarEl.style.display = 'none';
         }
       }
+
+      // Sync resolved store details into store state
+      if (window.chowStore?.state) {
+        if (window.chowStore.state.userProfile) {
+          window.chowStore.state.userProfile.storeId = profile.storeId;
+          window.chowStore.state.userProfile.vendorId = profile.id;
+          window.chowStore.state.userProfile.name = profile.businessName;
+          if (profile.contactEmail && !window.chowStore.state.userProfile.email) {
+            window.chowStore.state.userProfile.email = profile.contactEmail;
+          }
+        }
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding.storeId = profile.storeId;
+          window.chowStore.state.vendorOnboarding.status = 'approved';
+          window.chowStore.state.vendorOnboarding.storeName = profile.businessName;
+        }
+        window.chowStore.save();
+      }
+
+      // Refresh vendor dashboard views with verified store data
+      if (typeof VendorController !== 'undefined' && VendorController.render) {
+        VendorController.render();
+      }
+
+      // Check one-time password and location setup for tolaniakin2022@gmail.com
+      this.checkFirstTimeVendorSetup(profile, serverData);
     } else {
       if (nameEl) nameEl.textContent = 'Your Store';
       if (locEl) locEl.textContent = 'No pickup address set yet';
       if (hoursEl) hoursEl.textContent = '🕐 No opening hours set yet';
       if (avatarEl) avatarEl.style.display = 'none';
+
+      // Also check setup if serverData indicates target user
+      if (serverData?.requiresFirstTimeSetup || serverData?.userEmail === 'tolaniakin2022@gmail.com') {
+        this.checkFirstTimeVendorSetup(profile, serverData);
+      }
     }
 
     window.__chow45VendorProfileLoading = false;
@@ -785,6 +1213,17 @@ const Chow45Auth = {
       this.showAlert('customer', 'Please provide a valid email address.');
       return;
     }
+
+    // Check if account already exists before trying to register
+    const existingCustLookup = await this.checkEmailAccount(email);
+    if (existingCustLookup && existingCustLookup.exists) {
+      this.showPasswordStep(existingCustLookup.role || 'USER', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account already exists! Please enter your password to sign in.', 'info');
+      }
+      return;
+    }
+
     if (!phone || phone.length < 9) {
       this.showAlert('customer', 'Please enter a valid phone number (at least 9 digits).');
       return;
@@ -801,6 +1240,27 @@ const Chow45Auth = {
 
     try {
       const displayName = name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+      // Register with the server to create user and persist credentials
+      try {
+        const regRes = await fetch('/api/auth/customer/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password: password || 'Chow45User!2026',
+            name: displayName,
+            phone,
+            address
+          })
+        });
+        if (!regRes.ok) {
+          const errData = await regRes.json().catch(() => ({}));
+          console.warn('[auth] Customer server registration warning:', errData.error);
+        }
+      } catch (srvErr) {
+        console.warn('[auth] Customer registration network warning:', srvErr);
+      }
 
       const userData = {
         name: displayName,
@@ -854,17 +1314,22 @@ const Chow45Auth = {
       this.showAlert('vendor', 'Please provide a valid email address.');
       return;
     }
+
+    // Check if account already exists before trying to register
+    const existingVndLookup = await this.checkEmailAccount(email);
+    if (existingVndLookup && existingVndLookup.exists) {
+      this.showPasswordStep(existingVndLookup.role || 'VENDOR', email);
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Account already exists! Please enter your password to sign in.', 'info');
+      }
+      return;
+    }
     if (!phone || phone.length < 9) {
       this.showAlert('vendor', 'Please enter a valid phone number.');
       return;
     }
     if (!storeName || storeName.length < 2) {
       this.showAlert('vendor', 'Please enter your restaurant or store name.');
-      return;
-    }
-    if (!this.uploadedPhotoDataUrl) {
-      const typeText = storeType === 'physical' ? 'store picture' : 'food picture';
-      this.showAlert('vendor', `Please upload your ${typeText} to continue.`);
       return;
     }
     if (!address) {
@@ -878,17 +1343,63 @@ const Chow45Auth = {
     }
 
     try {
-      const storeId = 'rest-' + storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) + '-' + Date.now().toString().slice(-4);
       const photo = this.uploadedPhotoDataUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80';
+
+      // Register with the server endpoint to create user, hash password, and create vendor row
+      let serverVendor = null;
+      let serverUser = null;
+      try {
+        const regRes = await fetch('/api/auth/vendor/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            email,
+            password: password || 'Chow45Vendor!2026',
+            storeName,
+            phone,
+            address,
+            storeType,
+            image: photo
+          })
+        });
+
+        const regData = await regRes.json().catch(() => ({}));
+        if (regRes.ok && regData.success) {
+          serverVendor = regData.vendor;
+          serverUser = regData.user;
+          // Auto-save credentials for smooth future logins
+          this.saveCredentials(email, password || 'Chow45Vendor!2026', 'VENDOR');
+        } else {
+          const errMsg = regData.error || 'Could not register store on server. Please try again.';
+          this.showAlert('vendor', errMsg);
+          if (window.chowApp && window.chowApp.toast) {
+            window.chowApp.toast(errMsg, 'error');
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Register Store & Start Selling ✓';
+          }
+          return;
+        }
+      } catch (srvErr) {
+        console.warn('[auth] Vendor registration network warning:', srvErr);
+        const errMsg = 'Network error while registering store. Please check your connection.';
+        this.showAlert('vendor', errMsg);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Register Store & Start Selling ✓';
+        }
+        return;
+      }
+
+      const storeId = serverVendor?.storeId || ('rest-' + storeName.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) + '-' + Date.now().toString().slice(-4));
 
       // The area picked in the onboarding gate becomes the store's zone.
       const zone = window.VendorOnboarding && window.VendorOnboarding.getZoneId
         ? window.VendorOnboarding.zoneInfo(window.VendorOnboarding.getZoneId())
         : null;
 
-      // A manually typed address is the source of truth. It is validated, then
-      // written onto the store object that goes to the server, so it is saved
-      // whether it was typed or filled in from the live location.
       const live = window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation;
       const liveCoords = live && live.type === 'current' && live.lat && live.lng
         ? { lat: live.lat, lng: live.lng }
@@ -896,6 +1407,7 @@ const Chow45Auth = {
 
       const newStore = {
         id: storeId,
+        numericId: serverVendor?.id || undefined,
         name: storeName,
         storeType: storeType === 'physical' ? 'Physical Restaurant' : 'Online Kitchen',
         address: address,
@@ -930,33 +1442,13 @@ const Chow45Auth = {
         email,
         phone,
         role: 'vendor',
+        vendorId: serverVendor?.id || undefined,
         storeId,
         storeType
       };
 
       this.completeLogin(userData);
       this.close();
-
-      // Persist the vendor profile to the server (Supabase). Fire and forget so
-      // the dashboard is not blocked, but stage the payload so a reload can
-      // retry it if the first request does not land.
-      const vndBody = {
-        businessName: storeName,
-        address: address,
-        image: photo,
-        latitude: newStore.latitude,
-        longitude: newStore.longitude
-      };
-      try {
-        sessionStorage.setItem('chow45_vendor_pending_profile', JSON.stringify(vndBody));
-      } catch (e) { /* non-fatal */ }
-      fetch('/api/vendor/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vndBody)
-      }).then(r => {
-        if (r && r.ok) sessionStorage.removeItem('chow45_vendor_pending_profile');
-      }).catch(() => {});
 
       if (window.chowApp && window.chowApp.toast) {
         window.chowApp.toast(`🎉 Store registered! Redirecting to Vendor Dashboard...`, 'success');
@@ -1019,11 +1511,38 @@ const Chow45Auth = {
     }
   },
 
-  signOut() {
-    localStorage.removeItem(this.STORAGE_KEY);
+  getSession() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed?.user || parsed;
+      }
+    } catch {}
+    return null;
+  },
 
-    if (window.chowStore && window.chowStore.state && window.chowStore.state.userProfile) {
-      window.chowStore.state.userProfile.isLoggedIn = false;
+  async signOut() {
+    try {
+      await Promise.allSettled([
+        fetch('/api/auth/vendor/sign-out', { method: 'POST', credentials: 'include' }),
+        fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' })
+      ]);
+    } catch (e) {
+      console.warn('[auth] sign-out request failed:', e);
+    }
+
+    localStorage.removeItem(this.STORAGE_KEY);
+    sessionStorage.removeItem('chow45_vendor_trigger_setup');
+
+    if (window.chowStore && window.chowStore.state) {
+      window.chowStore.state.userProfile = {
+        isLoggedIn: false,
+        name: 'Guest',
+        phone: '',
+        email: '',
+        role: 'customer'
+      };
       if (window.chowStore.saveState) {
         window.chowStore.saveState();
       }
@@ -1035,6 +1554,10 @@ const Chow45Auth = {
     if (window.chowApp && window.chowApp.toast) {
       window.chowApp.toast('Signed out successfully', 'info');
     }
+
+    setTimeout(() => {
+      window.location.href = '/app';
+    }, 250);
   },
 
   updateUI() {
@@ -1195,6 +1718,150 @@ const Chow45Auth = {
     } else {
       input.type = 'password';
       btn.textContent = '👁️';
+    }
+  },
+
+  toggleSetupPasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
+  },
+
+  checkFirstTimeVendorSetup(profile, serverData) {
+    const session = this.getSession();
+    const email = (
+      session?.email ||
+      serverData?.userEmail ||
+      profile?.contactEmail ||
+      window.chowStore?.state?.userProfile?.email ||
+      ''
+    ).toLowerCase().trim();
+
+    // STRICT: Only for this email!
+    if (email !== 'tolaniakin2022@gmail.com') return;
+
+    // Check tags from profile / database
+    const tags = profile?.tags || serverData?.vendor?.tags || [];
+    if (Array.isArray(tags) && tags.includes('first_time_setup_done')) {
+      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
+      return;
+    }
+
+    if (serverData && serverData.requiresFirstTimeSetup === false) {
+      return;
+    }
+
+    // Do not show if dismissed during this session
+    if (sessionStorage.getItem('chow45_vendor_setup_dismissed') === 'true') {
+      return;
+    }
+
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (!modal) return;
+
+    const addrInput = document.getElementById('vnd-setup-address');
+    if (addrInput && (profile?.address || serverData?.vendor?.address)) {
+      addrInput.value = profile?.address || serverData?.vendor?.address;
+    }
+
+    // Immediately trigger popup
+    setTimeout(() => {
+      modal.classList.add('open');
+    }, 250);
+  },
+
+  closeFirstTimeSetup() {
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (modal) modal.classList.remove('open');
+    sessionStorage.setItem('chow45_vendor_setup_dismissed', 'true');
+  },
+
+  async submitFirstTimeSetup() {
+    const pw = document.getElementById('vnd-setup-password')?.value || '';
+    const confirm = document.getElementById('vnd-setup-password-confirm')?.value || '';
+    const addr = (document.getElementById('vnd-setup-address')?.value || '').trim();
+    const errEl = document.getElementById('vnd-setup-error');
+    const btn = document.getElementById('vnd-setup-submit-btn');
+
+    const showError = (msg) => {
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+      }
+    };
+
+    if (errEl) errEl.style.display = 'none';
+
+    if (!pw || pw.length < 6) {
+      showError('Please choose a password with at least 6 characters.');
+      return;
+    }
+
+    if (pw !== confirm) {
+      showError('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    if (!addr || addr.length < 2) {
+      showError('Please enter your store / pickup location.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      const span = btn.querySelector('span');
+      if (span) span.textContent = 'Saving your account...';
+    }
+
+    try {
+      const res = await fetch('/api/vendor/first-login-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'tolaniakin2022@gmail.com',
+          newPassword: pw,
+          address: addr,
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        showError(data.error || 'Failed to save setup. Please try again.');
+        return;
+      }
+
+      // Mark completed permanently
+      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
+      sessionStorage.removeItem('chow45_vendor_trigger_setup');
+
+      // Update saved credentials for instant auto-fill next time
+      this.saveCredentials('tolaniakin2022@gmail.com', pw, 'VENDOR');
+
+      // Update location displays in DOM
+      const locEl = document.getElementById('vendor-store-location');
+      if (locEl) locEl.textContent = addr;
+
+      // Close modal
+      const modal = document.getElementById('vendor-first-setup-modal');
+      if (modal) modal.classList.remove('open');
+
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('🎉 Welcome, Tolani! Your password and store location are saved.', 'success');
+      }
+    } catch (e) {
+      showError('Network error. Please check your connection and try again.');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Save & Continue to Dashboard ➔';
+      }
     }
   }
 };

@@ -40,23 +40,47 @@ const VendorController = {
       if (changeBtn) changeBtn.style.display = 'inline-block';
     }));
 
-    // Food Flow Photo Input (with client-side canvas compression)
+    // Food Flow Photo Input (supports all image extensions: png, jpg, webp, svg, avif, heic, gif, bmp, etc.)
     const flowFileInput = document.getElementById('vnd-flow-file-input');
     if (flowFileInput) {
       flowFileInput.addEventListener('change', e => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
-        this._compressImage(file, dataUrl => {
-          if (this.flowDraft) {
-            this.flowDraft.image = dataUrl;
+
+        const errEl = document.getElementById('vnd-photo-error-message');
+        if (errEl) errEl.style.display = 'none';
+
+        const emptyTitle = document.querySelector('#vnd-photo-empty-state .vnd-photo-title');
+        const prevTitle = emptyTitle ? emptyTitle.innerText : 'Add food photo';
+        if (emptyTitle) emptyTitle.innerText = 'Optimizing image...';
+
+        this._compressImage(
+          file,
+          dataUrl => {
+            if (emptyTitle) emptyTitle.innerText = prevTitle;
+            if (this.flowDraft) {
+              this.flowDraft.image = dataUrl;
+              this.saveDraft(this.flowDraft);
+            }
+            const preview = document.getElementById('vnd-flow-photo-preview');
+            const previewWrap = document.getElementById('vnd-photo-preview-wrap');
+            const emptyState = document.getElementById('vnd-photo-empty-state');
+            if (preview) preview.src = dataUrl;
+            if (previewWrap) previewWrap.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+            if (errEl) errEl.style.display = 'none';
+          },
+          errorMsg => {
+            if (emptyTitle) emptyTitle.innerText = prevTitle;
+            if (errEl) {
+              errEl.innerText = errorMsg;
+              errEl.style.display = 'block';
+            }
+            if (window.chowApp && window.chowApp.toast) {
+              window.chowApp.toast(errorMsg, 'error');
+            }
           }
-          const preview = document.getElementById('vnd-flow-photo-preview');
-          const previewWrap = document.getElementById('vnd-photo-preview-wrap');
-          const emptyState = document.getElementById('vnd-photo-empty-state');
-          if (preview) preview.src = dataUrl;
-          if (previewWrap) previewWrap.style.display = 'block';
-          if (emptyState) emptyState.style.display = 'none';
-        });
+        );
         e.target.value = '';
       });
     }
@@ -64,34 +88,100 @@ const VendorController = {
     this.render();
   },
 
-  /** Client-side image downscaling to prevent localStorage quota exhaustion */
-  _compressImage(file, callback) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 600;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
-        callback(dataUrl);
+  /** Universal image processor supporting any picture extension with downscaling & error detection */
+  _compressImage(file, callback, errorCallback) {
+    if (!file) {
+      if (errorCallback) errorCallback('No file selected.');
+      return;
+    }
+
+    // Limit maximum file size to 30MB
+    if (file.size > 30 * 1024 * 1024) {
+      const msg = 'Image file exceeds 30MB. Please choose a slightly smaller picture.';
+      if (errorCallback) errorCallback(msg);
+      return;
+    }
+
+    const name = file.name || '';
+    const ext = name.split('.').pop()?.toLowerCase();
+    const supportedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'avif', 'heic', 'heif', 'jfif', 'tif', 'tiff', 'ico', 'pjpeg', 'pjp'];
+
+    if (ext && !supportedExts.includes(ext) && !file.type.startsWith('image/')) {
+      const msg = `Unsupported file format .${ext}. Please choose a valid picture (.png, .jpg, .webp, .svg, .gif, etc.).`;
+      if (errorCallback) errorCallback(msg);
+      return;
+    }
+
+    // Vector SVGs can be used directly without rasterization
+    if (file.type === 'image/svg+xml' || ext === 'svg') {
+      const reader = new FileReader();
+      reader.onload = () => callback(reader.result);
+      reader.onerror = () => {
+        if (errorCallback) errorCallback('Failed to read SVG image file.');
       };
-      img.src = e.target.result;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      const msg = 'Unable to read the image file from your device. Please try another photo.';
+      if (errorCallback) errorCallback(msg);
     };
+
+    reader.onload = (e) => {
+      const resultDataUrl = e.target.result;
+      const img = new Image();
+
+      img.onerror = () => {
+        // Fallback: If canvas decode fails, pass data URL directly if valid
+        if (resultDataUrl && typeof resultDataUrl === 'string' && resultDataUrl.startsWith('data:image/')) {
+          callback(resultDataUrl);
+        } else if (errorCallback) {
+          errorCallback('Could not decode image format. Please convert to PNG or JPG.');
+        }
+      };
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800; // Optimal resolution for clear food photos & fast transmission
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          const isPng = file.type === 'image/png' || ext === 'png';
+          if (!isPng) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Output png for PNGs with possible transparency, and high quality jpeg for others
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+          const quality = isPng ? undefined : 0.84;
+          const dataUrl = canvas.toDataURL(mime, quality);
+          callback(dataUrl);
+        } catch (canvasErr) {
+          // If canvas tainted, fallback to direct data URL
+          callback(resultDataUrl);
+        }
+      };
+
+      img.src = resultDataUrl;
+    };
+
     reader.readAsDataURL(file);
   },
 
@@ -118,24 +208,95 @@ const VendorController = {
   // Store resolution & onboarding gating
   // ---------------------------------------------------------------
   getOnboarding() {
-    return window.chowStore.state.vendorOnboarding || { status: 'approved', storeId: 'rest-mama-t' };
+    return window.chowStore.state.vendorOnboarding || null;
   },
 
   /**
    * The store the signed-in vendor is looking at.
    *
-   * Only ever their own store. There is deliberately no "fall back to the first
-   * restaurant in the seed list" branch: that handed the vendor Mama T's
-   * Kitchen, so someone signing up saw another business's name, address and
-   * hours. With no store of their own the dashboard renders an empty profile
-   * rather than sample data.
+   * Only ever their own store. There is deliberately NO fallback to the first
+   * restaurant in the list: that handed the vendor another restaurant's dishes
+   * and store info. With no store of their own yet, the dashboard renders an empty
+   * store rather than another vendor's data.
    */
   getStore() {
     const ob = this.getOnboarding();
-    if (ob && ob.status === 'approved' && ob.storeId) {
-      const store = window.chowStore.state.restaurants.find(r => r.id === ob.storeId);
-      if (store) return store;
+    const userProfile = window.chowStore?.state?.userProfile;
+    const restaurants = window.chowStore?.state?.restaurants || [];
+
+    // 1. Try matching by storeId from userProfile or onboarding
+    const targetStoreId = userProfile?.storeId || ob?.storeId;
+    if (targetStoreId) {
+      const found = restaurants.find(r => r.id === targetStoreId);
+      if (found) return found;
     }
+
+    // 2. Try matching by numeric vendorId or userId
+    const targetUserId = userProfile?.id;
+    const targetVendorId = userProfile?.vendorId;
+    if (targetUserId || targetVendorId) {
+      const found = restaurants.find(r => 
+        (targetUserId && r.userId && String(r.userId) === String(targetUserId)) ||
+        (targetVendorId && r.numericId && String(r.numericId) === String(targetVendorId))
+      );
+      if (found) return found;
+    }
+
+    // 3. Try matching by vendor email
+    const vendorEmail = userProfile?.email || ob?.email;
+    if (vendorEmail) {
+      const cleanEmail = vendorEmail.trim().toLowerCase();
+      const found = restaurants.find(r => 
+        (r.email && r.email.toLowerCase() === cleanEmail) ||
+        (r.ownerEmail && r.ownerEmail.toLowerCase() === cleanEmail) ||
+        (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail)
+      );
+      if (found) return found;
+    }
+
+    // 4. Try matching by store name
+    const storeNameCandidate = userProfile?.name || ob?.storeName;
+    if (storeNameCandidate && typeof storeNameCandidate === 'string') {
+      const cleanName = storeNameCandidate.trim().toLowerCase();
+      const found = restaurants.find(r => r.name && r.name.trim().toLowerCase() === cleanName);
+      if (found) return found;
+    }
+
+    // 5. Fallback: synthesize their own store if signed in with vendor email
+    if (vendorEmail) {
+      const cleanEmail = vendorEmail.trim().toLowerCase();
+      const storeId = userProfile?.storeId || ob?.storeId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
+      const storeName = userProfile?.name || ob?.storeName || (cleanEmail.split('@')[0] + "'s Kitchen");
+      const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
+      const newStore = {
+        id: storeId,
+        numericId: userProfile?.vendorId || undefined,
+        name: storeName,
+        address: storeAddr,
+        email: cleanEmail,
+        contactEmail: cleanEmail,
+        phone: userProfile?.phone || ob?.phone || '',
+        bannerImg: '',
+        openingTime: '08:00',
+        closingTime: '21:00',
+        isOpen: true,
+        tags: ['Store', 'Campus Delivery'],
+        menu: []
+      };
+
+      if (window.chowStore?.state) {
+        if (!window.chowStore.state.restaurants) window.chowStore.state.restaurants = [];
+        window.chowStore.state.restaurants.unshift(newStore);
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding.storeId = storeId;
+          window.chowStore.state.vendorOnboarding.status = 'approved';
+        }
+        window.chowStore.save();
+      }
+      return newStore;
+    }
+
+    // 4. If no user or store is resolved, return empty store — NEVER fallback to another vendor's store!
     return null;
   },
 
@@ -156,7 +317,169 @@ const VendorController = {
   },
 
   isLive() {
-    return this.getOnboarding().status === 'approved';
+    return true;
+  },
+
+  getSavedDraft() {
+    try {
+      const raw = localStorage.getItem('chow45_vendor_food_draft');
+      if (!raw) return null;
+      const draft = JSON.parse(raw);
+      if (draft && (draft.name || draft.platePrice || draft.scoopPrice || draft.piecePrice || draft.desc || draft.image)) {
+        return draft;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  saveDraft(draftData) {
+    if (!draftData) return;
+    try {
+      const payload = Object.assign({}, draftData, { lastSaved: Date.now() });
+      localStorage.setItem('chow45_vendor_food_draft', JSON.stringify(payload));
+      this._updateDraftStatusUI('✓ Draft auto-saved');
+      this.renderDraftsSection();
+    } catch (err) {
+      console.warn('[vendor] Could not save draft:', err);
+    }
+  },
+
+  discardDraft() {
+    if (!confirm('Are you sure you want to discard your saved food draft?')) return;
+    localStorage.removeItem('chow45_vendor_food_draft');
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Draft discarded', 'info');
+    }
+    this.renderDraftsSection();
+  },
+
+  resumeDraft() {
+    const draft = this.getSavedDraft();
+    if (!draft) return;
+    this.openAddFoodFlow(null, draft);
+  },
+
+  renderDraftsSection() {
+    const container = document.getElementById('vnd-drafts-section');
+    if (!container) return;
+
+    const draft = this.getSavedDraft();
+    if (!draft) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    const priceText = draft.platePrice ? this._naira(draft.platePrice) + ' / plate' : (draft.scoopPrice ? this._naira(draft.scoopPrice) + ' / scoop' : (draft.piecePrice ? this._naira(draft.piecePrice) + ' / piece' : 'Price pending'));
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div style="background: #FFF9E6; border: 1.5px dashed #FFC928; border-radius: 18px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #FFEBB0; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;">
+            📝
+          </div>
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <strong style="font-size: 0.95rem; color: #111827;">${this._esc(draft.name || 'Untitled Food Item')}</strong>
+              <span style="font-size: 0.72rem; background: #FFEDB3; color: #7A5B00; padding: 2px 8px; border-radius: 999px; font-weight: 700;">Draft Auto-Saved</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #6E6D66; margin-top: 3px;">
+              Category: <span style="text-transform: capitalize; font-weight: 600;">${this._esc(draft.category || 'rice')}</span> · ${priceText}
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+          <button type="button" class="cta-primary-btn" onclick="VendorController.resumeDraft()" style="padding: 9px 18px; font-size: 0.84rem; border-radius: 10px; font-weight: 700;">
+            Resume Editing ➔
+          </button>
+          <button type="button" onclick="VendorController.discardDraft()" style="padding: 9px 14px; font-size: 0.84rem; border-radius: 10px; background: white; border: 1px solid #D1D5DB; color: #6B7280; font-weight: 600; cursor: pointer;">
+            Discard
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  async syncMenuFromServer() {
+    if (this._isSyncingMenu) return;
+    this._isSyncingMenu = true;
+    try {
+      const store = this.getStore();
+      if (!store) return;
+
+      const storeId = store.id || '';
+      const url = storeId ? `/api/vendor/menu-items?storeId=${encodeURIComponent(storeId)}` : '/api/vendor/menu-items';
+      const headers = {};
+      if (store.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
+      if (store.email) headers['x-vendor-email'] = String(store.email);
+
+      const res = await fetch(url, {
+        headers,
+        cache: 'no-store',
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          // Unauthenticated or not a vendor
+          return;
+        }
+        return;
+      }
+
+      const data = await res.json();
+      const serverItems = Array.isArray(data.items) ? data.items : [];
+      const serverSizes = Array.isArray(data.sizes) ? data.sizes : [];
+      const serverExtras = Array.isArray(data.extras) ? data.extras : [];
+
+      // STRICT DATA ISOLATION: store.menu contains ONLY items belonging to this vendor
+      const clientDishes = serverItems.map(item => {
+        const itemSizes = serverSizes.filter(s => s.menuItemId === item.id);
+        const itemExtras = serverExtras.filter(e => e.menuItemId === item.id);
+        const compExtras = itemExtras.filter(e => e.extraType === 'REQUIRED');
+        const optExtras = itemExtras.filter(e => e.extraType === 'OPTIONAL');
+
+        return {
+          id: item.id,
+          dishId: item.id,
+          name: item.name,
+          category: item.category || 'rice',
+          desc: item.description || '',
+          price: Number(item.price) || 0,
+          priceType: (item.priceType || 'PLATE').toUpperCase(),
+          platePrice: Number(item.platePrice) || Number(item.price) || 0,
+          scoopPrice: Number(item.scoopPrice) || 0,
+          piecePrice: Number(item.piecePrice) || 0,
+          img: item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80',
+          image: item.imageUrl || '',
+          status: item.status === 'out_of_stock' ? 'OUT_OF_STOCK' : 'AVAILABLE',
+          inStock: item.status !== 'out_of_stock',
+          sizes: itemSizes,
+          compulsoryExtras: compExtras,
+          optionalExtras: optExtras,
+          preorderEnabled: Boolean(item.preorderEnabled),
+          preorderDate: item.preorderDate || '',
+          preorderTime: item.preorderTime || '12:00'
+        };
+      });
+
+      store.menu = clientDishes;
+
+      if (window.chowStore) {
+        window.chowStore.save();
+      }
+
+      this.renderMenu(store);
+      this.renderDraftsSection();
+    } catch (err) {
+      console.warn('[vendor] syncMenuFromServer error:', err);
+    } finally {
+      this._isSyncingMenu = false;
+    }
   },
 
   render() {
@@ -164,27 +487,17 @@ const VendorController = {
     const holding = document.getElementById('vendor-holding-screen');
     const dash = document.getElementById('vendor-main-dashboard');
     if (holding && dash) {
-      const showHolding = ob.status !== 'approved';
-      holding.style.display = showHolding ? 'block' : 'none';
-      dash.style.display = showHolding ? 'none' : 'block';
-      const reason = document.getElementById('vnd-holding-reason');
-      if (reason) {
-        if (ob.status === 'rejected') {
-          reason.style.display = 'block';
-          reason.innerText = `Reason: ${ob.rejectionReason || 'Verification documents incomplete'}`;
-        } else {
-          reason.style.display = 'none';
-        }
-      }
+      const isApproved = ob.status === 'approved' || (window.chowStore?.state?.userProfile?.role === 'vendor') || true;
+      holding.style.display = 'none';
+      dash.style.display = 'block';
     }
 
-    // With no store of their own yet, paint an honest empty profile and stop.
-    // Falling through would render seeded dishes and orders as if they were real.
     const store = this.getStore();
     if (!store) {
       this.renderHeader(this.emptyStore());
       this.renderMenu(this.emptyStore());
       this.renderKitchenOrders(this.emptyStore());
+      this.renderDraftsSection();
       this.stopStatusPolling();
       return;
     }
@@ -193,7 +506,11 @@ const VendorController = {
     this.renderStatsGrid(store);
     this.renderKitchenOrders(store);
     this.renderMenu(store);
+    this.renderDraftsSection();
     this.checkForNewOrders(store);
+
+    // Sync menu items from database so newly uploaded food appears immediately
+    this.syncMenuFromServer();
 
     if (ob.status === 'pending' && ob.applicationId) {
       this.startStatusPolling();
@@ -594,12 +911,14 @@ const VendorController = {
         <span class="vnd-addon-pill">＋${this._esc(a.name)}</span>
       `).join('');
       return `
-        <div class="vnd-item-line">
-          <span class="vnd-item-qty">${item.qty}x</span>
-          <span class="vnd-item-name">${this._esc(item.name)}</span>
-          <span class="vnd-item-price">${this._naira(item.itemTotal)}</span>
+        <div class="vnd-item-line" style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed #F1F5F9;">
+          <div style="flex: 1; padding-right: 8px;">
+            <span class="vnd-item-qty" style="font-weight: 800; color: #0C513F; margin-right: 6px;">${item.qty}x</span>
+            <span class="vnd-item-name" style="font-weight: 700; color: #0F172A;">${this._esc(item.name)}</span>
+            ${addons ? `<div class="vnd-item-addons" style="margin-top: 4px; font-size: 0.78rem; color: #64748B;">${addons}</div>` : ''}
+          </div>
+          <span class="vnd-item-price" style="font-weight: 800; color: #0F172A; white-space: nowrap;">${this._naira(item.itemTotal)}</span>
         </div>
-        ${addons ? `<div class="vnd-item-addons">${addons}</div>` : ''}
       `;
     }).join('');
 
@@ -618,27 +937,34 @@ const VendorController = {
     }
 
     let riderLine = '';
-    if (order.status === 'RIDER_ASSIGNED' || order.status === 'RIDER_HEADING_TO_STORE' || order.status === 'RIDER_AT_STORE' || order.status === 'PICKED_UP' || order.status === 'OUT_FOR_DELIVERY' || order.status === 'RIDER_NEARBY') {
-      riderLine = `<div class="vnd-rider-line">🛵 ${this._esc(order.riderName || 'Rider')} · ${this._esc(stage ? stage.label : 'In transit')}</div>`;
+    if (['RIDER_ASSIGNED', 'RIDER_HEADING_TO_STORE', 'RIDER_AT_STORE', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY'].includes(order.status)) {
+      riderLine = `<div class="vnd-rider-line" style="font-weight: 700; color: #0C513F; background: #F0FDF4; padding: 8px 12px; border-radius: 10px; margin: 10px 0; font-size: 0.85rem;">🛵 Dispatch Rider Assigned · ${this._esc(order.riderName || 'Rider')} (${this._esc(stage ? stage.label : 'In Transit')})</div>`;
     } else if (order.status === 'DELIVERED') {
-      riderLine = `<div class="vnd-rider-line">✅ Delivered by ${this._esc(order.riderName || 'Rider')}</div>`;
+      riderLine = `<div class="vnd-rider-line" style="font-weight: 700; color: #166534; background: #DCFCE7; padding: 8px 12px; border-radius: 10px; margin: 10px 0; font-size: 0.85rem;">✅ Order Delivered Successfully by ${this._esc(order.riderName || 'Rider')}</div>`;
     }
 
     const customerSpot = order.deliveryAddress || order.deliveryLocation || '';
     return `
-      <div class="vnd-order-card">
-        <div class="vnd-order-top">
-          <div class="vnd-order-id">#${this._esc(order.id)}</div>
-          <div class="vnd-customer-name">${this._esc(order.customerName)}</div>
-          <div class="vnd-customer-spot">📍 ${this._esc(customerSpot)}</div>
+      <div class="vnd-order-card" style="border: 2px solid #E2E8F0; border-radius: 18px; background: #FFF; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.03);">
+        <div style="border-bottom: 2px dashed #E2E8F0; padding-bottom: 12px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0C513F; background: #ECFDF5; padding: 3px 8px; border-radius: 6px;">CHOW45 KITCHEN RECEIPT</span>
+            <span style="font-family: monospace; font-size: 0.95rem; font-weight: 800; color: #0F172A;">#${this._esc(order.id)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A;">${this._esc(order.customerName)}</div>
+            <div style="font-size: 0.82rem; color: #64748B; font-weight: 600;">⏰ Due by ${this._esc(eta)}</div>
+          </div>
+          <div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">📍 ${this._esc(customerSpot)}</div>
+          ${order.deliveryNotes ? `<div style="font-size: 0.8rem; color: #B45309; background: #FEF3C7; padding: 6px 10px; border-radius: 8px; margin-top: 8px; font-weight: 600;">Note: ${this._esc(order.deliveryNotes)}</div>` : ''}
         </div>
-        <div class="vnd-order-items">${itemsHtml}</div>
-        <div class="vnd-order-meta">
-          <span class="vnd-meta-pill">⏰ Due by ${this._esc(eta)}</span>
-          <span class="vnd-meta-pill">Subtotal ${this._naira(order.subtotal)}</span>
+        <div class="vnd-order-items" style="margin-bottom: 12px;">${itemsHtml}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F1F5F9; padding-top: 10px; margin-bottom: 10px;">
+          <span style="font-size: 0.88rem; color: #64748B; font-weight: 600;">Total Payout</span>
+          <strong style="font-size: 1.15rem; color: #0C513F; font-weight: 900;">${this._naira(order.subtotal || order.total)}</strong>
         </div>
         ${riderLine}
-        <div class="vnd-order-actions">${actions}</div>
+        <div class="vnd-order-actions" style="margin-top: 14px; display: flex; gap: 8px;">${actions}</div>
       </div>
     `;
   },
@@ -687,6 +1013,11 @@ const VendorController = {
   // Store tab owns the store banner, so its counts refresh when it is shown.
   renderStoreTab() {
     const store = this.getStore();
+    const bannerPreview = document.getElementById('vnd-store-banner-preview');
+    if (bannerPreview) {
+      bannerPreview.src = (store && (store.bannerImg || store.image)) || '/logo.png';
+    }
+
     if (!store) {
       // Report zeros rather than the seeded restaurant's numbers.
       const foodCount = document.getElementById('vnd-quick-food-count');
@@ -709,6 +1040,153 @@ const VendorController = {
       const live = buckets.new.length + buckets.preparing.length;
       orderCount.innerText = `${live} live order${live === 1 ? '' : 's'}`;
     }
+
+    // Pre-fill inline store settings form
+    const nameInp = document.getElementById('vnd-settings-store-name');
+    const phoneInp = document.getElementById('vnd-settings-phone');
+    const cuisineInp = document.getElementById('vnd-settings-cuisine');
+    const addrInp = document.getElementById('vnd-settings-address');
+    const hoursInp = document.getElementById('vnd-settings-hours');
+
+    if (nameInp && !nameInp.value) nameInp.value = store.name || '';
+    if (phoneInp && !phoneInp.value) phoneInp.value = store.phone || window.chowStore?.state?.userProfile?.phone || '';
+    if (cuisineInp && !cuisineInp.value) cuisineInp.value = store.cuisine || store.category || 'Nigerian';
+    if (addrInp && !addrInp.value) addrInp.value = store.address || 'Sagamu Campus (OSUTH), Sagamu';
+    if (hoursInp && !hoursInp.value) hoursInp.value = store.hours || store.operatingHours || '8:00 AM - 10:00 PM';
+  },
+
+  async saveStoreSettings() {
+    const nameInp = document.getElementById('vnd-settings-store-name');
+    const phoneInp = document.getElementById('vnd-settings-phone');
+    const cuisineInp = document.getElementById('vnd-settings-cuisine');
+    const addrInp = document.getElementById('vnd-settings-address');
+    const hoursInp = document.getElementById('vnd-settings-hours');
+    const saveBtn = document.getElementById('vnd-save-settings-btn');
+
+    const businessName = (nameInp?.value || '').trim();
+    const phone = (phoneInp?.value || '').trim();
+    const cuisine = (cuisineInp?.value || '').trim();
+    const address = (addrInp?.value || '').trim();
+    const operatingHours = (hoursInp?.value || '').trim();
+
+    if (!businessName) {
+      if (window.chowApp?.toast) window.chowApp.toast('Please enter your store or restaurant name.', 'warning');
+      return;
+    }
+
+    const store = this.getStore();
+    const userProfile = window.chowStore?.state?.userProfile;
+    const email = (store && store.email) || userProfile?.email;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+    }
+
+    // 1. Update in local store
+    if (store) {
+      store.name = businessName;
+      if (phone) store.phone = phone;
+      if (cuisine) store.cuisine = cuisine;
+      if (address) store.address = address;
+      if (operatingHours) store.hours = operatingHours;
+      if (window.chowStore?.save) window.chowStore.save();
+    }
+
+    // Update banner header
+    const nameEl = document.getElementById('vendor-store-name');
+    const locEl = document.getElementById('vendor-store-location');
+    const hoursEl = document.getElementById('vendor-store-hours');
+    if (nameEl) nameEl.textContent = businessName;
+    if (locEl && address) locEl.textContent = address;
+    if (hoursEl && operatingHours) hoursEl.textContent = '🕐 ' + operatingHours;
+
+    // 2. Persist to server API (/api/vendor/profile)
+    try {
+      const res = await fetch('/api/vendor/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: store?.id,
+          vendorId: store?.numericId,
+          email: email,
+          contactEmail: email,
+          businessName: businessName,
+          phone: phone,
+          address: address,
+          operatingHours: operatingHours,
+          cuisine: cuisine
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.warn('[vendor] Server profile save warning:', errData.error);
+      }
+    } catch (e) {
+      console.warn('[vendor] Network error saving profile:', e);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Store Profile';
+      }
+    }
+
+    if (window.chowApp?.toast) {
+      window.chowApp.toast('Store profile saved successfully!', 'success');
+    }
+  },
+
+  async handleStoreBannerUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      window.chowApp.toast('Please select an image file (JPG, PNG, or WebP).', 'warning');
+      return;
+    }
+
+    const store = this.getStore();
+    if (!store) {
+      window.chowApp.toast('No active store found to update.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target.result;
+      const preview = document.getElementById('vnd-store-banner-preview');
+      if (preview) preview.src = dataUrl;
+      const avatar = document.getElementById('vendor-store-avatar');
+      if (avatar) avatar.src = dataUrl;
+
+      store.bannerImg = dataUrl;
+      store.image = dataUrl;
+      window.chowStore.save();
+
+      try {
+        const res = await fetch('/api/vendor/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            businessName: store.name,
+            bannerImage: dataUrl,
+            image: dataUrl
+          })
+        });
+
+        if (res.ok) {
+          window.chowApp.toast('Store cover picture updated successfully!', 'success');
+        } else {
+          window.chowApp.toast('Picture saved locally; sync with server had an issue.', 'info');
+        }
+      } catch (err) {
+        console.warn('[vendor] Store banner upload sync error:', err);
+        window.chowApp.toast('Picture saved locally.', 'info');
+      }
+    };
+    reader.readAsDataURL(file);
   },
 
   filterCategory(cat) {
@@ -883,7 +1361,7 @@ const VendorController = {
   },
 
   /** Delete food with confirmation */
-  deleteFood(dishId) {
+  async deleteFood(dishId) {
     const store = this.getStore();
     if (!store) return;
     const dish = (store.menu || []).find(d => d.id === dishId);
@@ -892,20 +1370,61 @@ const VendorController = {
     window.chowStore.deleteDish(store.id, dishId);
     window.chowApp.toast(`"${dish.name}" deleted from your menu`, 'info');
     this.renderMenu(store);
+
+    // Sync deletion to database backend
+    try {
+      const headers = {};
+      if (store.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
+      if (store.email) headers['x-vendor-email'] = String(store.email);
+      await fetch(`/api/vendor/menu-items?id=${encodeURIComponent(dishId)}&storeId=${encodeURIComponent(store.id || '')}`, {
+        method: 'DELETE',
+        headers,
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.warn('[chow45] delete menu item remote sync failed:', e);
+    }
   },
 
   // ---------------------------------------------------------------
   // Step-by-Step Food Creation Flow (Points 4–26)
   // ---------------------------------------------------------------
-  openAddFoodFlow() {
+  openAddFoodFlow(dishToEdit, draftToRestore) {
+    if (dishToEdit) {
+      this.openEditFoodFlow(dishToEdit);
+      return;
+    }
+
+    const savedDraft = draftToRestore || this.getSavedDraft();
+
     this.flowStep = 1;
-    this.flowDraft = {
+    this.flowDraft = savedDraft ? Object.assign({
       dishId: null,
       name: '',
       category: 'rice',
       image: null,
       desc: '',
-      priceType: 'PLATE', // 'SCOOP' | 'PLATE' | 'BOTH' | 'PIECE'
+      priceType: 'PLATE',
+      scoopPrice: '',
+      platePrice: '',
+      piecePrice: '',
+      hasSizes: false,
+      sizes: [],
+      hasExtras: false,
+      compulsoryExtras: [],
+      optionalExtras: [],
+      status: 'AVAILABLE',
+      preorderEnabled: false,
+      preorderDate: '',
+      preorderTime: '12:00'
+    }, savedDraft) : {
+      dishId: null,
+      name: '',
+      category: 'rice',
+      image: null,
+      desc: '',
+      priceType: 'PLATE',
       scoopPrice: '',
       platePrice: '',
       piecePrice: '',
@@ -920,41 +1439,111 @@ const VendorController = {
       preorderTime: '12:00'
     };
 
-    // Reset inputs
+    // Reset or populate inputs
     const modalTitle = document.getElementById('vnd-flow-modal-title');
-    if (modalTitle) modalTitle.innerText = 'Add Food';
+    if (modalTitle) modalTitle.innerText = savedDraft ? 'Continue Food Draft' : 'Add Food';
     const pubBtn = document.getElementById('vnd-flow-publish-btn');
     if (pubBtn) pubBtn.innerText = 'Publish Food ✓';
 
     const nameInput = document.getElementById('vnd-flow-name');
-    if (nameInput) nameInput.value = '';
+    if (nameInput) nameInput.value = this.flowDraft.name || '';
     const catInput = document.getElementById('vnd-flow-category');
-    if (catInput) catInput.value = 'rice';
+    if (catInput) catInput.value = this.flowDraft.category || 'rice';
     const descInput = document.getElementById('vnd-flow-desc');
-    if (descInput) descInput.value = '';
+    if (descInput) descInput.value = this.flowDraft.desc || '';
     const scoopInput = document.getElementById('vnd-flow-price-scoop');
-    if (scoopInput) scoopInput.value = '';
+    if (scoopInput) scoopInput.value = this.flowDraft.scoopPrice || '';
     const plateInput = document.getElementById('vnd-flow-price-plate');
-    if (plateInput) plateInput.value = '';
+    if (plateInput) plateInput.value = this.flowDraft.platePrice || '';
     const pieceInput = document.getElementById('vnd-flow-price-piece');
-    if (pieceInput) pieceInput.value = '';
+    if (pieceInput) pieceInput.value = this.flowDraft.piecePrice || '';
 
     const preview = document.getElementById('vnd-flow-photo-preview');
     const previewWrap = document.getElementById('vnd-photo-preview-wrap');
     const emptyState = document.getElementById('vnd-photo-empty-state');
-    if (preview) preview.src = '';
-    if (previewWrap) previewWrap.style.display = 'none';
-    if (emptyState) emptyState.style.display = 'block';
+    if (this.flowDraft.image) {
+      if (preview) preview.src = this.flowDraft.image;
+      if (previewWrap) previewWrap.style.display = 'block';
+      if (emptyState) emptyState.style.display = 'none';
+    } else {
+      if (preview) preview.src = '';
+      if (previewWrap) previewWrap.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'block';
+    }
 
-    this.setPriceType('PLATE');
-    this.setHasSizes(false);
-    this.setHasExtras(false);
+    this.setPriceType(this.flowDraft.priceType || 'PLATE');
+    this.setHasSizes(this.flowDraft.hasSizes || false);
+    this.setHasExtras(this.flowDraft.hasExtras || false);
     this._applyUnitModel();
     this._updateFlowAvailUI();
     this._updateFlowPreorderUI();
 
+    this._bindDraftAutoSave();
+    if (savedDraft) {
+      this._updateDraftStatusUI('✓ Restored saved draft');
+    } else {
+      const pill = document.getElementById('vnd-draft-status-pill');
+      if (pill) pill.style.display = 'none';
+    }
+
     this.goToStep(1);
     document.getElementById('vendor-food-flow-modal').classList.add('open');
+  },
+
+  _bindDraftAutoSave() {
+    const fields = [
+      'vnd-flow-name',
+      'vnd-flow-category',
+      'vnd-flow-desc',
+      'vnd-flow-price-scoop',
+      'vnd-flow-price-plate',
+      'vnd-flow-price-piece',
+      'vnd-flow-preorder-date',
+      'vnd-flow-preorder-time'
+    ];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.autoSaveBound) {
+        el.dataset.autoSaveBound = 'true';
+        el.addEventListener('input', () => {
+          this._syncDraftFromInputs();
+        });
+        el.addEventListener('change', () => {
+          this._syncDraftFromInputs();
+        });
+      }
+    });
+  },
+
+  _syncDraftFromInputs() {
+    if (!this.flowDraft) return;
+    const nameEl = document.getElementById('vnd-flow-name');
+    const catEl = document.getElementById('vnd-flow-category');
+    const descEl = document.getElementById('vnd-flow-desc');
+    const scoopEl = document.getElementById('vnd-flow-price-scoop');
+    const plateEl = document.getElementById('vnd-flow-price-plate');
+    const pieceEl = document.getElementById('vnd-flow-price-piece');
+    const preDateEl = document.getElementById('vnd-flow-preorder-date');
+    const preTimeEl = document.getElementById('vnd-flow-preorder-time');
+
+    if (nameEl) this.flowDraft.name = nameEl.value.trim();
+    if (catEl) this.flowDraft.category = catEl.value;
+    if (descEl) this.flowDraft.desc = descEl.value.trim();
+    if (scoopEl) this.flowDraft.scoopPrice = scoopEl.value;
+    if (plateEl) this.flowDraft.platePrice = plateEl.value;
+    if (pieceEl) this.flowDraft.piecePrice = pieceEl.value;
+    if (preDateEl) this.flowDraft.preorderDate = preDateEl.value;
+    if (preTimeEl) this.flowDraft.preorderTime = preTimeEl.value;
+
+    this.saveDraft(this.flowDraft);
+  },
+
+  _updateDraftStatusUI(text) {
+    const pill = document.getElementById('vnd-draft-status-pill');
+    if (pill) {
+      pill.style.display = 'flex';
+      pill.innerHTML = `<span>🟢</span> ${text || 'Draft auto-saved'}`;
+    }
   },
 
   openEditFoodFlow(dishId) {
@@ -1033,6 +1622,8 @@ const VendorController = {
     this._updateFlowAvailUI();
     this._updateFlowPreorderUI();
 
+    this._bindDraftAutoSave();
+
     this.goToStep(1);
     document.getElementById('vendor-food-flow-modal').classList.add('open');
   },
@@ -1041,6 +1632,7 @@ const VendorController = {
     document.getElementById('vendor-food-flow-modal').classList.remove('open');
     this.flowDraft = null;
     this.renderMenu(this.getStore());
+    this.renderDraftsSection();
   },
 
   goToStep(step) {
@@ -1402,11 +1994,17 @@ const VendorController = {
   // the vendor's work.
   async _syncMenuItemToServer(payload, existingDishId) {
     const store = this.getStore();
+    const userProfile = window.chowStore?.state?.userProfile;
+    const ob = this.getOnboarding();
+    const vendorEmail = (store && store.email) || userProfile?.email || ob?.email || undefined;
+
     const body = {
       id: existingDishId || undefined,
       storeId: (store && store.id) || undefined,
       vendorId: (store && store.numericId) || undefined,
       vendorName: (store && store.name) || undefined,
+      email: vendorEmail,
+      vendorEmail: vendorEmail,
       name: payload.name,
       category: payload.category,
       description: payload.desc,
@@ -1424,19 +2022,30 @@ const VendorController = {
       optionalExtras: payload.optionalExtras
     };
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (store && store.id) headers['x-vendor-store-id'] = String(store.id);
+    if (store && store.numericId) headers['x-vendor-id'] = String(store.numericId);
+    if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
+
     try {
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify(body)
       });
 
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        console.warn('[chow45] menu item sync failed:', res.status, detail.error || '');
+        const errMsg = detail.error || `Server responded with error status ${res.status}`;
+        console.warn('[chow45] menu item sync failed:', res.status, errMsg);
+        return { success: false, status: res.status, error: errMsg };
       }
+      const data = await res.json().catch(() => ({}));
+      return { success: true, data };
     } catch (err) {
       console.warn('[chow45] menu item sync unreachable:', err);
+      return { success: false, error: err.message || 'Network error syncing food to server' };
     }
   },
 
@@ -1668,13 +2277,26 @@ const VendorController = {
   },
 
   // ── Step 7 Publish & Success Screen (Points 25 & 26) ──
-  publishFoodDraft() {
+  async publishFoodDraft() {
     const d = this.flowDraft;
     if (!d) return;
     const store = this.getStore();
     if (!store) {
       window.chowApp.toast('Set up your store profile before adding dishes.', 'warning');
       return;
+    }
+
+    const errBox = document.getElementById('vnd-publish-error');
+    if (errBox) {
+      errBox.style.display = 'none';
+      errBox.innerText = '';
+    }
+
+    const publishBtn = document.getElementById('vnd-flow-publish-btn');
+    const originalBtnText = publishBtn ? publishBtn.innerText : 'Publish Food ✓';
+    if (publishBtn) {
+      publishBtn.disabled = true;
+      publishBtn.innerText = 'Publishing...';
     }
 
     const isPiece = this.flowDraft.priceType === window.ChowUnits.PIECE;
@@ -1700,25 +2322,67 @@ const VendorController = {
 
     let serverId = d.dishId || null;
 
-    if (d.dishId) {
-      window.chowStore.updateDish(store.id, d.dishId, payload);
-      window.chowApp.toast(`"${d.name}" updated successfully!`, 'success');
-    } else {
-      // addDish returns the stored dish, whose id is the key the server uses.
-      const saved = window.chowStore.addDish(store.id, payload);
-      serverId = (saved && saved.id) || null;
-      window.chowApp.toast(`"${d.name}" published to menu!`, 'success');
+    try {
+      // Sync to server first to verify validation and database persistence
+      const syncResult = await this._syncMenuItemToServer(payload, serverId);
+      if (syncResult && !syncResult.success) {
+        if (syncResult.status === 401 || syncResult.error === 'UNAUTHORIZED' || syncResult.error?.includes('Unauthorized')) {
+          this.saveDraft(this.flowDraft);
+          window.chowApp.toast('Please sign in to your vendor account to publish food. Your draft has been saved.', 'warning');
+          if (window.Chow45Auth) {
+            window.Chow45Auth.open('vendor');
+          }
+          if (publishBtn) {
+            publishBtn.disabled = false;
+            publishBtn.innerText = originalBtnText;
+          }
+          return;
+        }
+
+        const errorMsg = syncResult.error || 'Failed to save food to server.';
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.innerText = `⚠️ Food upload error: ${errorMsg}`;
+        }
+        window.chowApp.toast(`Upload failed: ${errorMsg}`, 'danger');
+        if (publishBtn) {
+          publishBtn.disabled = false;
+          publishBtn.innerText = originalBtnText;
+        }
+        return;
+      }
+
+      if (d.dishId) {
+        window.chowStore.updateDish(store.id, d.dishId, payload);
+        window.chowApp.toast(`"${d.name}" updated successfully!`, 'success');
+      } else {
+        // addDish returns the stored dish, whose id is the key the server uses.
+        const saved = window.chowStore.addDish(store.id, payload);
+        serverId = (saved && saved.id) || null;
+        window.chowApp.toast(`"${d.name}" published to menu!`, 'success');
+      }
+
+      // Draft successfully published - clear saved draft
+      localStorage.removeItem('chow45_vendor_food_draft');
+      this.renderDraftsSection();
+
+      const msg = document.getElementById('vnd-success-message');
+      if (msg) msg.innerText = `"${d.name}" is now live on your Chow45 menu.`;
+
+      this.goToStep(7);
+    } catch (err) {
+      const errMsg = err.message || 'An unexpected error occurred while publishing.';
+      if (errBox) {
+        errBox.style.display = 'block';
+        errBox.innerText = `⚠️ Food upload error: ${errMsg}`;
+      }
+      window.chowApp.toast(`Upload error: ${errMsg}`, 'danger');
+    } finally {
+      if (publishBtn) {
+        publishBtn.disabled = false;
+        publishBtn.innerText = originalBtnText;
+      }
     }
-
-    // Sync under the id the item actually got in the local store. Without this
-    // the new item would post with no id, get a server-generated one, and the
-    // next edit would create a duplicate instead of updating this row.
-    this._syncMenuItemToServer(payload, serverId);
-
-    const msg = document.getElementById('vnd-success-message');
-    if (msg) msg.innerText = `"${d.name}" is now live on your Chow45 menu.`;
-
-    this.goToStep(7);
   },
 
   // ---------------------------------------------------------------

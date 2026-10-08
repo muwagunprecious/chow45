@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/db";
@@ -139,7 +139,12 @@ async function loadStores(): Promise<ClientStore[]> {
   const menuRows = await db
     .select()
     .from(menuItems)
-    .where(inArray(menuItems.vendorId, vendorIds))
+    .where(
+      and(
+        inArray(menuItems.vendorId, vendorIds),
+        ne(menuItems.status, "rejected")
+      )
+    )
     .orderBy(asc(menuItems.createdAt));
 
   const itemIds = menuRows.map((m) => m.id);

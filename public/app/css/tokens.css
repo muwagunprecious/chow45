@@ -47,61 +47,61 @@
   /* Mode */
   color-scheme: light;
 
-  /* Chow45 Brand Colors */
-  --c-accent: #0C513F;             /* Deep Chow45 Forest Green */
-  --c-primary: #0C513F;            /* Primary brand green */
-  --c-primary-hover: #073B2E;
-  --c-primary-light: #00B978;      /* Vibrant Mint Green */
-  --c-primary-dark: #073B2E;
-  --c-primary-surface: #E4F7EC;    /* Mint Pastel Tint */
-  --c-accent-hover: #073B2E;
-  --c-accent-soft: #E4F7EC;
-  --c-yellow: #FFC928;             /* Chow45 Gold / Yellow */
-  --c-yellow-soft: #FFF2B2;
+  /* Heyfood Brand Colors */
+  --c-accent: #00a205;             /* Vivid Brand Green */
+  --c-primary: #00a205;            /* Primary brand green */
+  --c-primary-hover: #008704;
+  --c-primary-light: #00a205;
+  --c-primary-dark: #008704;
+  --c-primary-surface: #e6f6e6;    /* Mint Tint */
+  --c-accent-hover: #008704;
+  --c-accent-soft: #e6f6e6;
+  --c-yellow: #00a205;
+  --c-yellow-soft: #e6f6e6;
 
   /* Surfaces & Backgrounds */
-  --c-bg-canvas: #FFFDF6;          /* Authentic Chow45 Warm Paper */
-  --c-bg-surface: #FFFFFF;         /* Crisp White Cards */
-  --c-bg-subtle: #FAF6EB;          /* Warm Cream Tint */
-  --c-bg-glass: rgba(255, 253, 246, 0.96);
+  --c-bg-canvas: #fafafa;          /* Bright clean background */
+  --c-bg-surface: #ffffff;         /* Crisp White Cards */
+  --c-bg-subtle: #fafafa;
+  --c-bg-glass: rgba(255, 255, 255, 0.95);
 
   /* Typography Colors */
-  --c-text-primary: #111111;       /* High-contrast ink text */
-  --c-text-secondary: #383834;     /* Soft charcoal secondary */
-  --c-text-muted: #6E6D66;         /* Subtle gray descriptor text */
-  --c-text-inverse: #FFFFFF;       /* Pure white on dark surfaces */
+  --c-text-primary: #000000;       /* Dominant black text */
+  --c-text-secondary: #374151;     /* Neutral secondary */
+  --c-text-muted: #6b7280;         /* Subtle gray descriptor text */
+  --c-text-inverse: #ffffff;       /* Pure white on dark surfaces */
 
   /* Borders & Dividers */
-  --c-border: rgba(12, 81, 63, 0.12); /* Subtle branded green border */
-  --c-border-subtle: rgba(12, 81, 63, 0.07);
-  --c-border-secondary-btn: rgba(12, 81, 63, 0.16);
-  --c-border-active: #0C513F;
+  --c-border: #e5e7eb;             /* Neutral 100 border */
+  --c-border-subtle: #e5e7eb;
+  --c-border-secondary-btn: #e5e7eb;
+  --c-border-active: #000000;
 
   /* Status Colors */
-  --c-success: #00B978;
-  --c-success-bg: #E4F7EC;
-  --c-warning: #FFC928;
-  --c-warning-bg: #FFF2B2;
-  --c-error: #FF5E3A;
-  --c-error-bg: #FCD8E3;
-  --c-info: #0C513F;
-  --c-info-bg: #E4F7EC;
+  --c-success: #00a205;
+  --c-success-bg: #e6f6e6;
+  --c-warning: #f59e0b;
+  --c-warning-bg: #fef3c7;
+  --c-error: #d92d20;
+  --c-error-bg: #fef2f2;
+  --c-info: #00a205;
+  --c-info-bg: #e6f6e6;
 
-  /* Secondary accent for spicy/tags */
-  --c-secondary: #FF5E3A;
-  --c-secondary-soft: #FFF2B2;
+  /* Secondary accent */
+  --c-secondary: #000000;          /* Secondary is black */
+  --c-secondary-soft: #f3f4f6;
 
   /* Typography Families & Fallbacks */
-  --font-family-fallbacks: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: 'Plus Jakarta Sans', var(--font-family-fallbacks);
+  --font-family-fallbacks: "OS_Semi_Bold", "OS_Bold", "OS_Regular", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: 'Plus Jakarta Display', var(--font-family-fallbacks);
   --font-body: 'Plus Jakarta Sans', var(--font-family-fallbacks);
 
   /* Element Spacing Scale */
   --space-xs: 8px;
   --space-sm: 16px;
-  --space-md: 24px;
-  --space-lg: 48px;
-  --space-xl: 96px;
+  --space-md: 28px;
+  --space-lg: 70px;
+  --space-xl: 112px;
 
   /* Utility Spacing aliases */
   --space-2: 2px;
@@ -117,22 +117,22 @@
   --space-48: 48px;
   --space-64: 64px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 8px rgba(12, 81, 63, 0.06);
-  --shadow-md: 0 6px 20px rgba(12, 81, 63, 0.08);
-  --shadow-lg: 0 12px 32px rgba(12, 81, 63, 0.12);
-  --shadow-xl: 0 20px 48px rgba(12, 81, 63, 0.16);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-floating: 0 12px 36px rgba(12, 81, 63, 0.16);
+  /* Shadows - Minimal / Flat per Heyfood spec */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-floating: 0 10px 30px rgba(0, 0, 0, 0.08);
 
-  /* Border Radii: Rounded, friendly, and modern */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
+  /* Border Radii: Heyfood pill CTAs + 8px/16px cards */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
   --radius-md: 16px;
-  --radius-card: 20px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-card: 8px;
+  --radius-lg: 32px;
+  --radius-xl: 65.52px;
   --radius-pill: 9999px;
 
   /* Layout Consts */
@@ -143,4 +143,77 @@
   /* Transitions */
   --transition-snappy: 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
   --transition-smooth: 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* -------------------------------------------------------------
+   Heyfood Design System Component Classes
+   ------------------------------------------------------------- */
+.btn-primary, .button-primary {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 65.52px !important;
+  padding: 9.828px 27.846px !important;
+  font-size: 16.38px !important;
+  font-weight: 500 !important;
+  min-width: 64px !important;
+  min-height: 48px !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease, transform 0.15s ease !important;
+}
+.btn-primary:hover, .button-primary:hover {
+  opacity: 0.88 !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-secondary, .button-secondary {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 65.52px !important;
+  padding: 9.828px 27.846px !important;
+  font-size: 16.38px !important;
+  font-weight: 500 !important;
+  min-width: 64px !important;
+  min-height: 48px !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease !important;
+}
+.btn-secondary:hover, .button-secondary:hover {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db !important;
+}
+
+.btn-link {
+  background: transparent !important;
+  color: #00a205 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  font-size: 15.4px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+.btn-link:hover {
+  text-decoration: underline !important;
+}
+
+.card-heyfood {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  box-shadow: none !important;
+  color: #000000 !important;
 }

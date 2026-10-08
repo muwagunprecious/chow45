@@ -1,46 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #111111;
+  --background: #fafafa;
+  --foreground: #000000;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --color-brand-green: #0c513f;
-  --color-brand-green-dark: #073b2e;
-  --color-brand-green-light: #e4f7ec;
-  --color-brand-green-bright: #00b978;
-  --color-brand-mint: #d2f2dd;
-  --color-brand-blue: #d5e7fd;
-  --color-brand-pink: #fcd8e3;
-  --color-brand-yellow-pastel: #fff2b2;
-  --color-brand-cream: #faf6eb;
-  --color-brand-paper: #fffdf6;
-  --color-brand-dark-bg: #0a0f0d;
-  --color-brand-dark-card: #131b18;
-  --color-brand-yellow: #ffc928;
-  --color-brand-orange: #ff5e3a;
-  --color-brand-ink: #111111;
-  --color-brand-ink-soft: #383834;
-  --color-brand-muted: #6e6d66;
+  --color-brand-green: #00a205;
+  --color-brand-green-dark: #008704;
+  --color-brand-green-light: #e6f6e6;
+  --color-brand-green-bright: #00a205;
+  --color-brand-mint: #e6f6e6;
+  --color-brand-blue: #f0fdf4;
+  --color-brand-pink: #fef2f2;
+  --color-brand-yellow-pastel: #fafafa;
+  --color-brand-cream: #fafafa;
+  --color-brand-paper: #fafafa;
+  --color-brand-surface: #ffffff;
+  --color-brand-border: #e5e7eb;
+  --color-brand-dark-bg: #000000;
+  --color-brand-dark-card: #111111;
+  --color-brand-yellow: #00a205;
+  --color-brand-orange: #d92d20;
+  --color-brand-ink: #000000;
+  --color-brand-ink-soft: #374151;
+  --color-brand-muted: #6b7280;
 
-  --font-display: var(--font-jakarta);
-  --font-accent: var(--font-grotesk);
-  --font-sans: var(--font-jakarta);
+  --font-display: "OS_Semi_Bold", "OS_Bold", var(--font-jakarta), Arial, sans-serif;
+  --font-heading: "OS_Bold", var(--font-jakarta), Arial, sans-serif;
+  --font-accent: "OS_Semi_Bold", var(--font-jakarta), Arial, sans-serif;
+  --font-body: "OS_Regular", var(--font-jakarta), Arial, sans-serif;
+  --font-sans: "OS_Regular", var(--font-jakarta), Arial, sans-serif;
 
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 28px;
-  --radius-xl: 34px;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 32px;
+  --radius-xl: 65.52px;
+  --radius-full: 9999px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #fafafa;
+    --foreground: #000000;
   }
 }
 
@@ -50,12 +55,13 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: #fafafa;
 }
 
 body {
   margin: 0;
-  background: var(--color-brand-paper);
-  color: var(--color-brand-ink);
-  font-family: var(--font-display), Arial, Helvetica, sans-serif;
+  background: #fafafa;
+  color: #000000;
+  font-family: var(--font-body), "OS_Regular", Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

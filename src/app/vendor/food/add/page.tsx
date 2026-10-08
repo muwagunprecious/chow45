@@ -31,17 +31,131 @@ export default function AddFoodPage() {
   const [preorderNote, setPreorderNote] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
 
+  const [photoError, setPhotoError] = useState('');
+
   // Form State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [draftSavedText, setDraftSavedText] = useState('');
 
-  // Fetch real vendors on load
+  // Restore draft on mount
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem('chow45_vendor_add_food_page_draft');
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d.name) setName(d.name);
+        if (d.description) setDescription(d.description);
+        if (d.category) setCategory(d.category);
+        if (d.priceType) setPriceType(d.priceType);
+        if (d.singlePrice) setSinglePrice(d.singlePrice);
+        if (Array.isArray(d.scoops) && d.scoops.length) setScoops(d.scoops);
+        if (Array.isArray(d.compulsoryGroups)) setCompulsoryGroups(d.compulsoryGroups);
+        if (Array.isArray(d.optionalExtras)) setOptionalExtras(d.optionalExtras);
+        if (d.photoUrl) setPhotoUrl(d.photoUrl);
+        if (typeof d.isPreorder === 'boolean') setIsPreorder(d.isPreorder);
+        if (d.preorderNote) setPreorderNote(d.preorderNote);
+        if (typeof d.isAvailable === 'boolean') setIsAvailable(d.isAvailable);
+        setDraftSavedText('✓ Progress restored from your auto-saved draft');
+      }
+    } catch {}
+  }, []);
+
+  // Auto-save draft on changes
+  useEffect(() => {
+    if (!name && !description && !singlePrice && !photoUrl) return;
+    const timer = setTimeout(() => {
+      try {
+        const payload = {
+          name,
+          description,
+          category,
+          priceType,
+          singlePrice,
+          scoops,
+          compulsoryGroups,
+          optionalExtras,
+          photoUrl,
+          isPreorder,
+          preorderNote,
+          isAvailable,
+          savedAt: Date.now()
+        };
+        localStorage.setItem('chow45_vendor_add_food_page_draft', JSON.stringify(payload));
+        // Also sync with marketplace vendor draft so both flows share draft
+        localStorage.setItem('chow45_vendor_food_draft', JSON.stringify({
+          dishId: null,
+          name,
+          category,
+          image: photoUrl,
+          desc: description,
+          priceType: priceType.toUpperCase(),
+          platePrice: singlePrice,
+          scoopPrice: scoops[0]?.price || '',
+          piecePrice: singlePrice,
+          lastSaved: Date.now()
+        }));
+        setDraftSavedText('✓ All progress auto-saved to draft');
+      } catch {}
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [name, description, category, priceType, singlePrice, scoops, compulsoryGroups, optionalExtras, photoUrl, isPreorder, preorderNote, isAvailable]);
+
+  const [isAdminFlow, setIsAdminFlow] = useState(false);
+
+  // Fetch real vendors on load and auto-select matching logged-in vendor or URL parameter
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const isFromAdmin = params.get('from') === 'admin' || sessionStorage.getItem('chow45_admin_auth') === 'true';
+      if (isFromAdmin) setIsAdminFlow(true);
+    } catch {}
+
     fetch('/api/admin/foods')
       .then((res) => res.json())
       .then((data) => {
         if (data.vendors && data.vendors.length > 0) {
           setVendorsList(data.vendors);
+
+          // 1. Check if vendorId is specified in URL query parameters (e.g. from /admin)
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const queryVendorId = params.get('vendorId');
+            if (queryVendorId && Number.isFinite(Number(queryVendorId))) {
+              const numId = Number(queryVendorId);
+              const matchedFromQuery = data.vendors.find((v: any) => v.id === numId);
+              if (matchedFromQuery) {
+                setSelectedVendorId(matchedFromQuery.id);
+                return;
+              }
+            }
+
+            const queryEmail = params.get('email')?.toLowerCase();
+            if (queryEmail) {
+              const matchedEmail = data.vendors.find((v: any) => v.contactEmail?.toLowerCase() === queryEmail);
+              if (matchedEmail) {
+                setSelectedVendorId(matchedEmail.id);
+                return;
+              }
+            }
+          } catch {}
+
+          // 2. Check if user is currently signed in as a vendor in localStorage
+          try {
+            const rawSession = localStorage.getItem('chow45_auth_session_v1');
+            if (rawSession) {
+              const sess = JSON.parse(rawSession);
+              const userEmail = sess?.user?.email?.toLowerCase();
+              if (userEmail) {
+                const match = data.vendors.find((v: any) => v.contactEmail?.toLowerCase() === userEmail);
+                if (match) {
+                  setSelectedVendorId(match.id);
+                  return;
+                }
+              }
+            }
+          } catch {}
+
           setSelectedVendorId(data.vendors[0].id);
         }
       })
@@ -49,14 +163,90 @@ export default function AddFoodPage() {
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    setPhotoError('');
+    if (!e.target.files || !e.target.files[0]) return;
+
+    const file = e.target.files[0];
+    const fileName = file.name.toLowerCase();
+    const validExtensions = [
+      '.png', '.jpg', '.jpeg', '.webp', '.avif', '.heic', '.heif',
+      '.bmp', '.gif', '.svg', '.jfif', '.tif', '.tiff', '.ico', '.svgz'
+    ];
+    const isImageMime = file.type.startsWith('image/');
+    const hasValidExt = validExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!isImageMime && !hasValidExt) {
+      setPhotoError(`The file "${file.name}" is not a recognized image format. Please select an image file (.png, .jpg, .jpeg, .webp, etc.).`);
+      return;
     }
+
+    // Max 30MB
+    if (file.size > 30 * 1024 * 1024) {
+      setPhotoError('Image file is too large (max 30MB). Please select a smaller photo.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setPhotoError('Failed to read the image file from your device. Please try again or pick another photo.');
+    };
+
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) {
+        setPhotoError('Could not process the selected image.');
+        return;
+      }
+
+      // If SVG or animated GIF, keep raw data URL to avoid rasterizing
+      if (file.type === 'image/svg+xml' || fileName.endsWith('.svg') || file.type === 'image/gif') {
+        setPhotoUrl(dataUrl);
+        return;
+      }
+
+      // Optimize/compress large images via canvas
+      const img = new Image();
+      img.onerror = () => {
+        // Fallback to raw dataUrl if canvas decoding fails for rare formats
+        setPhotoUrl(dataUrl);
+      };
+      img.onload = () => {
+        try {
+          const maxDim = 900;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setPhotoUrl(dataUrl);
+            return;
+          }
+          // Fill background white so transparent images don't turn black in JPEG
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          // High-efficiency JPEG compression (~80-120KB output)
+          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          setPhotoUrl(compressed);
+        } catch {
+          setPhotoUrl(dataUrl);
+        }
+      };
+      img.src = dataUrl;
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const addScoop = () => setScoops([...scoops, { id: Date.now(), label: '', price: '' }]);
@@ -130,9 +320,17 @@ export default function AddFoodPage() {
           price: Number(opt.price) || 0,
         }));
 
+      const selectedVendor = vendorsList.find((v) => v.id === selectedVendorId);
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (selectedVendorId) headers['x-vendor-id'] = String(selectedVendorId);
+      if ((selectedVendor as any)?.storeId) headers['x-vendor-store-id'] = String((selectedVendor as any).storeId);
+      if ((selectedVendor as any)?.contactEmail) headers['x-vendor-email'] = String((selectedVendor as any).contactEmail);
+
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
@@ -143,7 +341,12 @@ export default function AddFoodPage() {
           piecePrice: isPiece ? numPlatePrice : null,
           imageUrl: photoUrl || null,
           vendorId: selectedVendorId,
+          storeId: (selectedVendor as any)?.storeId || undefined,
+          vendorName: selectedVendor?.businessName || undefined,
+          email: (selectedVendor as any)?.contactEmail || undefined,
+          vendorEmail: (selectedVendor as any)?.contactEmail || undefined,
           status: isAvailable ? 'available' : 'out_of_stock',
+          isPublished: isAvailable,
           preorderEnabled: isPreorder,
           preorderDate: isPreorder ? preorderNote : null,
           compulsoryExtras: flatCompulsoryExtras,
@@ -151,13 +354,28 @@ export default function AddFoodPage() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save food item');
+      let data: any = {};
+      const responseText = await res.text();
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { error: responseText || `Server responded with status ${res.status}` };
       }
 
-      alert('Food item uploaded successfully! It is now visible on the Admin page.');
-      router.push('/admin');
+      if (!res.ok) {
+        throw new Error(data.error || `Server error (${res.status}): Failed to save food item.`);
+      }
+
+      const targetVendorName = selectedVendor?.businessName || 'the vendor';
+      alert(`Food item submitted successfully for ${targetVendorName}! It is now live on Chow45.`);
+      localStorage.removeItem('chow45_vendor_add_food_page_draft');
+      localStorage.removeItem('chow45_vendor_food_draft');
+
+      if (isAdminFlow) {
+        router.push('/admin');
+      } else {
+        router.push('/vendor');
+      }
     } catch (err: any) {
       setSubmitError(err.message || 'Error saving food item');
     } finally {
@@ -181,17 +399,53 @@ export default function AddFoodPage() {
         {/* Top Bar */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
+            <Link href={isAdminFlow ? "/admin" : "/vendor"} className="p-2 text-[#6E6D66] hover:text-[#0C513F] bg-white rounded-full border border-gray-200 shadow-sm transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
             <div>
               <h1 className="font-display font-extrabold text-2xl text-[#111111]">Upload Vendor Food</h1>
-              <p className="text-xs text-[#6E6D66]">Publish real dishes to Chow45 marketplace and Admin dashboard</p>
+              <p className="text-xs text-[#6E6D66]">{isAdminFlow ? 'Upload food items directly for any vendor store' : 'Submits dishes directly to your Chow45 vendor menu'}</p>
             </div>
           </div>
-          <Link href="/admin" className="text-xs font-semibold text-[#0C513F] hover:underline">
-            View Admin Portal →
+          <Link href={isAdminFlow ? "/admin" : "/vendor"} className="text-xs font-semibold text-[#0C513F] hover:underline">
+            {isAdminFlow ? '← Back to Admin' : 'Vendor Dashboard →'}
           </Link>
+        </div>
+
+        {/* Auto-saved draft indicator */}
+        {draftSavedText && (
+          <div className="mb-6 px-4 py-3 rounded-2xl bg-[#E8F6F0] border border-[#0C513F]/20 flex items-center justify-between gap-3 text-xs text-[#0C513F] font-semibold">
+            <div className="flex items-center gap-2">
+              <span>🟢</span>
+              <span>{draftSavedText}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('chow45_vendor_add_food_page_draft');
+                localStorage.removeItem('chow45_vendor_food_draft');
+                setName('');
+                setDescription('');
+                setSinglePrice('');
+                setPhotoUrl(null);
+                setDraftSavedText('Draft cleared');
+              }}
+              className="text-xs text-red-600 hover:underline cursor-pointer"
+            >
+              Clear Draft
+            </button>
+          </div>
+        )}
+
+        {/* Verification notice */}
+        <div className="mb-6 p-4 rounded-2xl bg-[#FFF9E6] border border-[#FFC928]/40 flex items-start gap-3">
+          <span className="text-xl leading-none">⏳</span>
+          <div>
+            <h4 className="text-xs font-extrabold text-[#7A5B00]">Pending Admin Verification</h4>
+            <p className="text-xs text-[#8A6700] mt-0.5 leading-relaxed">
+              Dishes uploaded by vendors are held in a pending verification queue and will not be visible to customers in the marketplace until approved by the admin.
+            </p>
+          </div>
         </div>
 
         {submitError && (
@@ -211,9 +465,9 @@ export default function AddFoodPage() {
               className="w-full bg-[#FAF6EB] border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#0C513F]/20 focus:border-[#0C513F] outline-none font-semibold text-sm"
               required
             >
-              {vendorsList.map((v) => (
+              {vendorsList.map((v: any) => (
                 <option key={v.id} value={v.id}>
-                  {v.businessName || `Vendor #${v.id}`}
+                  {v.businessName || `Vendor #${v.id}`} {v.contactEmail ? `(${v.contactEmail})` : ''}
                 </option>
               ))}
             </select>
@@ -222,7 +476,15 @@ export default function AddFoodPage() {
           {/* Section 1: Photo */}
           <section className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <h2 className="font-display font-bold text-lg text-[#111111] mb-1">Food Photo</h2>
-            <p className="text-xs text-[#6E6D66] mb-4">Upload from your device gallery or photo files.</p>
+            <p className="text-xs text-[#6E6D66] mb-4">Upload from your device gallery or photo files. Supports all formats (PNG, JPG, WebP, AVIF, HEIC, SVG, GIF, etc.)</p>
+            
+            {photoError && (
+              <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold flex items-center justify-between">
+                <span>⚠️ {photoError}</span>
+                <button type="button" onClick={() => setPhotoError('')} className="text-red-500 hover:text-red-800 font-bold ml-2">✕</button>
+              </div>
+            )}
+
             {photoUrl ? (
               <div className="relative w-full h-52 rounded-xl overflow-hidden border border-gray-200">
                 <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -236,12 +498,17 @@ export default function AddFoodPage() {
               </div>
             ) : (
               <label className="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-[#0C513F]/20 rounded-2xl cursor-pointer bg-[#FAF6EB]/50 hover:bg-[#FAF6EB] hover:border-[#0C513F]/50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500 text-center px-4">
                   <span className="text-3xl mb-2">📸</span>
-                  <p className="text-sm font-bold text-[#0C513F]">Select photo from gallery</p>
-                  <p className="text-xs text-[#6E6D66] mt-0.5">JPG, PNG, WebP or GIF</p>
+                  <p className="text-sm font-bold text-[#0C513F]">Select photo from gallery or files</p>
+                  <p className="text-xs text-[#6E6D66] mt-1">PNG, JPG, WebP, AVIF, HEIC, GIF, SVG, BMP (any extension)</p>
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*,.png,.jpg,.jpeg,.webp,.avif,.heic,.heif,.bmp,.gif,.svg,.jfif,.tif,.tiff" 
+                  onChange={handlePhotoUpload} 
+                />
               </label>
             )}
           </section>

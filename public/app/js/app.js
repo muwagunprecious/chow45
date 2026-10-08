@@ -22,18 +22,7 @@ const Chow45App = {
       Chow45Auth.init();
     }
 
-    // Pull the vendor's real profile from the server. Only on the vendor route
-    // and only once a session exists, so the onboarding gate stays on top for
-    // signed-out visitors.
-    if (window.location.pathname.startsWith('/vendor')
-        && typeof Chow45Auth !== 'undefined'
-        && Chow45Auth.isLoggedIn()) {
-      Chow45Auth.loadVendorProfile();
-    }
-
     this.bindGlobalEvents();
-    this.updateRoleUI(window.chowStore.state.currentRole);
-    this.updateLocationUI(window.chowStore.state.selectedLocation);
 
     // Check URL pathname or parameters for direct role jumping (e.g. /vendor/food or /app?role=vendor)
     const urlParams = new URLSearchParams(window.location.search);
@@ -44,8 +33,23 @@ const Chow45App = {
       initialRole = 'vendor';
     }
 
+    const isVendorContext = pathname.startsWith('/vendor') ||
+      initialRole === 'vendor' ||
+      window.chowStore?.state?.currentRole === 'vendor' ||
+      sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true';
+
+    // Pull the vendor's real profile from the server whenever in vendor context
+    if (isVendorContext && typeof Chow45Auth !== 'undefined') {
+      Chow45Auth.loadVendorProfile();
+    }
+
+    this.updateRoleUI(window.chowStore.state.currentRole);
+    this.updateLocationUI(window.chowStore.state.selectedLocation);
+
     if (initialRole && ['customer', 'vendor', 'rider', 'admin'].includes(initialRole)) {
       this.switchRole(initialRole);
+    } else {
+      this.updateRoleUI(window.chowStore.state.currentRole || 'customer');
     }
 
     if (pathname.includes('/food') || urlParams.get('tab') === 'food') {
@@ -79,6 +83,51 @@ const Chow45App = {
           VendorController.render();
         }
       }
+
+      if (data.signedIn && data.user) {
+        const u = data.user;
+        const role = data.role === 'VENDOR' ? 'vendor' : 'customer';
+        const profile = {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || '',
+          role: role,
+          isLoggedIn: true
+        };
+
+        if (role === 'vendor' && Array.isArray(data.stores)) {
+          const myStore = data.stores.find(s => 
+            (s.userId && String(s.userId) === String(u.id)) ||
+            (s.numericId && String(s.numericId) === String(u.vendorId)) ||
+            (s.email && s.email.toLowerCase() === u.email.toLowerCase()) ||
+            (s.contactEmail && s.contactEmail.toLowerCase() === u.email.toLowerCase())
+          );
+          if (myStore) {
+            profile.storeId = myStore.id;
+            profile.vendorId = myStore.numericId;
+          }
+        }
+        if (window.chowStore && window.chowStore.state) {
+          window.chowStore.state.userProfile = Object.assign(
+            {},
+            window.chowStore.state.userProfile || {},
+            profile
+          );
+          if (window.chowStore.saveState) {
+            window.chowStore.saveState();
+          }
+        }
+        if (typeof Chow45Auth !== 'undefined') {
+          const session = {
+            token: 'chow45_session_' + Date.now(),
+            user: profile,
+            createdAt: new Date().toISOString()
+          };
+          localStorage.setItem(Chow45Auth.STORAGE_KEY, JSON.stringify(session));
+          Chow45Auth.updateUI();
+        }
+      }
     } catch (err) {
       console.warn('[chow45] could not sync from bootstrap:', err);
     }
@@ -91,10 +140,14 @@ const Chow45App = {
       this.updateLocationUI(state.selectedLocation);
     });
 
-    // Close modals on backdrop click
+    // Close modals on backdrop click (except mandatory first-time setup modal)
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
+          if (modal.id === 'vendor-first-setup-modal' && typeof Chow45Auth !== 'undefined' && Chow45Auth.closeFirstTimeSetup) {
+            Chow45Auth.closeFirstTimeSetup();
+            return;
+          }
           modal.classList.remove('open');
         }
       });
@@ -105,9 +158,15 @@ const Chow45App = {
     if (window.chowStore && window.chowStore.setRole) {
       window.chowStore.setRole(roleName);
     }
+    this.updateRoleUI(roleName);
+    if (roleName === 'vendor' && typeof Chow45Auth !== 'undefined') {
+      Chow45Auth.loadVendorProfile();
+    }
   },
 
   updateRoleUI(role) {
+    if (!role) role = 'customer';
+
     // Update role bar buttons
     document.querySelectorAll('.role-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.role === role);
@@ -125,7 +184,7 @@ const Chow45App = {
     });
 
     // Vendor bars highlight the sub-tab that is currently open.
-    const activeSubTab = window.VendorController && window.VendorController.activeSubTab;
+    const activeSubTab = (window.VendorController && window.VendorController.activeSubTab) || 'food';
     document.querySelectorAll('[data-vendor-tab]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.vendorTab === activeSubTab);
     });

@@ -357,7 +357,7 @@ p, .p {
   min-width: 119px;
   min-height: 48px;
   background-color: transparent;
-  color: #0c513f;
+  color: #00a205;
   border: 1px solid #e7eeec;
   border-radius: 9999px;
   padding: 12px 24px;
@@ -370,7 +370,7 @@ p, .p {
   transition: border-color var(--transition-snappy), background-color var(--transition-snappy);
 }
 .action-btn-secondary:hover, .button-secondary:hover, .btn-secondary:hover {
-  border-color: #0c513f;
+  border-color: #00a205;
   background-color: #f0fdf4;
 }
 
@@ -494,7 +494,9 @@ a.text-link, .link-btn {
   font-weight: 600;
   color: var(--c-text-muted);
   cursor: pointer;
-  padding: 6px 12px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
   border-radius: var(--radius-md);
   transition: all var(--transition-snappy);
   position: relative;
@@ -942,6 +944,9 @@ a.text-link, .link-btn {
   }
   .modal-body {
     padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
     -webkit-overflow-scrolling: touch;
   }
   .modal-footer {
@@ -1640,6 +1645,11 @@ a.text-link, .link-btn {
   font-size: 0.9rem;
 }
 
+.account-edit-toggle-btn:hover {
+  background: #F1F5F9 !important;
+  border-color: #94A3B8 !important;
+}
+
 .account-logout-wrap {
   border-top: 1px solid var(--c-border-subtle);
   padding-top: 16px;
@@ -1688,7 +1698,7 @@ a.text-link, .link-btn {
 }
 
 .auth-popup-card {
-  background: #FAF6EB;
+  background: #fafafa;
   border: 2px solid #00B978;
   border-radius: 24px;
   padding: 26px 22px 22px;
@@ -1722,7 +1732,7 @@ a.text-link, .link-btn {
   font-family: var(--font-display, inherit);
   font-size: 1.15rem;
   font-weight: 800;
-  color: #0C513F;
+  color: #00a205;
   margin: 0 0 8px 0;
 }
 
@@ -1757,18 +1767,18 @@ a.text-link, .link-btn {
 }
 
 .auth-popup-btn.primary {
-  background: #0C513F;
-  color: #FAF6EB;
+  background: #00a205;
+  color: #fafafa;
 }
 
 .auth-popup-btn.primary:hover {
   background: #00B978;
-  color: #0C513F;
+  color: #00a205;
 }
 
 .auth-popup-btn-upload {
   background: #00B978;
-  color: #0C513F;
+  color: #00a205;
   font-weight: 800;
   box-shadow: 0 4px 12px rgba(0, 185, 120, 0.35);
 }
