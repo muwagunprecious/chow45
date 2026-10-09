@@ -1116,9 +1116,11 @@ const Chow45Auth = {
     if (store?.numericId) headers['x-vendor-id'] = String(store.numericId);
     if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
 
-    const qs = store?.id
-      ? `?storeId=${encodeURIComponent(store.id)}`
-      : (vendorEmail ? `?email=${encodeURIComponent(vendorEmail)}` : '');
+    const params = new URLSearchParams();
+    if (store?.id && !store.id.includes('-') === false) params.set('storeId', store.id);
+    if (store?.numericId) params.set('vendorId', String(store.numericId));
+    if (vendorEmail) params.set('email', vendorEmail);
+    const qs = params.toString() ? `?${params.toString()}` : '';
 
     try {
       const res = await fetch(`/api/vendor/profile${qs}`, {
@@ -1159,25 +1161,41 @@ const Chow45Auth = {
 
       // Sync resolved store details into store state
       if (window.chowStore?.state) {
-        if (window.chowStore.state.userProfile) {
-          window.chowStore.state.userProfile.storeId = profile.storeId;
-          window.chowStore.state.userProfile.vendorId = profile.id;
-          window.chowStore.state.userProfile.name = profile.businessName;
-          if (profile.contactEmail && !window.chowStore.state.userProfile.email) {
-            window.chowStore.state.userProfile.email = profile.contactEmail;
-          }
+        if (!window.chowStore.state.userProfile) window.chowStore.state.userProfile = {};
+        window.chowStore.state.userProfile.storeId = profile.storeId;
+        window.chowStore.state.userProfile.vendorId = profile.id;
+        window.chowStore.state.userProfile.name = profile.businessName;
+        if (profile.contactEmail && !window.chowStore.state.userProfile.email) {
+          window.chowStore.state.userProfile.email = profile.contactEmail;
         }
+
         if (window.chowStore.state.vendorOnboarding) {
           window.chowStore.state.vendorOnboarding.storeId = profile.storeId;
           window.chowStore.state.vendorOnboarding.status = 'approved';
           window.chowStore.state.vendorOnboarding.storeName = profile.businessName;
         }
+
+        // Link with existing store in restaurants list
+        const rests = window.chowStore.state.restaurants || [];
+        let matched = rests.find(r => r.id === profile.storeId || (r.numericId && r.numericId === profile.id));
+        if (!matched && profile.contactEmail) {
+          const ce = profile.contactEmail.toLowerCase();
+          matched = rests.find(r => (r.email && r.email.toLowerCase() === ce) || (r.contactEmail && r.contactEmail.toLowerCase() === ce));
+        }
+        if (matched) {
+          matched.id = profile.storeId;
+          matched.numericId = profile.id;
+          matched.name = profile.businessName;
+          matched.address = profile.address || matched.address;
+          matched.email = profile.contactEmail || matched.email;
+        }
         window.chowStore.save();
       }
 
-      // Refresh vendor dashboard views with verified store data
-      if (typeof VendorController !== 'undefined' && VendorController.render) {
-        VendorController.render();
+      // Refresh vendor dashboard views and sync menu items from server immediately
+      if (typeof VendorController !== 'undefined') {
+        if (VendorController.render) VendorController.render();
+        if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
       }
 
       // Check one-time password and location setup for tolaniakin2022@gmail.com

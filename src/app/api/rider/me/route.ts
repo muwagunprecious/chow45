@@ -54,6 +54,8 @@ export async function GET(request: Request) {
           address: vendors.address,
           ownerPhone: vendors.ownerPhone,
           contactEmail: vendors.contactEmail,
+          latitude: vendors.latitude,
+          longitude: vendors.longitude,
         })
         .from(vendors)
         .where(eq(vendors.id, order.vendorId))

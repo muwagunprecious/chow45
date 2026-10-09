@@ -92,10 +92,12 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const storeId = url.searchParams.get("storeId");
   const vendorIdParam = url.searchParams.get("vendorId");
+  const emailParam = url.searchParams.get("email");
 
   const auth = await requireVendor(request, {
     storeId: storeId || undefined,
     vendorId: vendorIdParam || undefined,
+    email: emailParam || undefined,
   });
 
   if (!auth.ok) {

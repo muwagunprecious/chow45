@@ -113,9 +113,11 @@ export default function AddFoodPage() {
 
     fetch('/api/admin/foods')
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         if (data.vendors && data.vendors.length > 0) {
           setVendorsList(data.vendors);
+
+          const isFromAdmin = typeof window !== 'undefined' && (window.location.search.includes('admin') || window.location.pathname.includes('admin'));
 
           // 1. Check if vendorId is specified in URL query parameters (e.g. from /admin)
           try {
@@ -140,7 +142,40 @@ export default function AddFoodPage() {
             }
           } catch {}
 
-          // 2. Check if user is currently signed in as a vendor in localStorage
+          // 2. Fetch authenticated vendor profile directly from server
+          try {
+            const profileRes = await fetch('/api/vendor/profile', { credentials: 'include' });
+            if (profileRes.ok) {
+              const profData = await profileRes.json();
+              if (profData.vendor && profData.vendor.id) {
+                const match = data.vendors.find((v: any) => v.id === profData.vendor.id);
+                if (match) {
+                  setSelectedVendorId(match.id);
+                  return;
+                }
+              }
+            }
+          } catch {}
+
+          // 3. Check localStorage for marketplace state
+          try {
+            const rawMarket = localStorage.getItem('chow45_marketplace_state_v2');
+            if (rawMarket) {
+              const mState = JSON.parse(rawMarket);
+              const vId = mState?.userProfile?.vendorId;
+              const vEmail = mState?.userProfile?.email?.toLowerCase();
+              if (vId) {
+                const match = data.vendors.find((v: any) => v.id === Number(vId));
+                if (match) { setSelectedVendorId(match.id); return; }
+              }
+              if (vEmail) {
+                const match = data.vendors.find((v: any) => v.contactEmail?.toLowerCase() === vEmail);
+                if (match) { setSelectedVendorId(match.id); return; }
+              }
+            }
+          } catch {}
+
+          // 4. Check auth session v1
           try {
             const rawSession = localStorage.getItem('chow45_auth_session_v1');
             if (rawSession) {
@@ -156,7 +191,9 @@ export default function AddFoodPage() {
             }
           } catch {}
 
-          setSelectedVendorId(data.vendors[0].id);
+          if (isFromAdmin && data.vendors.length > 0) {
+            setSelectedVendorId(data.vendors[0].id);
+          }
         }
       })
       .catch((err) => console.warn('Could not load vendors list:', err));

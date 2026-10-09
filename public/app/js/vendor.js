@@ -217,65 +217,194 @@ const VendorController = {
    * Only ever their own store. There is deliberately NO fallback to the first
    * restaurant in the list: that handed the vendor another restaurant's dishes
    * and store info. With no store of their own yet, the dashboard renders an empty
+  _resolveVendorIdentity() {
+    let email = window.chowStore?.state?.userProfile?.email || this.getOnboarding()?.email || '';
+    let userId = window.chowStore?.state?.userProfile?.id || null;
+    let vendorId = window.chowStore?.state?.userProfile?.vendorId || null;
+    let storeId = window.chowStore?.state?.userProfile?.storeId || this.getOnboarding()?.storeId || '';
+    let name = window.chowStore?.state?.userProfile?.name || this.getOnboarding()?.storeName || '';
+
+    // Check Chow45Auth session
+    if (!email && window.Chow45Auth && typeof window.Chow45Auth.getSession === 'function') {
+      const s = window.Chow45Auth.getSession();
+      if (s) {
+        if (s.email) email = s.email;
+        if (s.id) userId = userId || s.id;
+        if (s.vendorId) vendorId = vendorId || s.vendorId;
+        if (s.storeId) storeId = storeId || s.storeId;
+        if (s.name) name = name || s.name;
+      }
+    }
+
+    // Check localStorage session fallback
+    if (!email) {
+      try {
+        const raw = localStorage.getItem('chow45_auth_session_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const u = parsed.user || parsed;
+          if (u.email) email = u.email;
+          if (u.id) userId = userId || u.id;
+          if (u.vendorId) vendorId = vendorId || u.vendorId;
+          if (u.storeId) storeId = storeId || u.storeId;
+          if (u.name) name = name || u.name;
+        }
+      } catch (e) {}
+    }
+
+    if (!email) {
+      try {
+        const rawU = localStorage.getItem('chow45_user');
+        if (rawU) {
+          const u = JSON.parse(rawU);
+          if (u.email) email = u.email;
+          if (u.id) userId = userId || u.id;
+          if (u.vendorId) vendorId = vendorId || u.vendorId;
+          if (u.storeId) storeId = storeId || u.storeId;
+        }
+      } catch (e) {}
+    }
+
+    return { email: String(email || '').trim().toLowerCase(), userId, vendorId, storeId, name: String(name || '').trim() };
+  },
+
+  _bindStoreIdentifiers(store, ident) {
+    if (!store) return;
+    if (ident.vendorId && !store.numericId) store.numericId = ident.vendorId;
+    if (ident.userId && !store.userId) store.userId = ident.userId;
+    if (!store.email && (store.contactEmail || ident.email)) {
+      store.email = store.contactEmail || ident.email;
+    }
+    if (window.chowStore?.state?.userProfile) {
+      const up = window.chowStore.state.userProfile;
+      up.storeId = store.id;
+      if (store.numericId) up.vendorId = store.numericId;
+      if (store.email && !up.email) up.email = store.email;
+    }
+  },
+
+  async _ensureStoreFetched(email) {
+    if (this._isFetchingProfile || !email) return;
+    this._isFetchingProfile = true;
+    try {
+      const res = await fetch(`/api/vendor/profile?email=${encodeURIComponent(email)}`, {
+        headers: { 'x-vendor-email': email },
+        credentials: 'include'
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.vendor) {
+        const v = data.vendor;
+        if (window.chowStore?.state) {
+          if (!window.chowStore.state.userProfile) window.chowStore.state.userProfile = {};
+          window.chowStore.state.userProfile.storeId = v.storeId;
+          window.chowStore.state.userProfile.vendorId = v.id;
+          window.chowStore.state.userProfile.name = v.businessName;
+          if (v.contactEmail) window.chowStore.state.userProfile.email = v.contactEmail;
+
+          const rests = window.chowStore.state.restaurants || [];
+          let matched = rests.find(r => r.id === v.storeId || (r.numericId && r.numericId === v.id));
+          if (!matched && v.contactEmail) {
+            matched = rests.find(r => (r.email && r.email.toLowerCase() === v.contactEmail.toLowerCase()) || (r.contactEmail && r.contactEmail.toLowerCase() === v.contactEmail.toLowerCase()));
+          }
+          if (matched) {
+            matched.id = v.storeId;
+            matched.numericId = v.id;
+            matched.name = v.businessName;
+            matched.address = v.address || matched.address;
+            matched.email = v.contactEmail || matched.email;
+          }
+          window.chowStore.save();
+          this.syncMenuFromServer();
+        }
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      this._isFetchingProfile = false;
+    }
+  },
+
+  /**
+   * The store the signed-in vendor is looking at.
+   *
+   * Only ever their own store. There is deliberately NO fallback to the first
+   * restaurant in the list: that handed the vendor another restaurant's dishes
+   * and store info. With no store of their own yet, the dashboard renders an empty
    * store rather than another vendor's data.
    */
   getStore() {
     const ob = this.getOnboarding();
-    const userProfile = window.chowStore?.state?.userProfile;
     const restaurants = window.chowStore?.state?.restaurants || [];
+    const ident = this._resolveVendorIdentity();
+    const cleanEmail = ident.email;
+    const targetStoreId = ident.storeId;
+    const targetUserId = ident.userId;
+    const targetVendorId = ident.vendorId;
 
-    // 1. Try matching by storeId from userProfile or onboarding
-    const targetStoreId = userProfile?.storeId || ob?.storeId;
+    // 1. Try matching by storeId
     if (targetStoreId) {
       const found = restaurants.find(r => r.id === targetStoreId);
-      if (found) return found;
+      if (found) {
+        this._bindStoreIdentifiers(found, ident);
+        return found;
+      }
     }
 
     // 2. Try matching by numeric vendorId or userId
-    const targetUserId = userProfile?.id;
-    const targetVendorId = userProfile?.vendorId;
     if (targetUserId || targetVendorId) {
       const found = restaurants.find(r => 
         (targetUserId && r.userId && String(r.userId) === String(targetUserId)) ||
         (targetVendorId && r.numericId && String(r.numericId) === String(targetVendorId))
       );
-      if (found) return found;
+      if (found) {
+        this._bindStoreIdentifiers(found, ident);
+        return found;
+      }
     }
 
     // 3. Try matching by vendor email
-    const vendorEmail = userProfile?.email || ob?.email;
-    if (vendorEmail) {
-      const cleanEmail = vendorEmail.trim().toLowerCase();
+    if (cleanEmail) {
       const found = restaurants.find(r => 
         (r.email && r.email.toLowerCase() === cleanEmail) ||
         (r.ownerEmail && r.ownerEmail.toLowerCase() === cleanEmail) ||
         (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail)
       );
-      if (found) return found;
+      if (found) {
+        this._bindStoreIdentifiers(found, ident);
+        return found;
+      }
     }
 
     // 4. Try matching by store name
-    const storeNameCandidate = userProfile?.name || ob?.storeName;
-    if (storeNameCandidate && typeof storeNameCandidate === 'string') {
+    const storeNameCandidate = ident.name;
+    if (storeNameCandidate && typeof storeNameCandidate === 'string' && storeNameCandidate.length > 2) {
       const cleanName = storeNameCandidate.trim().toLowerCase();
       const found = restaurants.find(r => r.name && r.name.trim().toLowerCase() === cleanName);
-      if (found) return found;
+      if (found) {
+        this._bindStoreIdentifiers(found, ident);
+        return found;
+      }
+    }
+
+    // If an email exists, fetch store profile in background to resolve true database record
+    if (cleanEmail) {
+      this._ensureStoreFetched(cleanEmail);
     }
 
     // 5. Fallback: synthesize their own store if signed in with vendor email
-    if (vendorEmail) {
-      const cleanEmail = vendorEmail.trim().toLowerCase();
-      const storeId = userProfile?.storeId || ob?.storeId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
-      const storeName = userProfile?.name || ob?.storeName || (cleanEmail.split('@')[0] + "'s Kitchen");
-      const storeAddr = userProfile?.storeAddress || userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
+    if (cleanEmail) {
+      const storeId = targetStoreId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
+      const storeName = ident.name || (cleanEmail.split('@')[0] + "'s Kitchen");
+      const storeAddr = window.chowStore?.state?.userProfile?.storeAddress || window.chowStore?.state?.userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
       const newStore = {
         id: storeId,
-        numericId: userProfile?.vendorId || undefined,
+        numericId: targetVendorId || undefined,
         name: storeName,
         address: storeAddr,
         email: cleanEmail,
         contactEmail: cleanEmail,
-        phone: userProfile?.phone || ob?.phone || '',
+        phone: window.chowStore?.state?.userProfile?.phone || ob?.phone || '',
         bannerImg: '',
         openingTime: '08:00',
         closingTime: '21:00',
@@ -296,7 +425,7 @@ const VendorController = {
       return newStore;
     }
 
-    // 4. If no user or store is resolved, return empty store — NEVER fallback to another vendor's store!
+    // 6. If no user or store is resolved, return empty store — NEVER fallback to another vendor's store!
     return null;
   },
 
@@ -410,12 +539,21 @@ const VendorController = {
       const store = this.getStore();
       if (!store) return;
 
-      const storeId = store.id || '';
-      const url = storeId ? `/api/vendor/menu-items?storeId=${encodeURIComponent(storeId)}` : '/api/vendor/menu-items';
-      const headers = {};
-      if (store.id) headers['x-vendor-store-id'] = String(store.id);
-      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
-      if (store.email) headers['x-vendor-email'] = String(store.email);
+      const ident = this._resolveVendorIdentity();
+      const storeId = store.id || ident.storeId || '';
+      const vendorId = store.numericId || ident.vendorId || '';
+      const vendorEmail = store.email || store.contactEmail || ident.email || '';
+
+      const params = new URLSearchParams();
+      if (storeId) params.set('storeId', storeId);
+      if (vendorId) params.set('vendorId', String(vendorId));
+      if (vendorEmail) params.set('email', vendorEmail);
+
+      const url = `/api/vendor/menu-items?${params.toString()}`;
+      const headers = { 'Content-Type': 'application/json' };
+      if (storeId) headers['x-vendor-store-id'] = String(storeId);
+      if (vendorId) headers['x-vendor-id'] = String(vendorId);
+      if (vendorEmail) headers['x-vendor-email'] = String(vendorEmail);
 
       const res = await fetch(url, {
         headers,
@@ -468,6 +606,16 @@ const VendorController = {
       });
 
       store.menu = clientDishes;
+
+      // Ensure restaurants array also has the updated menu
+      const matchedStore = (window.chowStore?.state?.restaurants || []).find(r =>
+        (store.id && r.id === store.id) ||
+        (store.numericId && r.numericId === store.numericId) ||
+        (vendorEmail && (r.email === vendorEmail || r.contactEmail === vendorEmail))
+      );
+      if (matchedStore) {
+        matchedStore.menu = clientDishes;
+      }
 
       if (window.chowStore) {
         window.chowStore.save();

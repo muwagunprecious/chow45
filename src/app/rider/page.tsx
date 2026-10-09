@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { riderAuthClient } from '@/lib/auth-client';
+import RiderMap from '@/components/rider/rider-map';
 
 interface RiderProfile {
   id: string;
@@ -54,6 +55,13 @@ interface ActiveMission {
   customerPhone?: string;
   deliveryAddress: string;
   deliveryNotes?: string;
+  deliveryLocation?: {
+    latitude?: number;
+    longitude?: number;
+    lat?: number;
+    lng?: number;
+    address?: string;
+  };
   subtotal: number;
   deliveryFee: number;
   total: number;
@@ -64,6 +72,8 @@ interface ActiveMission {
     businessName: string;
     address: string | null;
     ownerPhone: string | null;
+    latitude?: string | number | null;
+    longitude?: string | number | null;
   };
 }
 
@@ -134,6 +144,66 @@ export default function RiderDashboardPage() {
   const [newAccNumber, setNewAccNumber] = useState('');
   const [newAccName, setNewAccName] = useState('');
   const [bankFormError, setBankFormError] = useState<string | null>(null);
+
+  // Live GPS Real-time tracking
+  const [riderCoords, setRiderCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+
+    let watchId: number | null = null;
+
+    const pushLocation = async (lat: number, lng: number, accuracy?: number) => {
+      setRiderCoords({ lat, lng });
+      if (accuracy) setGpsAccuracy(Math.round(accuracy));
+
+      try {
+        await fetch('/api/rider/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lat, lng }),
+        });
+
+        if (activeMission?.id) {
+          await fetch(`/api/orders/${activeMission.id}/track`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng }),
+          });
+        }
+      } catch (e) {
+        // silent heartbeat
+      }
+    };
+
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          pushLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+        },
+        (err) => {
+          console.warn('Geolocation error:', err.message);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      );
+    } catch (e) {}
+
+    const interval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          pushLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+        },
+        undefined,
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }, 10000);
+
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      clearInterval(interval);
+    };
+  }, [activeMission?.id]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -286,7 +356,11 @@ export default function RiderDashboardPage() {
       const res = await fetch('/api/rider/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isOnline: targetStatus }),
+        body: JSON.stringify({
+          isOnline: targetStatus,
+          lat: riderCoords?.lat,
+          lng: riderCoords?.lng,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update online state');
@@ -585,6 +659,27 @@ export default function RiderDashboardPage() {
               </div>
             </div>
 
+            {/* Live GPS Radar Map */}
+            {rider?.isOnline && (
+              <div className="bg-[#ffffff] rounded-2xl p-3 border border-[#00a205]/15 shadow-sm space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#00a205] flex items-center gap-1.5">
+                    <span>📡</span> <span>Live Dispatch Radar & Area Map</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-[#00a205] bg-[#00a205]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00a205] animate-ping" />
+                    Tracking Active
+                  </span>
+                </div>
+                <RiderMap
+                  riderLocation={riderCoords}
+                  isOnline={true}
+                  height="160px"
+                  showDirectionsBtn={false}
+                />
+              </div>
+            )}
+
             {/* If Rider has an active delivery while viewing radar */}
             {activeMission && (
               <div className="bg-[#00a205] text-white rounded-2xl p-4 shadow-md flex items-center justify-between">
@@ -755,6 +850,42 @@ export default function RiderDashboardPage() {
                       </a>
                     </div>
                   )}
+                </div>
+
+                {/* Real-Time Interactive Mission Map */}
+                <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/15 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] flex items-center gap-1.5">
+                      <span>🗺️</span> <span>Live Navigation & GPS Route</span>
+                    </h4>
+                    {gpsAccuracy && (
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">
+                        GPS ±{gpsAccuracy}m
+                      </span>
+                    )}
+                  </div>
+                  <RiderMap
+                    riderLocation={riderCoords}
+                    pickupLocation={
+                      activeMission.vendor
+                        ? {
+                            lat: Number(activeMission.vendor.latitude || 6.8475),
+                            lng: Number(activeMission.vendor.longitude || 3.6530),
+                            name: activeMission.storeName,
+                            address: activeMission.vendor.address || activeMission.storeAddress,
+                          }
+                        : null
+                    }
+                    dropoffLocation={{
+                      lat: Number(activeMission.deliveryLocation?.latitude || activeMission.deliveryLocation?.lat || 6.8482),
+                      lng: Number(activeMission.deliveryLocation?.longitude || activeMission.deliveryLocation?.lng || 3.6545),
+                      name: activeMission.customerName,
+                      address: activeMission.deliveryAddress,
+                    }}
+                    activeMissionId={activeMission.id}
+                    height="280px"
+                    showDirectionsBtn={true}
+                  />
                 </div>
 
                 {/* Delivery Items Checklist */}

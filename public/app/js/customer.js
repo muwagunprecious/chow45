@@ -1412,6 +1412,21 @@ const CustomerController = {
             }
           }
         }
+
+        // Live Rider GPS Tracking: update live marker on Mapbox map
+        try {
+          const trackRes = await fetch(`/api/orders/${orderId}/track`);
+          if (trackRes.ok) {
+            const trackData = await trackRes.json();
+            if (trackData && Number.isFinite(trackData.riderLat) && Number.isFinite(trackData.riderLng)) {
+              if (window.chowMap && typeof window.chowMap.updateRiderPosition === 'function') {
+                window.chowMap.updateRiderPosition(trackData.riderLng, trackData.riderLat);
+              }
+            }
+          }
+        } catch (tErr) {
+          // ignore tracking poll network blip
+        }
       } catch (err) {
         // silent
       }

@@ -760,6 +760,19 @@ class MapboxService {
     }, 400);
   }
 
+  updateRiderPosition(lng, lat) {
+    if (this.routeAnimationTimer) {
+      clearInterval(this.routeAnimationTimer);
+      this.routeAnimationTimer = null;
+    }
+    const numLng = Number(lng);
+    const numLat = Number(lat);
+    if (!Number.isFinite(numLng) || !Number.isFinite(numLat)) return;
+    if (this.pixelMarkers && this.pixelMarkers.rider) {
+      this.pixelMarkers.rider.setLngLat([numLng, numLat]);
+    }
+  }
+
   // -------------------------------------------------------------
   // ZONE POLYGON EDITOR (Admin Service Areas)
   // -------------------------------------------------------------
