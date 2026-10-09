@@ -53,12 +53,14 @@ export default function RiderLoginPage() {
       {/* Header */}
       <header className="sticky top-0 z-30 bg-[#fafafa]/90 backdrop-blur-md border-b border-[#00a205]/10 px-4 py-3 sm:px-6">
         <div className="max-w-md mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="w-8 h-8 rounded-full bg-[#00a205] text-white flex items-center justify-center font-black text-sm tracking-tighter group-hover:scale-105 transition-transform">
-              45
-            </span>
-            <span className="font-bold text-lg tracking-tight text-[#00a205]">
-              CHOW<span className="text-[#E75A24]">45</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="Chow45 Logo"
+              className="h-9 w-9 object-contain rounded-full border border-[#e5e7eb] p-0.5 bg-white"
+            />
+            <span className="font-bold text-xl tracking-tight text-black">
+              Chow<span className="text-[#00a205]">45</span>
             </span>
           </Link>
           <span className="text-xs font-semibold text-[#00a205]/70 bg-[#00a205]/5 px-2.5 py-1 rounded-full border border-[#00a205]/10">
@@ -71,8 +73,22 @@ export default function RiderLoginPage() {
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-md bg-[#ffffff] rounded-3xl border border-[#00a205]/10 shadow-xl shadow-[#00a205]/5 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-full bg-[#00a205]/10 text-[#00a205] flex items-center justify-center text-3xl mx-auto mb-3">
-              🛵
+            <div className="w-14 h-14 rounded-full bg-[#00a205]/10 text-[#00a205] flex items-center justify-center mx-auto mb-3">
+              <svg
+                aria-hidden="true"
+                width="26"
+                height="26"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="5.5" cy="17.5" r="3.5" />
+                <circle cx="18.5" cy="17.5" r="3.5" />
+                <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2" />
+              </svg>
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-[#00a205]">
               Welcome Back, Rider
