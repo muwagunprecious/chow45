@@ -41,7 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 # Deliberately withheld local shells
-/src/app/app/
 /scratch/
 dev.log
 .kilo/
