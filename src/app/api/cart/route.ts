@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { cartItems, carts, menuItems, menuItemSizes, menuExtras, vendors } from "@/db";
-import { currentUserId } from "@/lib/session";
+import { requireUser } from "@/lib/guards";
 import { nonNegativeInt, readClientId } from "@/lib/validation";
 
 /**
@@ -97,20 +97,25 @@ async function readCart(userId: number) {
 }
 
 export async function GET(request: Request) {
-  const userId = await currentUserId(request);
-  if (userId === null) {
-    // Browsing is public, so a guest simply has no cart rather than an error.
+   const check = await requireUser();
+  if (!check.authorized) {
+    // If not authorized, return empty cart
     return NextResponse.json({ cart: { id: null, storeId: null, storeName: null, items: [] } });
   }
+
+  const userId = Number(check.user.id);
 
   return NextResponse.json({ cart: await readCart(userId) });
 }
 
 export async function POST(request: Request) {
-  const userId = await currentUserId(request);
-  if (userId === null) {
+  const check = await requireUser();
+
+  if (!check.authorized) {
     return NextResponse.json({ error: "Sign in to use the basket." }, { status: 401 });
   }
+
+   const userId = Number(check.user.id);
 
   let body: Record<string, unknown>;
   try {

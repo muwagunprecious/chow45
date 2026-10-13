@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { menuItems } from "@/db/schema/menu-items";
 import { menuItemSizes } from "@/db/schema/menu-item-sizes";
 import { menuExtras } from "@/db/schema/menu-extras";
-import { requireVendor } from "@/lib/session";
+import { requireVendor } from "@/lib/guards"
 
 /**
  * Menu items and their size variants for the signed-in vendor.
@@ -90,24 +90,16 @@ function parseExtras(raw: unknown, menuItemId: string, extraType: "REQUIRED" | "
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const storeId = url.searchParams.get("storeId");
-  const vendorIdParam = url.searchParams.get("vendorId");
-  const emailParam = url.searchParams.get("email");
+  const check = await requireVendor();
 
-  const auth = await requireVendor(request, {
-    storeId: storeId || undefined,
-    vendorId: vendorIdParam || undefined,
-    email: emailParam || undefined,
-  });
-
-  if (!auth.ok) {
+  if (!check.authorized) {
     return NextResponse.json(
-      { error: auth.error, message: "Unauthorized. Please sign in as a vendor to view your menu." },
-      { status: auth.status }
+      { error: "UNAUTHORIZED", message: "Unauthorized. Please sign in as a vendor to view your menu." },
+      { status: 401 }
     );
   }
 
-  const vendorId = auth.vendor.id;
+  const vendorId = check.vendor.id;
 
   const items = await db
     .select()
@@ -155,20 +147,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
     }
 
-    const auth = await requireVendor(request, {
-      storeId: body.storeId,
-      vendorId: body.vendorId,
-      email: body.email || body.vendorEmail,
-    });
+    const check = await requireVendor();
 
-    if (!auth.ok) {
+    if (!check.authorized) {
       return NextResponse.json(
-        { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
-        { status: auth.status }
+        { error: "UNAUTHORIZED", message: "Unauthorized. Please sign in as a vendor." },
+        { status: 401 }
       );
     }
 
-    const vendorId = auth.vendor.id;
+    const vendorId = check.vendor.id;
 
     const name = String(body.name ?? "").trim();
     if (!name) {
@@ -327,19 +315,16 @@ export async function DELETE(request: Request) {
     id = (body?.id as string) || null;
   }
 
-  const auth = await requireVendor(request, {
-    storeId: storeIdParam || body?.storeId || undefined,
-    vendorId: vendorIdParam || body?.vendorId || undefined,
-  });
+  const check = await requireVendor();
 
-  if (!auth.ok) {
+  if (!check.authorized) {
     return NextResponse.json(
-      { error: auth.error, message: "Unauthorized. Please sign in as a vendor." },
-      { status: auth.status }
+      { error: "UNAUTHORIZED", message: "Unauthorized. Please sign in as a vendor." },
+      { status: 401 }
     );
   }
 
-  const vendorId = auth.vendor.id;
+  const vendorId = check.vendor.id;
 
   const itemId = readClientId(id);
   if (!itemId) {

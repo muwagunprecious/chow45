@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { riders } from "@/db/schema/riders";
-import { requireRider } from "@/lib/session";
+import { requireRider } from "@/lib/guards";
 import { toLat, toCoord } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
-    const auth = await requireRider(request, true);
-    if (!auth.ok) {
-      return NextResponse.json(
-        { error: auth.error, message: auth.message },
-        { status: auth.status }
-      );
-    }
+    const check = await requireRider();
+  if (!check.authorized) {
+    return NextResponse.json({ error: "Forbidden: Vendor access required." }, { status: 403 });
+  }
 
-    const { rider } = auth;
+    const rider = check.rider;
+
     const body = await request.json().catch(() => ({}));
 
     const lat = body.lat !== undefined ? toLat(body.lat) : body.currentLat !== undefined ? toLat(body.currentLat) : null;

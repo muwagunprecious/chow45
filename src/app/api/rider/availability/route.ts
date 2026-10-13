@@ -3,19 +3,18 @@ import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { riders } from "@/db/schema/riders";
 import { orders } from "@/db/schema/orders";
-import { requireRider } from "@/lib/session";
+import { requireRider } from "@/lib/guards";
 import { toLat, toCoord } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const auth = await requireRider(request, true);
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: auth.error, message: auth.message },
-      { status: auth.status }
-    );
+  const check = await requireRider();
+
+    if (!check.authorized) {
+    return NextResponse.json({ error: "Forbidden: Vendor access required." }, { status: 403 });
   }
 
-  const { rider } = auth;
+
+  const rider = check.rider;
   const body = await request.json().catch(() => ({}));
   const isOnline = Boolean(body.isOnline);
 

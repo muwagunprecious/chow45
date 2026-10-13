@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { vendors, vendorWallets, users } from "@/db";
-import { requireVendor } from "@/lib/session";
+import { requireVendor } from "@/lib/guards";
 import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
 /**
@@ -42,18 +42,14 @@ export async function GET(request: Request) {
     const vendorId = url.searchParams.get("vendorId");
     const email = url.searchParams.get("email");
 
-    const authResult = await requireVendor(request, {
-      storeId: storeId || undefined,
-      vendorId: vendorId || undefined,
-      email: email || undefined,
-    });
+    const check = await requireVendor();
 
-    if (!authResult.ok) {
+    if (!check.authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const vendor = authResult.vendor;
-    const userEmail = (authResult.user?.email || vendor?.contactEmail || "").toLowerCase();
+    const vendor = check.vendor;
+    const userEmail = (check.user?.email || vendor?.contactEmail || "").toLowerCase();
     const isTargetUser = userEmail === "tolaniakin2022@gmail.com";
     const hasDoneSetup = vendor?.tags?.includes("first_time_setup_done") ?? false;
     const requiresFirstTimeSetup = isTargetUser && !hasDoneSetup;
@@ -72,18 +68,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({} as Record<string, unknown>));
 
-    const authResult = await requireVendor(request, {
-      storeId: body.storeId,
-      vendorId: body.vendorId,
-      email: body.contactEmail || body.email,
-    });
+    const check = await requireVendor();
 
-    if (!authResult.ok) {
+    if (!check.authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = authResult.userId;
-    const currentVendor = authResult.vendor;
+    const userId = check.vendor.id;
+    const currentVendor = check.vendor;
 
     const businessName = String(body.businessName ?? currentVendor?.businessName ?? "").trim();
     if (businessName.length < 2) {

@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { addresses } from "@/db";
 import { currentUserId } from "@/lib/session";
+import { requireUser } from "@/lib/guards";
 import { optionalText, toCoord } from "@/lib/validation";
 import { serializeAddress } from "@/lib/serializers";
 
@@ -27,10 +28,13 @@ import { serializeAddress } from "@/lib/serializers";
 const MAX_SAVED = 8;
 
 export async function GET(request: Request) {
-  const userId = await currentUserId(request);
-  if (userId === null) {
+  const check = await requireUser();
+
+  if (!check.authorized) {
     return NextResponse.json({ addresses: [] });
   }
+
+  const userId = Number(check.user.id);
 
   const rows = await db
     .select()

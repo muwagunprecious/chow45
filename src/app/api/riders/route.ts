@@ -3,7 +3,11 @@ import { db,riders } from "@/db";
 import { and, eq, ilike } from "drizzle-orm";
 import { serializeRider } from "@/lib/serializers";
 
+/* This endpoint is used to get all available riders in an area*/
+
 export async function GET(req: Request){
+    
+
     try{
         const { searchParams } = new URL(req.url);
         const location = searchParams.get("location")?.toLowerCase().trim();

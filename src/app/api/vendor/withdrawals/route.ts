@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { vendors, vendorWallets, vendorWithdrawals } from "@/db";
 import { currentRole, currentVendorUserId } from "@/lib/session";
+import { requireVendor } from "@/lib/guards";
 import { optionalText } from "@/lib/validation";
 import { serializeWallet, serializeWithdrawal } from "@/lib/serializers";
 
@@ -19,7 +20,13 @@ import { serializeWallet, serializeWithdrawal } from "@/lib/serializers";
  * or not at all.
  */
 export async function POST(request: Request) {
-  const userId = await currentVendorUserId(request);
+ const check = await requireVendor();
+
+ if(!check.authorized){
+   return NextResponse.json({ error: "Forbidden: Vendor access required." }, { status: 403 });
+ }
+
+  const userId = check.vendor.id;
   if (userId === null) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -67,15 +67,22 @@ function generateUsernameFromEmail(email: string) {
  * Normal Chow45 users.
  *
  * VENDOR:
- * Event organizers/vendors.
+ * Food vendors.
+ * 
+ * RIDER:
+ * Moves food from vendor to user.
+ * 
+ * ADMIN:
+ * Manages the operation of activities.
+ * 
  */
-type Role = "USER" | "VENDOR" | "RIDER";
+type Role = "USER" | "VENDOR" | "RIDER" | "ADMIN";
 
 /**
  * Creates a Better Auth instance for a specific role.
  *
  * Instead of maintaining completely separate authentication
- * configurations for USER, VENDOR and RIDER, both use this same function.
+ * configurations for ADMIN, USER, VENDOR and RIDER, both use this same function.
  *
  * The role passed here determines:
  * - API authentication path
@@ -259,7 +266,7 @@ function createAuth(role: Role) {
          * /rider/login
          */
         onAPIError: {
-            errorURL: role === "RIDER" ? "rider/login" : role === "VENDOR" ? "/vendor/login" : "/login",
+            errorURL: role === "ADMIN" ? "/admin" : role === "RIDER" ? "rider/login" : role === "VENDOR" ? "/vendor/login" : "/login",
         },
 
 
@@ -851,3 +858,10 @@ export const vendorAuth = createAuth("VENDOR");
  * Only accounts with role = RIDER are allowed through this instance.
  */
 export const riderAuth = createAuth("RIDER");
+
+/**
+ * ADMIN authentication instance.
+ * Base path: /api/auth/admin
+ * Enforces role = ADMIN
+ */
+export const adminAuth = createAuth("ADMIN");

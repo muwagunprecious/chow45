@@ -14,6 +14,9 @@ export async function GET(req: Request) {
         return NextResponse.json( {error: "Unauthorized"}, {status:401});
     }
 
+    const userId = Number(check.user.id);
+    const userEmail = check.user.email;
+
     //Parsing query params
     const { searchParams } = new URL(req.url);
     const locationParam = searchParams.get("location")?.toLowerCase().trim();
