@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://chow45.com/sitemap.xml',
+    sitemap: 'https://chow45.app/sitemap.xml',
   };
 }

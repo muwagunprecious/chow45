@@ -268,7 +268,7 @@ const AdminController = {
         <div class="fee-field"><label>Service Fee (₦)</label><input id="fee-service" type="number" min="0" value="${c.serviceFee}" /></div>
         <div class="fee-field"><label>Rate per Meter (₦)</label><input id="fee-rate" type="number" step="0.01" min="0" value="${c.ratePerMeter}" /></div>
       </div>
-      <div class="fee-config-note">Delivery Fee = Base Fee + (route distance × rate/m). Quoted live per order via the Mapbox Routing API on Ogun State roads.</div>
+      <div class="fee-config-note">Delivery Fee = Base Fee + (route distance × rate/m). Quoted live per order via the Google Maps Platform Directions &amp; Routes API on Ogun State roads.</div>
       <button class="action-btn-primary" onclick="AdminController.saveFeeConfig()">Save Delivery Fee Configuration</button>
     `;
   },
@@ -345,28 +345,33 @@ const AdminController = {
         return;
       }
 
-      const zones = window.chowStore.state.serviceZones || [];
-      const features = zones
-        .filter(z => z.polygon && z.polygon.length >= 3)
-        .map(z => ({
-          type: 'Feature',
-          properties: { id: z.id, name: z.name, active: z.active },
-          geometry: { type: 'Polygon', coordinates: [z.polygon] }
-        }));
+      // Render service zones on operations map
+      if (window.chowMap && typeof window.chowMap.renderServiceZones === 'function') {
+        window.chowMap.renderServiceZones('admin-map-canvas');
+      } else {
+        const zones = window.chowStore.state.serviceZones || [];
+        const features = zones
+          .filter(z => z.polygon && z.polygon.length >= 3)
+          .map(z => ({
+            type: 'Feature',
+            properties: { id: z.id, name: z.name, active: z.active },
+            geometry: { type: 'Polygon', coordinates: [z.polygon] }
+          }));
 
-      if (features.length) {
-        if (!map.getSource('admin-zones')) {
-          map.addSource('admin-zones', { type: 'geojson', data: { type: 'FeatureCollection', features } });
-          map.addLayer({
-            id: 'admin-zones-fill', type: 'fill', source: 'admin-zones',
-            paint: { 'fill-color': '#0C513F', 'fill-opacity': 0.14 }
-          });
-          map.addLayer({
-            id: 'admin-zones-line', type: 'line', source: 'admin-zones',
-            paint: { 'line-color': '#0C513F', 'line-width': 2, 'line-dasharray': [2.5, 1.5] }
-          });
-        } else {
-          map.getSource('admin-zones').setData({ type: 'FeatureCollection', features });
+        if (features.length && typeof map.getSource === 'function') {
+          if (!map.getSource('admin-zones')) {
+            map.addSource('admin-zones', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+            map.addLayer({
+              id: 'admin-zones-fill', type: 'fill', source: 'admin-zones',
+              paint: { 'fill-color': '#0C513F', 'fill-opacity': 0.14 }
+            });
+            map.addLayer({
+              id: 'admin-zones-line', type: 'line', source: 'admin-zones',
+              paint: { 'line-color': '#0C513F', 'line-width': 2, 'line-dasharray': [2.5, 1.5] }
+            });
+          } else {
+            map.getSource('admin-zones').setData({ type: 'FeatureCollection', features });
+          }
         }
       }
 

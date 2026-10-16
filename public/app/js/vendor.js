@@ -23,11 +23,36 @@ const VendorController = {
 
   placeholderImg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
 
+  isVendorContext() {
+    const isVendorPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/vendor');
+    const isVendorRole = window.chowStore?.state?.currentRole === 'vendor';
+    const profileRole = window.chowStore?.state?.userProfile?.role;
+    const isUserVendor = (profileRole === 'vendor') || Boolean(window.chowStore?.state?.userProfile?.vendorId);
+    let authVendor = false;
+    if (typeof window !== 'undefined' && window.Chow45Auth && typeof window.Chow45Auth.getSession === 'function') {
+      const s = window.Chow45Auth.getSession();
+      if (s && (s.role === 'vendor' || s.vendorId)) {
+        authVendor = true;
+      }
+    }
+    const ob = this.getOnboarding ? this.getOnboarding() : (window.chowStore?.state?.vendorOnboarding);
+    const hasVendorOnboarding = ob && (ob.status === 'approved' || ob.status === 'pending');
+    return Boolean(isVendorPath || isVendorRole || isUserVendor || authVendor || hasVendorOnboarding);
+  },
+
   init() {
-    // Re-render on every state save (polling/live-sync behaviour).
-    window.chowStore.subscribe(() => this.render());
-    // Cross-tab "realtime": another tab saving state triggers this.
-    window.addEventListener('storage', () => this.render());
+    // Re-render on state save ONLY if in vendor context
+    window.chowStore.subscribe(() => {
+      if (this.isVendorContext()) {
+        this.render();
+      }
+    });
+    // Cross-tab "realtime": another tab saving state triggers this
+    window.addEventListener('storage', () => {
+      if (this.isVendorContext()) {
+        this.render();
+      }
+    });
 
     const bannerInput = document.getElementById('v-reg-banner-input');
     if (bannerInput) bannerInput.addEventListener('change', e => this._readFile(e.target, dataUrl => {
@@ -85,7 +110,9 @@ const VendorController = {
       });
     }
 
-    this.render();
+    if (this.isVendorContext()) {
+      this.render();
+    }
   },
 
   /** Universal image processor supporting any picture extension with downscaling & error detection */
@@ -212,11 +239,8 @@ const VendorController = {
   },
 
   /**
-   * The store the signed-in vendor is looking at.
-   *
-   * Only ever their own store. There is deliberately NO fallback to the first
-   * restaurant in the list: that handed the vendor another restaurant's dishes
-   * and store info. With no store of their own yet, the dashboard renders an empty
+   * Resolves the current vendor identity from state, auth session, or localStorage.
+   */
   _resolveVendorIdentity() {
     let email = window.chowStore?.state?.userProfile?.email || this.getOnboarding()?.email || '';
     let userId = window.chowStore?.state?.userProfile?.id || null;
@@ -224,46 +248,42 @@ const VendorController = {
     let storeId = window.chowStore?.state?.userProfile?.storeId || this.getOnboarding()?.storeId || '';
     let name = window.chowStore?.state?.userProfile?.name || this.getOnboarding()?.storeName || '';
 
-    // Check Chow45Auth session
-    if (!email && window.Chow45Auth && typeof window.Chow45Auth.getSession === 'function') {
+    // Check Chow45Auth session to fill any gaps
+    if (window.Chow45Auth && typeof window.Chow45Auth.getSession === 'function') {
       const s = window.Chow45Auth.getSession();
       if (s) {
-        if (s.email) email = s.email;
-        if (s.id) userId = userId || s.id;
-        if (s.vendorId) vendorId = vendorId || s.vendorId;
-        if (s.storeId) storeId = storeId || s.storeId;
-        if (s.name) name = name || s.name;
+        if (s.email && !email) email = s.email;
+        if (s.id && !userId) userId = s.id;
+        if (s.vendorId && !vendorId) vendorId = s.vendorId;
+        if (s.storeId && !storeId) storeId = s.storeId;
+        if (s.name && !name) name = s.name;
       }
     }
 
     // Check localStorage session fallback
-    if (!email) {
-      try {
-        const raw = localStorage.getItem('chow45_auth_session_v1');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          const u = parsed.user || parsed;
-          if (u.email) email = u.email;
-          if (u.id) userId = userId || u.id;
-          if (u.vendorId) vendorId = vendorId || u.vendorId;
-          if (u.storeId) storeId = storeId || u.storeId;
-          if (u.name) name = name || u.name;
-        }
-      } catch (e) {}
-    }
+    try {
+      const raw = localStorage.getItem('chow45_auth_session_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const u = parsed.user || parsed;
+        if (u.email && !email) email = u.email;
+        if (u.id && !userId) userId = u.id;
+        if (u.vendorId && !vendorId) vendorId = u.vendorId;
+        if (u.storeId && !storeId) storeId = u.storeId;
+        if (u.name && !name) name = u.name;
+      }
+    } catch (e) {}
 
-    if (!email) {
-      try {
-        const rawU = localStorage.getItem('chow45_user');
-        if (rawU) {
-          const u = JSON.parse(rawU);
-          if (u.email) email = u.email;
-          if (u.id) userId = userId || u.id;
-          if (u.vendorId) vendorId = vendorId || u.vendorId;
-          if (u.storeId) storeId = storeId || u.storeId;
-        }
-      } catch (e) {}
-    }
+    try {
+      const rawU = localStorage.getItem('chow45_user');
+      if (rawU) {
+        const u = JSON.parse(rawU);
+        if (u.email && !email) email = u.email;
+        if (u.id && !userId) userId = u.id;
+        if (u.vendorId && !vendorId) vendorId = u.vendorId;
+        if (u.storeId && !storeId) storeId = u.storeId;
+      }
+    } catch (e) {}
 
     return { email: String(email || '').trim().toLowerCase(), userId, vendorId, storeId, name: String(name || '').trim() };
   },
@@ -284,6 +304,7 @@ const VendorController = {
   },
 
   async _ensureStoreFetched(email) {
+    if (!this.isVendorContext()) return;
     if (this._isFetchingProfile || !email) return;
     this._isFetchingProfile = true;
     try {
@@ -302,7 +323,7 @@ const VendorController = {
           window.chowStore.state.userProfile.name = v.businessName;
           if (v.contactEmail) window.chowStore.state.userProfile.email = v.contactEmail;
 
-          const rests = window.chowStore.state.restaurants || [];
+          let rests = window.chowStore.state.restaurants || [];
           let matched = rests.find(r => r.id === v.storeId || (r.numericId && r.numericId === v.id));
           if (!matched && v.contactEmail) {
             matched = rests.find(r => (r.email && r.email.toLowerCase() === v.contactEmail.toLowerCase()) || (r.contactEmail && r.contactEmail.toLowerCase() === v.contactEmail.toLowerCase()));
@@ -313,8 +334,28 @@ const VendorController = {
             matched.name = v.businessName;
             matched.address = v.address || matched.address;
             matched.email = v.contactEmail || matched.email;
+            matched.contactEmail = v.contactEmail || matched.contactEmail;
+          } else {
+            matched = {
+              id: v.storeId,
+              numericId: v.id,
+              name: v.businessName,
+              address: v.address || 'Hospital Road, Sagamu, Ogun State',
+              email: v.contactEmail,
+              contactEmail: v.contactEmail,
+              phone: v.contactPhone || '',
+              bannerImg: v.image || v.bannerImage || '',
+              image: v.image || '',
+              open: true,
+              isOpen: true,
+              tags: ['Store', 'Campus Delivery'],
+              menu: []
+            };
+            rests.unshift(matched);
           }
+          window.chowStore.state.restaurants = rests;
           window.chowStore.save();
+          this.renderHeader(matched);
           this.syncMenuFromServer();
         }
       }
@@ -330,32 +371,46 @@ const VendorController = {
    *
    * Only ever their own store. There is deliberately NO fallback to the first
    * restaurant in the list: that handed the vendor another restaurant's dishes
-   * and store info. With no store of their own yet, the dashboard renders an empty
-   * store rather than another vendor's data.
+   * and store info.
    */
   getStore() {
+    if (!this.isVendorContext()) {
+      return null;
+    }
+
     const ob = this.getOnboarding();
-    const restaurants = window.chowStore?.state?.restaurants || [];
+    let restaurants = window.chowStore?.state?.restaurants || [];
     const ident = this._resolveVendorIdentity();
     const cleanEmail = ident.email;
     const targetStoreId = ident.storeId;
     const targetUserId = ident.userId;
     const targetVendorId = ident.vendorId;
 
-    // 1. Try matching by storeId
-    if (targetStoreId) {
-      const found = restaurants.find(r => r.id === targetStoreId);
-      if (found) {
-        this._bindStoreIdentifiers(found, ident);
-        return found;
+    // Clean up any empty synthetic stores if a real store with numericId exists for the same email
+    if (cleanEmail && restaurants.length > 1) {
+      const realStore = restaurants.find(r =>
+        r.numericId &&
+        ((r.email && r.email.toLowerCase() === cleanEmail) ||
+         (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail))
+      );
+      if (realStore) {
+        const filtered = restaurants.filter(r =>
+          r === realStore ||
+          r.numericId ||
+          !((r.email && r.email.toLowerCase() === cleanEmail) || (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail))
+        );
+        if (filtered.length !== restaurants.length) {
+          window.chowStore.state.restaurants = filtered;
+          restaurants = filtered;
+        }
       }
     }
 
-    // 2. Try matching by numeric vendorId or userId
-    if (targetUserId || targetVendorId) {
+    // 1. Try matching by numeric vendorId or userId (highest precision)
+    if (targetVendorId || targetUserId) {
       const found = restaurants.find(r => 
-        (targetUserId && r.userId && String(r.userId) === String(targetUserId)) ||
-        (targetVendorId && r.numericId && String(r.numericId) === String(targetVendorId))
+        (targetVendorId && r.numericId && String(r.numericId) === String(targetVendorId)) ||
+        (targetUserId && r.userId && String(r.userId) === String(targetUserId))
       );
       if (found) {
         this._bindStoreIdentifiers(found, ident);
@@ -363,14 +418,25 @@ const VendorController = {
       }
     }
 
-    // 3. Try matching by vendor email
+    // 2. Try matching by storeId (preferring stores with numericId or real dishes)
+    if (targetStoreId) {
+      const matches = restaurants.filter(r => r.id === targetStoreId);
+      if (matches.length > 0) {
+        const found = matches.find(r => r.numericId || (r.menu && r.menu.length > 0)) || matches[0];
+        this._bindStoreIdentifiers(found, ident);
+        return found;
+      }
+    }
+
+    // 3. Try matching by vendor email (preferring stores with numericId or real dishes)
     if (cleanEmail) {
-      const found = restaurants.find(r => 
+      const matches = restaurants.filter(r => 
         (r.email && r.email.toLowerCase() === cleanEmail) ||
         (r.ownerEmail && r.ownerEmail.toLowerCase() === cleanEmail) ||
         (r.contactEmail && r.contactEmail.toLowerCase() === cleanEmail)
       );
-      if (found) {
+      if (matches.length > 0) {
+        const found = matches.find(r => r.numericId || (r.menu && r.menu.length > 0)) || matches[0];
         this._bindStoreIdentifiers(found, ident);
         return found;
       }
@@ -392,11 +458,22 @@ const VendorController = {
       this._ensureStoreFetched(cleanEmail);
     }
 
-    // 5. Fallback: synthesize their own store if signed in with vendor email
-    if (cleanEmail) {
-      const storeId = targetStoreId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36).slice(-4));
+    // 5. Fallback: synthesize consistent store if signed in with vendor email
+    const isVendorUser = (window.chowStore?.state?.userProfile?.role === 'vendor') ||
+      Boolean(targetVendorId) ||
+      (ob && (ob.status === 'approved' || ob.status === 'pending'));
+
+    if (cleanEmail && isVendorUser) {
+      const storeId = targetStoreId || ('rest-' + cleanEmail.split('@')[0].replace(/[^a-z0-9]/g, '-'));
       const storeName = ident.name || (cleanEmail.split('@')[0] + "'s Kitchen");
       const storeAddr = window.chowStore?.state?.userProfile?.storeAddress || window.chowStore?.state?.userProfile?.address || ob?.storeAddress || 'Hospital Road, Sagamu, Ogun State';
+      
+      const existing = restaurants.find(r => r.id === storeId || (r.email && r.email.toLowerCase() === cleanEmail));
+      if (existing) {
+        this._bindStoreIdentifiers(existing, ident);
+        return existing;
+      }
+
       const newStore = {
         id: storeId,
         numericId: targetVendorId || undefined,
@@ -533,6 +610,7 @@ const VendorController = {
   },
 
   async syncMenuFromServer() {
+    if (!this.isVendorContext()) return;
     if (this._isSyncingMenu) return;
     this._isSyncingMenu = true;
     try {
@@ -631,6 +709,10 @@ const VendorController = {
   },
 
   render() {
+    if (!this.isVendorContext()) {
+      return;
+    }
+
     const ob = this.getOnboarding();
     const holding = document.getElementById('vendor-holding-screen');
     const dash = document.getElementById('vendor-main-dashboard');
@@ -779,6 +861,43 @@ const VendorController = {
       window.chowApp.toast('Pickup address set to your current location ✓', 'success');
     };
 
+    const tryLowAccuracyFallback = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          if (window.chowMap && typeof window.chowMap.resolveLocation === 'function') {
+            window.chowMap.resolveLocation(longitude, latitude, { accuracy, timestamp: Date.now() })
+              .then(finish)
+              .catch(() => finish({ latitude, longitude, address: 'My Current Location' }));
+          } else {
+            finish({ latitude, longitude, address: 'My Current Location' });
+          }
+        },
+        async (err2) => {
+          try {
+            const res = await fetch('https://ipwho.is/');
+            if (res.ok) {
+              const d = await res.json();
+              if (d.success !== false && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)) {
+                finish({
+                  latitude: d.latitude,
+                  longitude: d.longitude,
+                  address: `${d.city || 'Lagos'}, ${d.region || 'Nigeria'}`
+                });
+                return;
+              }
+            }
+          } catch (e) {}
+          if (err2 && err2.code === 1) {
+            window.chowApp.toast('Location access was denied. Use the map instead.', 'warning');
+          } else {
+            window.chowApp.toast('Couldn\u2019t get your location. Use the map instead.', 'warning');
+          }
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+      );
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude, accuracy } = position.coords;
@@ -794,10 +913,10 @@ const VendorController = {
         if (err && err.code === 1) {
           window.chowApp.toast('Location access was denied. Use the map instead.', 'warning');
         } else {
-          window.chowApp.toast('Couldn\u2019t get your location. Use the map instead.', 'warning');
+          tryLowAccuracyFallback();
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
     );
   },
 
@@ -1781,6 +1900,7 @@ const VendorController = {
     this.flowDraft = null;
     this.renderMenu(this.getStore());
     this.renderDraftsSection();
+    this.syncMenuFromServer();
   },
 
   goToStep(step) {

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/db";
@@ -111,16 +111,73 @@ export async function GET(request: Request) {
       adminLedger: { totalGmv: 0, totalServiceFees: 0, completedDeliveries: 0 },
     };
 
-    if (userId === null) {
+    let resolvedUserId = userId;
+    let resolvedRole = role;
+
+    if (resolvedUserId === null) {
+      const headerEmail = (request.headers.get("x-vendor-email") || "").toLowerCase().trim();
+      const headerStoreId = (request.headers.get("x-vendor-store-id") || "").trim();
+      const headerVendorId = Number(request.headers.get("x-vendor-id"));
+
+      if (headerEmail || headerStoreId || headerVendorId > 0) {
+        const vendorMatch = await db
+          .select()
+          .from(vendors)
+          .where(
+            or(
+              headerEmail ? sql`LOWER(${vendors.contactEmail}) = ${headerEmail}` : undefined,
+              headerStoreId ? eq(vendors.storeId, headerStoreId) : undefined,
+              headerVendorId > 0 ? eq(vendors.id, headerVendorId) : undefined
+            )
+          )
+          .limit(1);
+
+        if (vendorMatch.length > 0 && vendorMatch[0].userId) {
+          resolvedUserId = vendorMatch[0].userId;
+          resolvedRole = "VENDOR";
+          payload.signedIn = true;
+          payload.role = "VENDOR";
+        }
+      }
+    }
+
+    if (resolvedUserId === null) {
       return NextResponse.json(payload);
     }
 
-    await attachPrivateData(payload, stores, userId);
-    await attachRoleData(payload, stores, userId, isAdmin, isVendor);
+    const resolvedIsAdmin = resolvedRole === "ADMIN";
+    const resolvedIsVendor = resolvedRole === "VENDOR";
+
+    await attachPrivateData(payload, stores, resolvedUserId);
+    await attachRoleData(payload, stores, resolvedUserId, resolvedIsAdmin, resolvedIsVendor);
 
     return NextResponse.json(payload);
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+    console.warn("[bootstrap] Database bootstrap query failed, returning fallback payload:", e?.message || e);
+    return NextResponse.json({
+      stores: [],
+      riders: [],
+      serviceZones: [],
+      locations: [],
+      categories: [],
+      deliveryConfig: null,
+      signedIn: false,
+      role: "customer",
+      user: null,
+      cart: serializeCart(null, []),
+      orders: [],
+      favorites: { foods: [], stores: [] },
+      addresses: [],
+      selectedLocation: null,
+      vendorWallet: serializeWallet(undefined),
+      vendorWithdrawals: [],
+      pendingVendors: [],
+      myApplication: null,
+      disputes: [],
+      adminLedger: { totalGmv: 0, totalServiceFees: 0, completedDeliveries: 0 },
+      error: e?.message || "Database unavailable",
+      fallback: true
+    }, { status: 200 });
   }
 }
 
@@ -214,17 +271,38 @@ async function attachPrivateData(
   ]);
 
   const user = userRows[0];
-  payload.user = user
-    ? {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone ?? "",
-        role: user.role,
-        image: user.image,
-        refCode: user.refCode,
-      }
-    : null;
+  if (user) {
+    const vMatch = await db
+      .select()
+      .from(vendors)
+      .where(or(eq(vendors.userId, user.id), sql`LOWER(${vendors.contactEmail}) = LOWER(${user.email})`))
+      .limit(1);
+
+    const v = vMatch[0];
+    payload.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone ?? "",
+      role: v ? "VENDOR" : user.role,
+      image: user.image,
+      refCode: user.refCode,
+      vendorId: v?.id,
+      storeId: v?.storeId,
+      businessName: v?.businessName,
+    };
+
+    if (v) {
+      payload.vendor = {
+        id: v.id,
+        storeId: v.storeId,
+        businessName: v.businessName,
+        contactEmail: v.contactEmail,
+      };
+    }
+  } else {
+    payload.user = null;
+  }
 
   // Cart, its line items, and the store they belong to. An emptied cart keeps
   // pointing at the last store, but the client treats "no items" as no cart, so

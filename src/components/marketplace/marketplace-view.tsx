@@ -12,10 +12,12 @@ interface MarketplaceViewProps {
 declare global {
   interface Window {
     __CHOW45_MAPBOX_TOKEN__?: string;
+    __CHOW45_GOOGLE_MAPS_KEY__?: string;
     _chow45Initialized?: boolean;
     _chow45ScriptsLoading?: Promise<void>;
     __chow45ScriptPromises?: Record<string, Promise<void>>;
     Chow45App?: any;
+    chowApp?: any;
     VendorController?: any;
     CustomerController?: any;
     RiderController?: any;
@@ -23,28 +25,30 @@ declare global {
     Chow45Auth?: any;
     ChowUnits?: any;
     chowStore?: any;
+    chowLocationPicker?: any;
+    Chow45LocationPicker?: any;
   }
 }
 
 const SCRIPTS_TO_LOAD = [
-  'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js',
-  '/app/js/mapbox-config.js?v=20261005a',
-  '/app/js/service-zones.js?v=20261005a',
+  'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly',
+  '/app/js/google-maps-config.js?v=20261016d',
+  '/app/js/service-zones.js?v=20261016d',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261005a',
-  '/app/js/data.js?v=20261005a',
-  '/app/js/state.js?v=20261005a',
-  '/app/js/mapbox-service.js?v=20261005a',
-  '/app/js/location-picker.js?v=20261005a',
-  '/app/js/customer.js?v=20261005a',
-  '/app/js/vendor.js?v=20261005a',
-  '/app/js/rider.js?v=20261005a',
-  '/app/js/admin.js?v=20261005a',
-  '/app/js/auth.js?v=20261005a',
+  '/app/js/units.js?v=20261016d',
+  '/app/js/data.js?v=20261016d',
+  '/app/js/state.js?v=20261016d',
+  '/app/js/google-maps-service.js?v=20261016d',
+  '/app/js/location-picker.js?v=20261016d',
+  '/app/js/customer.js?v=20261016d',
+  '/app/js/vendor.js?v=20261016d',
+  '/app/js/rider.js?v=20261016d',
+  '/app/js/admin.js?v=20261016d',
+  '/app/js/auth.js?v=20261016d',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261005a',
-  '/app/js/app.js?v=20261005a',
+  '/app/js/vendor-onboarding.js?v=20261016d',
+  '/app/js/app.js?v=20261016d',
 ];
 
 // Globals that must exist before the controllers can safely run. Without this
@@ -95,7 +99,7 @@ function loadScript(src: string): Promise<void> {
 
     if (!existing) {
       script.src = src;
-      script.async = false;
+      script.async = src.includes('maps.googleapis.com');
       script.dataset.chow45Src = src;
       document.body.appendChild(script);
       return;
@@ -163,16 +167,28 @@ export function MarketplaceView({
   useEffect(() => {
     setMounted(true);
 
-    // Provide public Mapbox token to global scope.
-    let publicToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-    if (!publicToken) {
-      try {
-        publicToken = typeof atob === 'function'
-          ? atob('cGsuZXlKMUlqb2lZV1JsYlhWM1lXZDFibkpsYldrMk1DSXNJbUVpT2lKamJXcHphalJpYlc4MGJUbDJNMmR6TlhsNmRXVmtOMjAxSW4wLkVHbTJvLW53MFFIRVV3ZUI4dWFpcmc=')
-          : '';
-      } catch {}
-    }
-    window.__CHOW45_MAPBOX_TOKEN__ = publicToken;
+    // Provide Google Maps Platform key to global scope
+    const googleKey =
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+      'AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo';
+    window.__CHOW45_GOOGLE_MAPS_KEY__ = googleKey;
+    window.__CHOW45_MAPBOX_TOKEN__ = googleKey;
+
+    // Early resilient global stubs so clicking buttons before full script hydration never throws
+    window.Chow45App = window.Chow45App || {
+      openLocationModal: () => {
+        if (window.chowLocationPicker && window.chowLocationPicker.open) {
+          window.chowLocationPicker.open();
+        } else if (window.Chow45LocationPicker && window.Chow45LocationPicker.open) {
+          window.Chow45LocationPicker.open();
+        } else {
+          const m = document.getElementById('map-picker-modal') || document.getElementById('location-modal');
+          if (m) m.classList.add('open');
+        }
+      },
+      toast: (msg: string, type: string) => console.log(`[Toast ${type}]`, msg)
+    };
+    window.chowApp = window.chowApp || window.Chow45App;
 
     let cancelled = false;
 
@@ -232,10 +248,6 @@ export function MarketplaceView({
   return (
     <div className="chow45-marketplace-wrapper min-h-screen relative">
       {/* Stylesheets for the marketplace shell */}
-      <link
-        rel="stylesheet"
-        href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css"
-      />
       <link rel="stylesheet" href="/app/css/tokens.css" />
       <link rel="stylesheet" href="/app/css/layout.css?v=20260928b" />
       <link rel="stylesheet" href="/app/css/marketplace.css?v=20260928a" />

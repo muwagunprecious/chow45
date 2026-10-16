@@ -25,6 +25,31 @@ class Chow45Store {
     this.STORAGE_KEY = 'chow45_marketplace_state_v2';
     this.listeners = [];
     this.state = this.loadInitialState();
+    this.ensureUserProfileIntegrity();
+  }
+
+  ensureUserProfileIntegrity() {
+    if (!this.state) return;
+    if (!this.state.userProfile || typeof this.state.userProfile !== 'object') {
+      this.state.userProfile = {
+        name: 'Guest',
+        phone: '',
+        savedAddresses: [],
+        favorites: { foods: [], stores: [] }
+      };
+    }
+    if (!this.state.userProfile.favorites || typeof this.state.userProfile.favorites !== 'object') {
+      this.state.userProfile.favorites = { foods: [], stores: [] };
+    }
+    if (!Array.isArray(this.state.userProfile.favorites.foods)) {
+      this.state.userProfile.favorites.foods = [];
+    }
+    if (!Array.isArray(this.state.userProfile.favorites.stores)) {
+      this.state.userProfile.favorites.stores = [];
+    }
+    if (!Array.isArray(this.state.userProfile.savedAddresses)) {
+      this.state.userProfile.savedAddresses = [];
+    }
   }
 
   loadInitialState() {
@@ -32,7 +57,28 @@ class Chow45Store {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.restaurants && parsed.restaurants.length > 0 && parsed.userProfile) {
+        if (parsed && (parsed.userProfile || Array.isArray(parsed.restaurants))) {
+          if (!Array.isArray(parsed.restaurants)) parsed.restaurants = [];
+          if (!parsed.userProfile || typeof parsed.userProfile !== 'object') {
+            parsed.userProfile = {
+              name: 'Guest',
+              phone: '',
+              savedAddresses: [],
+              favorites: { foods: [], stores: [] }
+            };
+          }
+          if (!parsed.userProfile.favorites || typeof parsed.userProfile.favorites !== 'object') {
+            parsed.userProfile.favorites = { foods: [], stores: [] };
+          }
+          if (!Array.isArray(parsed.userProfile.favorites.foods)) {
+            parsed.userProfile.favorites.foods = [];
+          }
+          if (!Array.isArray(parsed.userProfile.favorites.stores)) {
+            parsed.userProfile.favorites.stores = [];
+          }
+          if (!Array.isArray(parsed.userProfile.savedAddresses)) {
+            parsed.userProfile.savedAddresses = [];
+          }
           // Reconcile newer fields onto older saved states.
           if (!parsed.deliveryConfig) parsed.deliveryConfig = Object.assign({}, DEFAULT_DELIVERY_FEE_CONFIG);
           if (!parsed.vendorOnboarding || parsed.vendorOnboarding.storeId === 'rest-mama-t') {
@@ -199,12 +245,17 @@ class Chow45Store {
   }
 
   save() {
+    this.ensureUserProfileIntegrity();
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
     } catch (e) {
       console.error('Failed saving state to localStorage', e);
     }
     this.notify();
+  }
+
+  saveState() {
+    this.save();
   }
 
   subscribe(callback) {
@@ -363,6 +414,7 @@ class Chow45Store {
   // Favorites Management
   // -------------------------------------------------------------
   toggleFavoriteFood(dishId) {
+    this.ensureUserProfileIntegrity();
     const favs = this.state.userProfile.favorites.foods;
     const index = favs.indexOf(dishId);
     if (index > -1) {
@@ -375,6 +427,7 @@ class Chow45Store {
   }
 
   toggleFavoriteStore(storeId) {
+    this.ensureUserProfileIntegrity();
     const favs = this.state.userProfile.favorites.stores;
     const index = favs.indexOf(storeId);
     if (index > -1) {

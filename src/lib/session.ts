@@ -1,4 +1,4 @@
-import { userAuth, vendorAuth, riderAuth } from "@/auth";
+import { auth, userAuth, vendorAuth, riderAuth } from "@/auth";
 import { db } from "@/db";
 import { vendors } from "@/db/schema/vendors";
 import { users, sessions } from "@/db/schema/users";
@@ -68,32 +68,15 @@ function extractSessionToken(request: Request): string | null {
  * 4. Direct database lookup in sessions table (resilient across production domain/protocol changes)
  */
 export async function resolveSessionUser(request: Request): Promise<{ userId: number; user: SessionUser } | null> {
-  // 1. Better Auth vendor instance
+  // 1. Better Auth canonical session
   try {
-    const sVendor = await vendorAuth.api.getSession({ headers: request.headers });
-    const id = toUserId(sVendor);
-    if (id !== null && sVendor?.user) {
-      return { userId: id, user: sVendor.user };
+    const sAuth = await auth.api.getSession({ headers: request.headers });
+    const id = toUserId(sAuth);
+    if (id !== null && sAuth?.user) {
+      return { userId: id, user: sAuth.user };
     }
   } catch {}
 
-  // 2. Better Auth user instance
-  try {
-    const sUser = await userAuth.api.getSession({ headers: request.headers });
-    const id = toUserId(sUser);
-    if (id !== null && sUser?.user) {
-      return { userId: id, user: sUser.user };
-    }
-  } catch {}
-
-  // 3. Better Auth rider instance
-  try {
-    const sRider = await riderAuth.api.getSession({ headers: request.headers });
-    const id = toUserId(sRider);
-    if (id !== null && sRider?.user) {
-      return { userId: id, user: sRider.user };
-    }
-  } catch {}
 
   // 4. Direct database session lookup (handles HTTPS/Vercel domain differences where getSession might fail)
   const token = extractSessionToken(request);

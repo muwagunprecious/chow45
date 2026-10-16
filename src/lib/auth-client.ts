@@ -19,13 +19,14 @@ function getAuthBaseUrl(subpath: string): string {
 }
 
 export const authClient = createAuthClient({
-    baseURL: getAuthBaseUrl("/api/auth/user"),
+    baseURL: getAuthBaseUrl("/api/auth"),
 });
 
 export const vendorAuthClient = createAuthClient({
-    baseURL: getAuthBaseUrl("/api/auth/vendor"),
+    baseURL: getAuthBaseUrl("/api/auth"),
 });
 
 export const riderAuthClient = createAuthClient({
-    baseURL: getAuthBaseUrl("/api/auth/rider"),
+    baseURL: getAuthBaseUrl("/api/auth"),
 });
+

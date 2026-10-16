@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { riderAuthClient } from '@/lib/auth-client';
@@ -31,6 +31,17 @@ export default function RiderRegisterPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlEmail = params.get('email');
+      const urlName = params.get('name');
+      if (urlEmail) setEmail(urlEmail);
+      if (urlName) setName(urlName);
+    }
+  }, []);
+
 
   // Form fields
   const [name, setName] = useState('');
@@ -252,10 +263,49 @@ export default function RiderRegisterPage() {
             {/* STEP 1: ACCOUNT DETAILS */}
             {step === 1 && (
               <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/auth/sign-in/social', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                          provider: 'google',
+                          callbackURL: `${window.location.origin}/api/auth/post-login?intent=rider`,
+                        }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (data?.url) {
+                        window.location.href = data.url;
+                      }
+                    } catch (e) {
+                      setError('Failed to initiate Google sign in.');
+                    }
+                  }}
+                  className="w-full py-3 rounded-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2.5 mb-2"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.86c2.26-2.09 3.685-5.17 3.685-9.09z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.34 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                  </svg>
+                  <span>Quick Autofill with Google</span>
+                </button>
+
+                <div className="flex items-center my-2 text-center">
+                  <div className="flex-1 border-b border-[#00a205]/10"></div>
+                  <span className="px-3 text-xs font-semibold text-[#000000]/40 uppercase tracking-wider">or enter details</span>
+                  <div className="flex-1 border-b border-[#00a205]/10"></div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-[#00a205] mb-1">
                     Full Legal Name
                   </label>
+
                   <input
                     type="text"
                     required

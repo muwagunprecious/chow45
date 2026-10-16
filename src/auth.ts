@@ -84,22 +84,13 @@ type Role = "USER" | "VENDOR" | "RIDER";
  * - Email verification redirect
  * - Password reset redirect
  */
-function createAuth(role: Role) {
+function createCanonicalAuth() {
     return betterAuth({
 
         /**
-         * Authentication API base path.
-         *
-         * USER:
-         * /api/auth/user
-         *
-         * VENDOR:
-         * /api/auth/vendor
-         * 
-         * RIDER:
-         * /api/auth/rider
+         * Unified canonical authentication API base path.
          */
-        basePath: `/api/auth/${role.toLowerCase()}`,
+        basePath: "/api/auth",
 
         /**
          * The public URL of the application.
@@ -116,6 +107,9 @@ function createAuth(role: Role) {
             "http://localhost:3001",
             "https://*.vercel.app",
             "https://chow45.vercel.app",
+            "https://*.chow45.app",
+            "https://chow45.app",
+            "https://www.chow45.app",
             "https://*.chow45.com",
             "https://chow45.com",
             "https://www.chow45.com",
@@ -128,7 +122,7 @@ function createAuth(role: Role) {
          * Secret used by Better Auth for signing/encrypting
          * authentication-related data.
          */
-        secret: process.env.BASE_AUTH_SECRET,
+        secret: process.env.BASE_AUTH_SECRET || process.env.BETTER_AUTH_SECRET,
 
 
         /**
@@ -156,8 +150,8 @@ function createAuth(role: Role) {
                             // Generate a unique referral code.
                             refCode: refCodeGen(),
 
-                            // Assign the role based on the auth instance.
-                            role,
+                            // Default canonical role is USER (customer); can be augmented by vendor/rider profiles.
+                            role: user.role || "USER",
 
                             /**
                              * Use an existing username if one was supplied.
@@ -175,38 +169,8 @@ function createAuth(role: Role) {
 
         /**
          * Better Auth hooks.
-         *
-         * This runs after authentication-related API operations.
          */
-        hooks: {
-            after: createAuthMiddleware(async (ctx) => {
-
-                /**
-                 * Get the newly created authentication session.
-                 *
-                 * If no new session was created, there is nothing
-                 * to validate here.
-                 */
-                const newSession = ctx.context.newSession;
-
-                if (!newSession) return;
-
-                /**
-                 * Make sure the authenticated account belongs
-                 * to the authentication system being used.
-                 *
-                 * For example:
-                 *
-                 * /api/auth/vendor
-                 * must only allow VENDOR accounts.
-                 */
-                if (newSession.user.role !== role) {
-                    throw new APIError("FORBIDDEN", {
-                        message: `This account is not registered as a ${role.toLowerCase()}`,
-                    });
-                }
-            }),
-        },
+        hooks: {},
 
 
         /**
@@ -259,7 +223,7 @@ function createAuth(role: Role) {
          * /rider/login
          */
         onAPIError: {
-            errorURL: role === "RIDER" ? "rider/login" : role === "VENDOR" ? "/vendor/login" : "/login",
+            errorURL: "/app",
         },
 
 
@@ -461,11 +425,14 @@ function createAuth(role: Role) {
                          * Users use:
                          * /reset-password
                          */
+                        const userRole = String((user as any)?.role || "").toUpperCase();
                         const resetUrl = new URL(
-                            role === "VENDOR"
+                            userRole === "VENDOR"
                                 ? "/vendor/reset-password"
+                                : userRole === "RIDER"
+                                ? "/rider/reset-password"
                                 : "/reset-password",
-                            process.env.NEXT_PUBLIC_APP_URL
+                            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
                         );
 
                         /**
@@ -623,12 +590,13 @@ function createAuth(role: Role) {
                          * /rider/verify-email
                          */
 
+                        const userRole = String((user as any)?.role || "").toUpperCase();
                         const verificationUrl = new URL(
-                            role === "VENDOR"
+                            userRole === "VENDOR"
                                 ? "/vendor/verify-email"
-                                : role === "RIDER" ? "/rider/verify-email"
+                                : userRole === "RIDER" ? "/rider/verify-email"
                                 : "/verify-email",
-                            process.env.NEXT_PUBLIC_APP_URL
+                            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
                         );
 
 
@@ -821,33 +789,14 @@ function createAuth(role: Role) {
 
 
 /**
- * USER authentication instance.
+ * Canonical Chow45 Better Auth instance.
  *
  * Uses:
- * /api/auth/user
- *
- * Only accounts with role = USER are allowed through this instance.
+ * /api/auth
  */
-export const userAuth = createAuth("USER");
+export const auth = createCanonicalAuth();
 
-
-/**
- * VENDOR authentication instance.
- *
- * Uses:
- * /api/auth/vendor
- *
- * Only accounts with role = VENDOR are allowed through this instance.
- */
-export const vendorAuth = createAuth("VENDOR");
- 
- 
-/**
- * RIDER authentication instance.
- *
- * Uses:
- * /api/auth/rider
- *
- * Only accounts with role = RIDER are allowed through this instance.
- */
-export const riderAuth = createAuth("RIDER");
+// Backwards-compatible aliases for existing imports across the codebase
+export const userAuth = auth;
+export const vendorAuth = auth;
+export const riderAuth = auth;

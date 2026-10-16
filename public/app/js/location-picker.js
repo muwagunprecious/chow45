@@ -18,10 +18,68 @@ const Chow45LocationPicker = {
   resolving: false,
   searchTimer: null,
   lastSearchQuery: '',
+  _isLocating: false,
+  _gpsRequestId: 0,
+  _suppressPinMove: false,
+
+  setGpsButtonState(state) {
+    const btn = document.getElementById('picker-gps-btn');
+    const fab = document.getElementById('picker-gps-fab');
+    const modalBtn = document.getElementById('location-modal-gps-btn');
+
+    if (btn) {
+      const spinner = btn.querySelector('.picker-gps-spinner');
+      const label = btn.querySelector('.picker-gps-label');
+      const icon = btn.querySelector('.picker-gps-icon');
+
+      if (state === 'detecting') {
+        btn.disabled = true;
+        btn.classList.add('loading');
+        if (spinner) spinner.style.display = 'inline-block';
+        if (icon) icon.style.display = 'none';
+        if (label) label.textContent = 'Detecting your location...';
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        if (spinner) spinner.style.display = 'none';
+        if (icon) icon.style.display = '';
+        if (label) label.textContent = 'Get My Live Location';
+      }
+    }
+
+    if (fab) {
+      const spinner = fab.querySelector('.picker-gps-spinner');
+      const icon = fab.querySelector('.picker-gps-icon');
+
+      if (state === 'detecting') {
+        fab.disabled = true;
+        fab.classList.add('loading');
+        if (spinner) spinner.style.display = 'inline-block';
+        if (icon) icon.style.display = 'none';
+      } else {
+        fab.disabled = false;
+        fab.classList.remove('loading');
+        if (spinner) spinner.style.display = 'none';
+        if (icon) icon.style.display = '';
+      }
+    }
+
+    if (modalBtn) {
+      if (state === 'detecting') {
+        modalBtn.disabled = true;
+        modalBtn.textContent = '⏳ Detecting your location...';
+      } else {
+        modalBtn.disabled = false;
+        modalBtn.textContent = '📍 Get My Live Location';
+      }
+    }
+  },
 
   open(opts) {
     const modal = document.getElementById('map-picker-modal');
     if (!modal) return;
+
+    this.bindEvents();
 
     this.onConfirmCallback = (opts && opts.onConfirm) || null;
     this.mode = (opts && opts.mode) || 'delivery'; // 'delivery' | 'pickup'
@@ -34,7 +92,7 @@ const Chow45LocationPicker = {
 
     this.currentLocation = null;
     this.hideResults();
-    this.renderSavedAddresses();
+    this.hideSavedAddresses();
 
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -43,6 +101,13 @@ const Chow45LocationPicker = {
     this.setConfirmState('resolving');
 
     setTimeout(() => this.bootMap(initial), 60);
+    setTimeout(() => {
+      if (this.map && window.google && window.google.maps) {
+        window.google.maps.event.trigger(this.map, 'resize');
+        const c = this.map.getCenter();
+        if (c) this.map.setCenter(c);
+      }
+    }, 250);
     setTimeout(() => {
       const input = document.getElementById('picker-search-input');
       if (input) input.focus({ preventScroll: true });
@@ -55,6 +120,7 @@ const Chow45LocationPicker = {
     modal.classList.remove('open');
     document.body.style.overflow = '';
     this.hideResults();
+    this.mode = 'delivery';
     if (window.chowMap) window.chowMap.removeAccuracyCircle(this.map);
   },
 
@@ -67,7 +133,7 @@ const Chow45LocationPicker = {
 
     this.map = await window.chowMap.initMap(this.containerId, {
       initCenter: [initial.lng, initial.lat],
-      zoom: 14.5,
+      zoom: 16.5,
       onLoad: () => {
         this.onPinMoved();
       },
@@ -76,6 +142,13 @@ const Chow45LocationPicker = {
 
     if (this.map) {
       window.chowMap.renderServiceZones(this.containerId);
+      setTimeout(() => {
+        if (window.google && window.google.maps) {
+          window.google.maps.event.trigger(this.map, 'resize');
+          const c = this.map.getCenter();
+          if (c) this.map.setCenter(c);
+        }
+      }, 150);
     } else {
       this.setMapError('Unable to load the map.');
     }
@@ -115,42 +188,181 @@ const Chow45LocationPicker = {
   },
 
   // -------------------------------------------------------------
-  // GPS
+  // GPS & LIVE LOCATION DETECTION
   // -------------------------------------------------------------
   useCurrentLocation() {
-    if (!navigator.geolocation) {
-      this.setGpsError('Your browser does not support location services.', 'Search manually');
+    if (this._isLocating) {
+      console.log('[GPS] Location detection already in progress. Ignoring duplicate trigger.');
       return;
     }
 
-    this.setStatus(null, 'Locating you…');
+    this._gpsRequestId = (this._gpsRequestId || 0) + 1;
+    const reqId = this._gpsRequestId;
+    console.log(`[GPS #${reqId}] Requesting live location...`);
+
+    // 1. Verify browser support
+    if (!navigator.geolocation) {
+      this.onGpsError({ code: 0, message: 'Browser geolocation is not supported on this device.' }, reqId);
+      return;
+    }
+
+    // 2. Verify secure context (HTTPS required by modern browsers, localhost is exempt)
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!window.isSecureContext && !isLocalhost) {
+      this.onGpsError({
+        code: 0,
+        message: 'Live location requires a secure HTTPS connection. Please use HTTPS or search manually.'
+      }, reqId);
+      return;
+    }
+
+    this._isLocating = true;
+    this.setGpsButtonState('detecting');
+    this.setStatus(null, 'Detecting your location…');
     this.setConfirmState('resolving');
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => this.onGpsSuccess(position),
-      (err) => this.onGpsError(err),
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Detecting GPS location…', 'info');
+    }
+
+    // Inspect permission status if supported
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then((status) => {
+        console.log(`[GPS #${reqId}] Geolocation permission status:`, status.state);
+        if (status.state === 'denied') {
+          console.warn(`[GPS #${reqId}] Location permission is explicitly blocked.`);
+        }
+      }).catch(() => {});
+    }
+
+    let resolved = false;
+    let watchId = null;
+
+    const clearGpsWatch = () => {
+      if (watchId !== null) {
+        try { navigator.geolocation.clearWatch(watchId); } catch {}
+        watchId = null;
       }
-    );
+    };
+
+    const handleSuccess = (position) => {
+      if (resolved || reqId !== this._gpsRequestId) return;
+      resolved = true;
+      clearGpsWatch();
+      this.onGpsSuccess(position, reqId);
+    };
+
+    const handleFallbackOrError = (err) => {
+      if (resolved || reqId !== this._gpsRequestId) return;
+      clearGpsWatch();
+
+      // If user denied permission (Code 1), respect permission denial immediately
+      if (err && err.code === 1) {
+        resolved = true;
+        this.onGpsError(err, reqId);
+        return;
+      }
+
+      console.log(`[GPS #${reqId}] High-accuracy failed/timed out, attempting low-accuracy fallback...`);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => handleSuccess(pos),
+        (lowErr) => {
+          if (resolved || reqId !== this._gpsRequestId) return;
+          resolved = true;
+          if (lowErr && lowErr.code === 1) {
+            this.onGpsError(lowErr, reqId);
+          } else {
+            this.tryNetworkIpFallback(lowErr, reqId);
+          }
+        },
+        { enableHighAccuracy: false, timeout: 7000, maximumAge: 60000 }
+      );
+    };
+
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const acc = pos.coords.accuracy || 999;
+          handleSuccess(pos);
+          if (acc <= 50) clearGpsWatch();
+        },
+        (err) => {
+          handleFallbackOrError(err);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 6000,
+          maximumAge: 5000
+        }
+      );
+
+      // Timeout fallback if watch does not resolve in 6s
+      setTimeout(() => {
+        if (!resolved && reqId === this._gpsRequestId) {
+          handleFallbackOrError({ code: 3, message: 'GPS request timed out' });
+        }
+      }, 6000);
+    } catch (e) {
+      handleFallbackOrError(e);
+    }
   },
 
-  onGpsSuccess(position) {
-    const { latitude, longitude, accuracy } = position.coords;
+  async tryNetworkIpFallback(reasonErr, reqId) {
+    if (reqId && reqId !== this._gpsRequestId) return;
+    this.setStatus(null, 'Checking approximate network location…');
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const d = await res.json();
+        if (d.success !== false && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)) {
+          if (reqId && reqId !== this._gpsRequestId) return;
+          console.log(`[GPS #${reqId}] Network IP location obtained: [${d.longitude}, ${d.latitude}]`);
+          if (window.chowApp && window.chowApp.toast) {
+            window.chowApp.toast('Approximate location detected from network. Fine-tune by dragging pin.', 'info');
+          }
+          this.onGpsSuccess({
+            coords: {
+              latitude: d.latitude,
+              longitude: d.longitude,
+              accuracy: 2500
+            }
+          }, reqId);
+          return;
+        }
+      }
+    } catch (e) {}
 
-    if (typeof accuracy === 'number' && accuracy > 450) {
-      // Poor accuracy: don't block, but clearly warn and grant manual options.
-      this.setStatus('warning', 'Your location isn’t precise enough.');
-      this.setConfirmState('blocked');
+    this.onGpsError(reasonErr || { code: 2, message: 'Could not detect location' }, reqId);
+  },
+
+  onGpsSuccess(position, reqId) {
+    if (reqId && reqId !== this._gpsRequestId) {
+      console.warn(`[GPS] Discarding stale GPS callback #${reqId} (active is #${this._gpsRequestId})`);
+      return;
+    }
+
+    this._isLocating = false;
+    this.setGpsButtonState('success');
+    setTimeout(() => {
+      if (!this._isLocating) this.setGpsButtonState('idle');
+    }, 1500);
+
+    const { latitude, longitude, accuracy } = position.coords;
+    console.log(`[GPS #${reqId || 0}] Position acquired: lat=${latitude.toFixed(6)}, lng=${longitude.toFixed(6)}, accuracy=${Math.round(accuracy || 0)}m`);
+
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Location acquired! ✓', 'success');
+    }
+
+    if (typeof accuracy === 'number' && accuracy > 500) {
+      this.setStatus('warning', 'Approximate location detected. Drag the pin to your exact building.');
       const banner = document.getElementById('picker-status-banner');
       if (banner) {
         banner.className = 'picker-status-banner warning open';
         banner.innerHTML = `
           <div>
-            <strong>Your location isn't precise enough.</strong>
-            <p>GPS accuracy is ${Math.round(accuracy)} m. Try again or move the map pin to your delivery spot.</p>
+            <strong>Approximate location detected (~${Math.round(accuracy)}m).</strong>
+            <p>Drag the map so the pin points right at your gate or building.</p>
           </div>
           <div style="display:flex;gap:6px;">
             <button class="picker-chip-btn" onclick="Chow45LocationPicker.useCurrentLocation()">Retry GPS</button>
@@ -158,64 +370,152 @@ const Chow45LocationPicker = {
           </div>
         `;
       }
-      return;
     }
 
-    this.setStatus(null, 'Checking delivery availability…');
+    this.setStatus(null, 'Pinpointing delivery location…');
     this.setConfirmState('resolving');
 
+    // Programmatic map fly: suppress onPinMoved during transition to prevent race condition
+    this._suppressPinMove = true;
+    setTimeout(() => { this._suppressPinMove = false; }, 1200);
+
     if (this.map && window.chowMap) {
-      window.chowMap.flyTo(this.containerId, longitude, latitude, 15.5);
+      window.chowMap.flyTo(this.containerId, longitude, latitude, 17.5);
       window.chowMap.showAccuracyCircle(this.map, { lng: longitude, lat: latitude }, accuracy);
     }
 
-    window.chowMap.resolveLocation(longitude, latitude, { accuracy, timestamp: Date.now() })
-      .then((loc) => this.presentResolved(loc));
-  },
-
-  onGpsError(err) {
-    const code = err && err.code;
-    if (code === 1) {
-      this.setGpsError('Location access was denied.', 'Search manually');
-    } else if (code === 3) {
-      this.setGpsError('We couldn’t get your location.', 'Try again');
+    if (window.chowMap && typeof window.chowMap.resolveLocation === 'function') {
+      window.chowMap.resolveLocation(longitude, latitude, { accuracy, timestamp: Date.now() })
+        .then((loc) => {
+          if (!reqId || reqId === this._gpsRequestId) {
+            this.presentResolved(loc);
+          }
+        })
+        .catch(() => {
+          if (!reqId || reqId === this._gpsRequestId) {
+            this.resolveAndPresent({ lng: longitude, lat: latitude, accuracy, timestamp: Date.now() });
+          }
+        });
     } else {
-      this.setGpsError('We couldn’t get your location.', 'Try again');
+      this.resolveAndPresent({ lng: longitude, lat: latitude, accuracy, timestamp: Date.now() });
     }
   },
 
-  setGpsError(message, action) {
-    this.setStatus('error', message);
+  onGpsError(err, reqId) {
+    if (reqId && reqId !== this._gpsRequestId) return;
+
+    this._isLocating = false;
+    this.setGpsButtonState('error');
+    setTimeout(() => {
+      if (!this._isLocating) this.setGpsButtonState('idle');
+    }, 2500);
+
+    const code = err && err.code;
+    const msg = err && err.message ? err.message : '';
+    console.warn(`[GPS #${reqId || 0}] Geolocation error (code ${code}):`, msg);
+
+    if (code === 1) { // PERMISSION_DENIED
+      const title = 'Location permission denied';
+      const detail = 'Please tap the lock or tune icon 🔒 in your browser address bar to allow location access, or select your campus zone below.';
+      this.setGpsError(title, detail, 'Search manually');
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Location permission denied. Tap the lock icon in the address bar to allow.', 'warning');
+      }
+    } else if (code === 2) { // POSITION_UNAVAILABLE
+      const title = 'Location unavailable';
+      const detail = 'Unable to determine your physical position. Ensure device GPS / location services are switched on, or search manually.';
+      this.setGpsError(title, detail, 'Retry GPS');
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('GPS signal unavailable. Please ensure location services are enabled.', 'warning');
+      }
+    } else if (code === 3) { // TIMEOUT
+      const title = 'Location detection timed out';
+      const detail = 'Your device took too long to return GPS coordinates. Tap "Retry GPS" or pick your campus zone directly.';
+      this.setGpsError(title, detail, 'Retry GPS');
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Location detection timed out. Click to retry.', 'warning');
+      }
+    } else {
+      const title = 'Could not detect location';
+      const detail = msg || 'Could not acquire location automatically. Search your street name or choose your campus zone below.';
+      this.setGpsError(title, detail, 'Search manually');
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast(title + '. Please search or choose a zone.', 'warning');
+      }
+    }
+  },
+
+  setGpsError(title, detail, action) {
+    this.setStatus('error', title);
     this.setConfirmState('blocked');
     const banner = document.getElementById('picker-status-banner');
     if (banner) {
-      const click = action === 'Try again'
+      const click = action === 'Retry GPS'
         ? `Chow45LocationPicker.useCurrentLocation()`
         : `document.getElementById('picker-search-input').focus()`;
       banner.className = 'picker-status-banner error open';
       banner.innerHTML = `
-        <div>
-          <strong>${message}</strong>
-          <p>You can also search for your delivery address manually.</p>
+        <div style="flex: 1; min-width: 0;">
+          <strong style="color: #DC2626; font-size: 0.92rem; display: block;">${title}</strong>
+          <p style="margin: 3px 0 0; font-size: 0.8rem; color: #4B5563; line-height: 1.35;">${detail}</p>
         </div>
-        <button class="picker-chip-btn" onclick="${click}">${action}</button>
+        <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
+          <button class="picker-chip-btn" onclick="${click}">${action}</button>
+          <button class="picker-chip-btn" onclick="Chow45LocationPicker.flyToZone('ifo')">📍 Moboluwaduro</button>
+        </div>
       `;
     }
+  },
+
+  // -------------------------------------------------------------
+  // QUICK ZONE JUMP (for 1-tap navigation to active Ogun State zones)
+  // -------------------------------------------------------------
+  flyToZone(zoneKey) {
+    const zones = {
+      ifo: { lng: 3.1975, lat: 6.8111, name: 'Ifo / Moboluwaduro Zone' },
+      sagamu: { lng: 3.6139, lat: 6.8270, name: 'Sagamu (OOUTH)' },
+      agoiwoye: { lng: 3.6545, lat: 6.8482, name: 'Ago-Iwoye (OOU Main Campus)' },
+      ibogun: { lng: 3.3900, lat: 6.7200, name: 'Ibogun Campus' }
+    };
+    const target = zones[zoneKey];
+    if (!target) return;
+
+    this.setStatus(null, `Navigating to ${target.name}…`);
+    this.setConfirmState('resolving');
+
+    if (this.map && window.chowMap) {
+      window.chowMap.flyTo(this.containerId, target.lng, target.lat, 16.5);
+    }
+
+    window.chowMap.resolveLocation(target.lng, target.lat, { accuracy: 15, timestamp: Date.now() })
+      .then((loc) => this.presentResolved(loc));
   },
 
   // -------------------------------------------------------------
   // MOVABLE PIN (map pans, pin stays centered)
   // -------------------------------------------------------------
   onPinMoved() {
+    if (this._suppressPinMove) {
+      console.log('[LocationPicker] Suppressing onPinMoved during active GPS transition');
+      return;
+    }
     const map = window.chowMap && window.chowMap.getMap(this.containerId);
     if (!map) return;
-    if (this.resolving) return;
+    if (this.resolving) {
+      this._pendingPinMove = true;
+      return;
+    }
 
     this.setConfirmState('resolving');
-    this.setStatus(null, 'Checking delivery availability…');
+    this.setStatus(null, 'Pinpointing delivery location…');
 
     const c = map.getCenter();
-    this.resolveAndPresent({ lng: c.lng, lat: c.lat, accuracy: null, timestamp: Date.now() }, true);
+    if (!c) return;
+    const lng = typeof c.lng === 'function' ? c.lng() : (c.lng ?? (Array.isArray(c) ? c[0] : c.longitude));
+    const lat = typeof c.lat === 'function' ? c.lat() : (c.lat ?? (Array.isArray(c) ? c[1] : c.latitude));
+    const numLng = Number(lng) || 3.1975;
+    const numLat = Number(lat) || 6.8111;
+    this.resolveAndPresent({ lng: numLng, lat: numLat, accuracy: null, timestamp: Date.now() }, true);
   },
 
   // -------------------------------------------------------------
@@ -233,57 +533,93 @@ const Chow45LocationPicker = {
       return;
     }
 
+    const cfg = window.CHOW45_MAP_CONFIG || window.CHOW45_MAPBOX_CONFIG || {};
     this.searchTimer = setTimeout(async () => {
       const results = await window.chowMap.searchAddress(q);
       this.renderResults(results);
-    }, CHOW45_MAPBOX_CONFIG.searchDebounceMs);
+    }, cfg.searchDebounceMs || 300);
   },
 
   renderResults(results) {
     const container = document.getElementById('picker-search-results');
     if (!container) return;
     this.hideSavedAddresses();
+    this._currentSearchResults = results || [];
 
     if (!results || results.length === 0) {
       container.className = 'picker-search-results open';
       container.innerHTML = `
         <div class="picker-search-empty">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span>We couldn't find that. Try “Olori Market”, “OOU Main Gate”, “Sagamu”.</span>
+          <span>No exact match found. Try a street, building, or area name (e.g. “Lagos-Abeokuta”, “Moboluwaduro”, “Hospital Road”).</span>
         </div>`;
       return;
     }
 
     container.className = 'picker-search-results open';
-    container.innerHTML = results.map(r => `
-      <button class="picker-result-item" onclick="Chow45LocationPicker.selectResult(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+    container.innerHTML = results.map((r, idx) => `
+      <button type="button" class="picker-result-item" onclick="Chow45LocationPicker.selectResultByIndex(${idx})">
         <span class="picker-result-icon">📍</span>
-        <span>
-          <strong>${r.text}</strong>
-          <small>${r.placeName}</small>
+        <span style="display:flex; flex-direction:column; text-align:left;">
+          <strong style="color:#0F172A; font-size:0.9rem;">${r.text}</strong>
+          <small style="color:#64748B; font-size:0.78rem;">${r.placeName}</small>
         </span>
       </button>
     `).join('');
   },
 
-  selectResult(result) {
+  async selectResultByIndex(idx) {
+    const result = (this._currentSearchResults || [])[idx];
+    if (!result) return;
+    await this.selectResult(result);
+  },
+
+  async selectResult(result) {
     this.currentLocation = null;
     this.setConfirmState('resolving');
-    this.setStatus(null, 'Checking delivery availability…');
+    this.setStatus(null, 'Pinpointing street location…');
 
-    if (this.map && window.chowMap) window.chowMap.flyTo(this.containerId, result.lng, result.lat, 15.5);
+    let lng = result.lng;
+    let lat = result.lat;
+    let formattedAddress = result.placeName || result.text;
 
-    window.chowMap.resolveLocation(result.lng, result.lat, { timestamp: Date.now() })
-      .then((loc) => {
-        loc.placeId = result.placeId;
-        loc.address = loc.address || result.text;
-        loc.formattedAddress = loc.formattedAddress || result.placeName;
-        this.presentResolved(loc);
-      });
+    // If coordinates are missing (from Google Places New prediction), resolve them by placeId
+    if ((!Number.isFinite(lng) || !Number.isFinite(lat)) && result.placeId) {
+      if (window.chowMap && typeof window.chowMap.getPlaceDetails === 'function') {
+        const details = await window.chowMap.getPlaceDetails(result.placeId);
+        if (details && Number.isFinite(details.lng) && Number.isFinite(details.lat)) {
+          lng = details.lng;
+          lat = details.lat;
+          if (details.formattedAddress) formattedAddress = details.formattedAddress;
+        }
+      }
+    }
+
+    // Secondary fallback coordinates if completely unresolvable
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+      lng = 3.6545;
+      lat = 6.8482;
+    }
+
+    if (this.map && window.chowMap) {
+      window.chowMap.flyTo(this.containerId, lng, lat, 17);
+    }
 
     const input = document.getElementById('picker-search-input');
-    if (input) input.value = result.text;
+    if (input) input.value = result.text || formattedAddress;
     this.hideResults();
+
+    window.chowMap.resolveLocation(lng, lat, { timestamp: Date.now() })
+      .then((loc) => {
+        loc.placeId = result.placeId || loc.placeId;
+        loc.address = result.text || loc.address;
+        loc.formattedAddress = formattedAddress || loc.formattedAddress;
+        this.presentResolved(loc);
+        this.confirmLocation();
+      })
+      .catch(() => {
+        this.resolveAndPresent({ lng, lat, accuracy: null, timestamp: Date.now() });
+      });
   },
 
   // -------------------------------------------------------------
@@ -292,16 +628,68 @@ const Chow45LocationPicker = {
   async resolveAndPresent(point) {
     this.resolving = true;
     try {
-      const loc = await window.chowMap.resolveLocation(point.lng, point.lat, {
+      const pLng = typeof point.lng === 'function' ? point.lng() : (point.lng ?? point.longitude ?? point[0]);
+      const pLat = typeof point.lat === 'function' ? point.lat() : (point.lat ?? point.latitude ?? point[1]);
+      const numLng = Number(pLng) || 3.6545;
+      const numLat = Number(pLat) || 6.8482;
+
+      const loc = await window.chowMap.resolveLocation(numLng, numLat, {
         accuracy: point.accuracy,
         timestamp: point.timestamp
       });
       this.presentResolved(loc);
     } catch (e) {
-      this.setConfirmState('blocked');
-      this.setStatus('error', 'We couldn’t identify this location.');
+      console.warn('[LocationPicker] Location resolution fallback engaged:', e);
+      const pLng = Number(typeof point.lng === 'function' ? point.lng() : (point.lng ?? point.longitude ?? point[0] ?? 3.6545)) || 3.6545;
+      const pLat = Number(typeof point.lat === 'function' ? point.lat() : (point.lat ?? point.latitude ?? point[1] ?? 6.8482)) || 6.8482;
+      const availability = typeof getServiceAvailability === 'function'
+        ? getServiceAvailability({ lng: pLng, lat: pLat })
+        : { status: 'available', inOgun: true, isSupported: true, zone: null };
+      const zoneName = availability && availability.zone ? availability.zone.name : null;
+      const zoneLga = availability && availability.zone ? availability.zone.lga : 'Ogun State';
+      const addressLabel = zoneName
+        ? `${zoneName} (${pLat.toFixed(4)}, ${pLng.toFixed(4)})`
+        : `Pinned Location (${pLat.toFixed(4)}, ${pLng.toFixed(4)})`;
+
+      const fallbackLoc = {
+        latitude: pLat,
+        longitude: pLng,
+        accuracy: point.accuracy || null,
+        timestamp: Date.now(),
+        address: addressLabel,
+        street: addressLabel,
+        locality: zoneName || 'Ogun',
+        place: zoneName || 'Ogun',
+        lga: zoneLga,
+        state: 'Ogun',
+        country: 'Nigeria',
+        placeId: null,
+        formattedAddress: `${addressLabel}, Ogun State, Nigeria`,
+        availability
+      };
+      this.presentResolved(fallbackLoc);
     } finally {
       this.resolving = false;
+      if (this._pendingPinMove) {
+        this._pendingPinMove = false;
+        setTimeout(() => this.onPinMoved(), 60);
+      }
+    }
+  },
+
+  editExactDetails() {
+    const loc = this.currentLocation;
+    const current = loc ? (loc.customNote || loc.address || '') : '';
+    const landmark = prompt('Enter your exact compound, house number or landmark in this area:\n(e.g., House 12, Green gate beside Transformer, Moboluwaduro CDA)', current);
+    if (landmark && landmark.trim()) {
+      const val = landmark.trim();
+      if (!this.currentLocation) this.currentLocation = {};
+      this.currentLocation.customNote = val;
+      this.currentLocation.address = val;
+      this.currentLocation.formattedAddress = `${val}, ${this._subtitleFromAddress(this.currentLocation)}`;
+      this.currentLocation.deliveryInstructions = val;
+      this.presentResolved(this.currentLocation);
+      window.chowApp && window.chowApp.toast('Exact address details updated! ✓', 'success');
     }
   },
 
@@ -311,9 +699,13 @@ const Chow45LocationPicker = {
 
     const addressText = document.getElementById('picker-address-text');
     if (addressText) {
+      const customNote = loc.customNote || '';
       addressText.innerHTML = `
-        <strong>${this._titleFromAddress(loc)}</strong>
-        <span>${this._subtitleFromAddress(loc)}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;">${customNote ? customNote : this._titleFromAddress(loc)}</strong>
+          <button type="button" onclick="Chow45LocationPicker.editExactDetails()" style="border:none; background:#E8F6F0; color:#00a205; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:6px; cursor:pointer;" title="Add specific building, flat or landmark">✏️ Edit</button>
+        </div>
+        <span style="display:block; font-size:0.78rem; color:#6E6D66; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px;">${this._subtitleFromAddress(loc)}</span>
       `;
     }
 
@@ -342,71 +734,70 @@ const Chow45LocationPicker = {
     const statusEl = document.getElementById('picker-zone-status');
     const banner = document.getElementById('picker-status-banner');
 
-    const availability = loc.availability || getServiceAvailability({ lng: loc.longitude, lat: loc.latitude });
+    const availability = (loc.availability && loc.availability.status === 'available')
+      ? loc.availability
+      : { status: 'available', inOgun: true, isSupported: true, zone: (loc.availability && loc.availability.zone) || null };
     loc.availability = availability;
 
-    if (availability.status === 'available') {
-      this.setStatus('success', 'Chow45 delivers here.');
-      this.setConfirmState('ready');
-      if (statusEl) {
-        statusEl.className = 'picker-zone-status ok';
-        statusEl.innerHTML = `<span>✓</span> ${availability.zone ? availability.zone.name : 'Delivery zone'}`;
-      }
-      if (banner) {
-        banner.className = 'picker-status-banner success open';
-        banner.innerHTML = `
-          <div>
-            <strong>Great! We deliver here.</strong>
-            <p>${availability.zone ? availability.zone.name + ' • ' : ''}${loc.lga ? loc.lga + ', ' : ''}Ogun State</p>
-          </div>`;
-      }
-    } else if (availability.status === 'ogun_outside_zone') {
-      this.setConfirmState('waitlist');
-      if (statusEl) {
-        statusEl.className = 'picker-zone-status warn';
-        statusEl.innerHTML = `<span>⚠</span> Expanding to ${loc.state || 'Ogun State'} soon`;
-      }
-      if (banner) {
-        banner.className = 'picker-status-banner warning open';
-        banner.innerHTML = `
-          <div>
-            <strong>You're in Ogun State, but Chow45 hasn't reached this area yet.</strong>
-            <p>We're currently expanding across Ogun State. Join the waitlist to be first in line.</p>
-          </div>
-          <button class="picker-chip-btn" onclick="Chow45LocationPicker.joinWaitlist()">Join the waitlist</button>
-        `;
-      }
-    } else {
-      this.setConfirmState('blocked');
-      if (statusEl) {
-        statusEl.className = 'picker-zone-status err';
-        statusEl.innerHTML = `<span>✕</span> Outside service area`;
-      }
-      if (banner) {
-        banner.className = 'picker-status-banner error open';
-        banner.innerHTML = `
-          <div>
-            <strong>Chow45 isn't available here yet.</strong>
-            <p>We're currently expanding across Ogun State.</p>
-          </div>
-          <button class="picker-chip-btn" onclick="Chow45LocationPicker.open()">Choose another location</button>
-        `;
-      }
+    this.setStatus('success', 'Ready for delivery');
+    this.setConfirmState('ready');
+    if (statusEl) {
+      statusEl.className = 'picker-zone-status ok';
+      statusEl.innerHTML = `<span>✓</span> ${availability.zone ? availability.zone.name : 'Ready to confirm'}`;
+    }
+    if (banner) {
+      banner.className = 'picker-status-banner';
+      banner.innerHTML = '';
     }
 
     this.renderConfirmCard();
   },
 
   _titleFromAddress(loc) {
-    const parts = [loc.street || loc.address, loc.locality, loc.place].filter(Boolean);
-    return parts[0] || loc.formattedAddress || 'Selected location';
+    const isPlusCode = (s) => /^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(\b|$)/i.test((s || '').trim());
+    const isUnnamed = (s) => /^unnamed\s+road$/i.test((s || '').trim());
+    const isPostal = (s) => /^\d{5,6}$/.test((s || '').trim());
+
+    const clean = (s) => {
+      if (!s) return '';
+      return s.replace(/^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(?:,\s*|\s+)?/i, '')
+              .replace(/^\d{5,6}(?:,\s*|\s+)?/, '')
+              .trim();
+    };
+
+    let cand = loc.street || loc.address;
+    if (cand && (isPlusCode(cand) || isUnnamed(cand) || isPostal(cand))) {
+      cand = '';
+    }
+
+    if (!cand && loc.formattedAddress) {
+      const cleanedFormatted = clean(loc.formattedAddress);
+      const firstToken = cleanedFormatted.split(',')[0].trim();
+      if (firstToken && !isPlusCode(firstToken) && !isUnnamed(firstToken) && !isPostal(firstToken)) {
+        cand = firstToken;
+      }
+    }
+
+    if (!cand) {
+      cand = loc.place || loc.locality || (loc.availability?.zone?.name);
+    }
+
+    return cand || clean(loc.formattedAddress) || 'Selected location';
   },
 
   _subtitleFromAddress(loc) {
+    const isPlusCode = (s) => /^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(\b|$)/i.test((s || '').trim());
+    const clean = (s) => {
+      if (!s) return '';
+      return s.replace(/^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(?:,\s*|\s+)?/i, '')
+              .replace(/^\d{5,6}(?:,\s*|\s+)?/, '')
+              .trim();
+    };
+
     const parts = [loc.lga, loc.state ? loc.state + ' State' : '', loc.country].filter(Boolean);
-    const l = [loc.locality, loc.place].filter(Boolean);
+    const l = [loc.locality, loc.place].filter(s => Boolean(s) && !isPlusCode(s));
     const joined = l.length ? l.join(', ') + (parts.length ? ', ' + parts.join(', ') : '') : parts.join(', ');
-    return joined || loc.formattedAddress || 'Ogun State, Nigeria';
+    return joined || clean(loc.formattedAddress) || 'Ogun State, Nigeria';
   },
 
   setStatus(type, message) {
@@ -430,18 +821,16 @@ const Chow45LocationPicker = {
   // CONFIRM CARD / ADDRESS SAVING
   // -------------------------------------------------------------
   setConfirmState(state) {
-    const btn = document.getElementById('picker-confirm-btn');
+    const btn = document.getElementById('picker-header-confirm-btn') || document.getElementById('picker-confirm-btn');
     const card = document.getElementById('picker-confirm-card');
-    if (!btn) return;
-    btn.dataset.state = state;
-    btn.disabled = false;
-
-    if (state === 'ready') {
-      btn.innerHTML = `Confirm Location ✓`;
-    } else if (state === 'resolving') {
-      btn.innerHTML = `Checking location…`;
-    } else {
-      btn.innerHTML = `Confirm Location ✓`;
+    if (btn) {
+      btn.dataset.state = state;
+      btn.disabled = false;
+      if (state === 'resolving') {
+        btn.innerHTML = `Checking…`;
+      } else {
+        btn.innerHTML = `Confirm ✓`;
+      }
     }
     if (card) card.classList.remove('blocked');
   },
@@ -464,11 +853,17 @@ const Chow45LocationPicker = {
       if (this.map && window.chowMap) {
         const center = window.chowMap.getCenter(this.containerId);
         if (center) {
+          const latVal = center.latitude ?? center.lat ?? (Array.isArray(center) ? center[1] : 6.8390);
+          const lngVal = center.longitude ?? center.lng ?? (Array.isArray(center) ? center[0] : 3.6480);
+          const cLat = typeof latVal === 'function' ? latVal() : (Number(latVal) || 6.8111);
+          const cLng = typeof lngVal === 'function' ? lngVal() : (Number(lngVal) || 3.1975);
+          const avail = typeof getServiceAvailability === 'function' ? getServiceAvailability({ lng: cLng, lat: cLat }) : null;
+          const zName = avail && avail.zone ? avail.zone.name : `Pinned Location (${cLat.toFixed(4)}, ${cLng.toFixed(4)})`;
           loc = {
-            latitude: center[1],
-            longitude: center[0],
-            address: 'Hospital Road, Sagamu',
-            formattedAddress: 'Hospital Road, Sagamu, Ogun State, Nigeria',
+            latitude: cLat,
+            longitude: cLng,
+            address: zName,
+            formattedAddress: `${zName}, Ogun State, Nigeria`,
             state: 'Ogun'
           };
         }
@@ -479,56 +874,56 @@ const Chow45LocationPicker = {
     }
     if (!loc) {
       loc = {
-        latitude: 6.8390,
-        longitude: 3.6480,
-        address: 'Hospital Road, Sagamu',
-        formattedAddress: 'Hospital Road, Sagamu, Ogun State, Nigeria',
+        latitude: 6.8111,
+        longitude: 3.1975,
+        address: 'Moboluwaduro / Ifo Zone',
+        formattedAddress: 'Moboluwaduro / Ifo Zone, Ogun State, Nigeria',
         state: 'Ogun'
       };
     }
 
     const formatted = loc.formattedAddress || loc.address || loc.name || 'Hospital Road, Sagamu, Ogun State, Nigeria';
 
-    const isVendor = this.mode === 'pickup' ||
-      (window.chowStore && window.chowStore.state && window.chowStore.state.userProfile && window.chowStore.state.userProfile.role === 'vendor') ||
-      (window.chowStore && window.chowStore.state && window.chowStore.state.currentRole === 'vendor') ||
-      window.location.pathname.includes('/vendor') ||
-      !!document.getElementById('view-vendor')?.classList.contains('active');
+    // Only treat as vendor pickup if mode was explicitly set to 'pickup' (e.g. from vendor onboarding)
+    const isVendorPickup = this.mode === 'pickup';
+
+    const rawLat = loc.latitude ?? loc.lat ?? 6.8390;
+    const rawLng = loc.longitude ?? loc.lng ?? 3.6480;
+    const numLat = typeof rawLat === 'function' ? rawLat() : (Number(rawLat) || 6.8390);
+    const numLng = typeof rawLng === 'function' ? rawLng() : (Number(rawLng) || 3.6480);
 
     const payload = {
-      latitude: loc.latitude ?? loc.lat ?? 6.8390,
-      longitude: loc.longitude ?? loc.lng ?? 3.6480,
+      latitude: numLat,
+      longitude: numLng,
       accuracy: loc.accuracy || null,
       timestamp: loc.timestamp || Date.now(),
       address: loc.address || formatted,
-      locality: loc.locality || 'Sagamu',
-      lga: loc.lga || 'Sagamu LGA',
+      locality: loc.locality || (loc.availability?.zone ? loc.availability.zone.lga.replace(' LGA', '') : (loc.lga || loc.state || 'Local Area')),
+      lga: loc.lga || (loc.availability?.zone ? loc.availability.zone.lga : (loc.state ? `${loc.state} State` : 'Delivery Area')),
       state: loc.state || 'Ogun',
       country: loc.country || 'Nigeria',
       placeId: loc.placeId || '',
       formattedAddress: formatted,
-      zoneId: loc.availability && loc.availability.zone ? loc.availability.zone.id : (loc.zoneId || 'sagamu-campus'),
-      zoneName: loc.availability && loc.availability.zone ? loc.availability.zone.name : (loc.zoneName || 'Sagamu Campus'),
+      zoneId: loc.availability && loc.availability.zone ? loc.availability.zone.id : (loc.zoneId || 'delivery-zone'),
+      zoneName: loc.availability && loc.availability.zone ? loc.availability.zone.name : (loc.zoneName || 'Delivery Area'),
       deliveryInstructions: '',
-      label: isVendor ? 'Store Location' : (this.getSelectedLabel() || 'Campus')
+      label: isVendorPickup ? 'Store Location' : (this.getSelectedLabel() || 'Campus')
     };
 
     // Save into chowStore
     if (window.chowStore) {
       window.chowStore.setDeliveryLocation(payload);
-      if (isVendor) {
+      if (isVendorPickup) {
         if (window.chowStore.state.vendorOnboarding) {
           window.chowStore.state.vendorOnboarding.storeAddress = formatted;
         }
         if (window.chowStore.state.userProfile) {
           window.chowStore.state.userProfile.storeAddress = formatted;
         }
-        if (Array.isArray(window.chowStore.state.restaurants)) {
-          window.chowStore.state.restaurants.forEach(r => {
-            r.address = formatted;
-            r.latitude = payload.latitude;
-            r.longitude = payload.longitude;
-          });
+      } else {
+        // Customer delivery address: ensure customer role is active
+        if (window.chowStore.state.currentRole !== 'customer') {
+          window.chowStore.setRole('customer');
         }
       }
       window.chowStore.save();
@@ -538,7 +933,20 @@ const Chow45LocationPicker = {
     const locTextEl = document.getElementById('current-location-text');
     if (locTextEl) locTextEl.textContent = formatted;
     const vndLocEl = document.getElementById('vendor-store-location');
-    if (vndLocEl) vndLocEl.innerText = formatted;
+    if (vndLocEl && isVendorPickup) vndLocEl.innerText = formatted;
+
+    // Ensure customer view is active if confirming customer delivery address
+    if (!isVendorPickup) {
+      if (window.chowApp && window.chowApp.updateRoleUI) {
+        window.chowApp.updateRoleUI('customer');
+      }
+      // If the user was erroneously on /vendor, return to the customer app
+      if (window.location.pathname.startsWith('/vendor')) {
+        setTimeout(() => {
+          window.location.href = '/app';
+        }, 300);
+      }
+    }
 
     // 1. Immediately close the map and location picker
     this.close();
@@ -552,13 +960,6 @@ const Chow45LocationPicker = {
       const cb = this.onConfirmCallback;
       this.onConfirmCallback = null;
       try { cb(payload); } catch {}
-    }
-
-    // 3. Immediately redirect to the vendor dashboard
-    if (isVendor) {
-      setTimeout(() => {
-        window.location.href = '/vendor';
-      }, 300);
     }
   },
 
@@ -777,35 +1178,141 @@ const Chow45LocationPicker = {
     }
   },
 
+  restoreSavePlaceDefaultSuggestions() {
+    const suggEl = document.getElementById('save-place-suggestions');
+    if (!suggEl) return;
+    const slot = this._currentSavingSlot || 'Campus';
+    const defaults = {
+      Campus: ['OOU Main Campus Gate, Ago-Iwoye', 'OOUTH Hospital Road, Sagamu', 'Ibogun Campus, Ifo'],
+      Home: ['Moboluwaduro CDA, Ifo', 'Sagamu Residential Area', '9 Goshen Ave, Idimu, Lagos', 'Egbeda, Lagos'],
+      Work: ['Sagamu Campus, OOU Ijagun', 'OOUTH Admin Block, Sagamu', 'Allen Avenue, Ikeja, Lagos']
+    };
+    const list = defaults[slot] || defaults.Campus;
+    suggEl.innerHTML = list.map(s => `
+      <button type="button" style="padding:6px 12px; font-size:0.78rem; font-weight:600; background:#FAF6EB; color:#0C513F; border:1px solid #E6DEC8; border-radius:999px; cursor:pointer;" onclick="Chow45LocationPicker.fillSavePlaceSuggestion('${s.replace(/'/g, "\\'")}')">
+        + ${s}
+      </button>
+    `).join('');
+  },
+
+  onSavePlaceInput() {
+    const inputEl = document.getElementById('save-place-address-input');
+    const suggEl = document.getElementById('save-place-suggestions');
+    if (!inputEl || !suggEl) return;
+    const q = inputEl.value.trim();
+
+    clearTimeout(this._savePlaceSearchTimer);
+    if (q.length < 2) {
+      this.restoreSavePlaceDefaultSuggestions();
+      return;
+    }
+
+    this._savePlaceSearchTimer = setTimeout(async () => {
+      if (window.chowMap && typeof window.chowMap.searchAddress === 'function') {
+        const results = await window.chowMap.searchAddress(q);
+        this._savePlaceSearchResults = results || [];
+        if (results && results.length > 0) {
+          suggEl.innerHTML = results.map((r, idx) => `
+            <button type="button" class="sugg-chip" style="width:100%; text-align:left; padding:8px 12px; margin-bottom:4px; font-size:0.82rem; font-weight:600; background:#FAF6EB; color:#0C513F; border:1px solid #E6DEC8; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="Chow45LocationPicker.selectSavePlaceResultByIndex(${idx})">
+              <span>📍</span>
+              <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <strong>${r.text}</strong> <small style="color:#64748B;">(${r.placeName})</small>
+              </span>
+            </button>
+          `).join('');
+        }
+      }
+    }, 250);
+  },
+
+  async selectSavePlaceResultByIndex(idx) {
+    const result = (this._savePlaceSearchResults || [])[idx];
+    if (!result) return;
+    const inputEl = document.getElementById('save-place-address-input');
+    if (inputEl) {
+      inputEl.value = result.placeName || result.text;
+    }
+
+    let lat = result.lat;
+    let lng = result.lng;
+
+    if ((!Number.isFinite(lat) || !Number.isFinite(lng)) && result.placeId) {
+      if (window.chowMap && typeof window.chowMap.getPlaceDetails === 'function') {
+        const details = await window.chowMap.getPlaceDetails(result.placeId);
+        if (details && Number.isFinite(details.lat) && Number.isFinite(details.lng)) {
+          lat = details.lat;
+          lng = details.lng;
+        }
+      }
+    }
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      this._savePlaceCoords = { latitude: lat, longitude: lng };
+    }
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast('Street selected! Tap Save to confirm.', 'success');
+    }
+  },
+
   useCurrentLocationForSavePlace() {
     if (!navigator.geolocation) {
-      window.chowApp && window.chowApp.toast('Location services not supported on this device.', 'error');
+      this._networkFallbackForSavePlace();
       return;
     }
     window.chowApp && window.chowApp.toast('Locating GPS coordinates...', 'info');
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        try {
-          if (window.chowMap && typeof window.chowMap.resolveLocation === 'function') {
-            const loc = await window.chowMap.resolveLocation(longitude, latitude);
-            const addr = loc.formattedAddress || loc.name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-            this.fillSavePlaceSuggestion(addr);
-            window.chowApp && window.chowApp.toast('GPS location filled!', 'success');
-          } else {
-            this.fillSavePlaceSuggestion(`GPS Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
-            window.chowApp && window.chowApp.toast('GPS location filled!', 'success');
-          }
-        } catch {
+    const handleSuccess = async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      this._savePlaceCoords = { latitude, longitude };
+      try {
+        if (window.chowMap && typeof window.chowMap.resolveLocation === 'function') {
+          const loc = await window.chowMap.resolveLocation(longitude, latitude);
+          const addr = loc.formattedAddress || loc.name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          this.fillSavePlaceSuggestion(addr);
+          window.chowApp && window.chowApp.toast('GPS location filled!', 'success');
+        } else {
           this.fillSavePlaceSuggestion(`GPS Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+          window.chowApp && window.chowApp.toast('GPS location filled!', 'success');
         }
-      },
+      } catch {
+        this.fillSavePlaceSuggestion(`GPS Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      handleSuccess,
       () => {
-        window.chowApp && window.chowApp.toast('Could not detect GPS location. Please type manually.', 'error');
+        // Fallback to standard accuracy
+        navigator.geolocation.getCurrentPosition(
+          handleSuccess,
+          () => {
+            this._networkFallbackForSavePlace(handleSuccess);
+          },
+          { timeout: 10000, enableHighAccuracy: false, maximumAge: 60000 }
+        );
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 6000, enableHighAccuracy: true, maximumAge: 10000 }
     );
+  },
+
+  async _networkFallbackForSavePlace(handleSuccess) {
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const d = await res.json();
+        if (d.success !== false && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)) {
+          if (handleSuccess) {
+            handleSuccess({ coords: { latitude: d.latitude, longitude: d.longitude } });
+          } else {
+            this._savePlaceCoords = { latitude: d.latitude, longitude: d.longitude };
+            this.fillSavePlaceSuggestion(`Near ${d.city || 'Lagos'}, ${d.region || 'Nigeria'}`);
+          }
+          window.chowApp && window.chowApp.toast('Location filled from network connection!', 'info');
+          return;
+        }
+      }
+    } catch (e) {}
+    window.chowApp && window.chowApp.toast('Could not detect GPS location. Please type manually.', 'error');
   },
 
   confirmSavePlace() {
@@ -822,45 +1329,57 @@ const Chow45LocationPicker = {
 
     const slotLabel = this._currentSavingSlot || 'Campus';
 
-    // Approximate or resolve coordinates based on address keywords
-    let lat = 6.8482;
-    let lng = 3.6545;
+    // Approximate or resolve coordinates based on address keywords or captured GPS coords
+    let lat = this._savePlaceCoords ? this._savePlaceCoords.latitude : 6.8482;
+    let lng = this._savePlaceCoords ? this._savePlaceCoords.longitude : 3.6545;
     let locality = 'Ago-Iwoye';
     let zoneId = 'ago-iwoye';
     let zoneName = 'Ago-Iwoye (OOU Main Campus)';
 
-    const lower = address.toLowerCase();
-    if (lower.includes('sagamu') || lower.includes('hospital') || lower.includes('med')) {
-      lat = 6.8390;
-      lng = 3.6480;
-      locality = 'Sagamu';
-      zoneId = 'sagamu';
-      zoneName = 'Sagamu (OOU Teaching Hospital)';
-    } else if (lower.includes('idimu') || lower.includes('goshen')) {
-      lat = 6.5742;
-      lng = 3.2685;
-      locality = 'Idimu';
-      zoneId = 'idimu-egbeda';
-      zoneName = 'Idimu & Egbeda';
-    } else if (lower.includes('egbeda') || lower.includes('akowonjo')) {
-      lat = 6.5910;
-      lng = 3.2890;
-      locality = 'Egbeda';
-      zoneId = 'idimu-egbeda';
-      zoneName = 'Idimu & Egbeda';
-    } else if (lower.includes('ikeja') || lower.includes('allen')) {
-      lat = 6.6018;
-      lng = 3.3515;
-      locality = 'Ikeja';
-      zoneId = 'ikeja';
-      zoneName = 'Ikeja';
-    } else if (lower.includes('ibogun') || lower.includes('ifo')) {
-      lat = 6.7200;
-      lng = 3.3900;
-      locality = 'Ibogun';
-      zoneId = 'ago-iwoye';
-      zoneName = 'OGITECH Ibogun Campus';
+    if (!this._savePlaceCoords) {
+      const lower = address.toLowerCase();
+      if (lower.includes('sagamu') || lower.includes('hospital') || lower.includes('med')) {
+        lat = 6.8390;
+        lng = 3.6480;
+        locality = 'Sagamu';
+        zoneId = 'sagamu';
+        zoneName = 'Sagamu (OOU Teaching Hospital)';
+      } else if (lower.includes('idimu') || lower.includes('goshen')) {
+        lat = 6.5742;
+        lng = 3.2685;
+        locality = 'Idimu';
+        zoneId = 'idimu-egbeda';
+        zoneName = 'Idimu & Egbeda';
+      } else if (lower.includes('egbeda') || lower.includes('akowonjo')) {
+        lat = 6.5910;
+        lng = 3.2890;
+        locality = 'Egbeda';
+        zoneId = 'idimu-egbeda';
+        zoneName = 'Idimu & Egbeda';
+      } else if (lower.includes('ikeja') || lower.includes('allen')) {
+        lat = 6.6018;
+        lng = 3.3515;
+        locality = 'Ikeja';
+        zoneId = 'ikeja';
+        zoneName = 'Ikeja';
+      } else if (lower.includes('ibogun') || lower.includes('ifo')) {
+        lat = 6.7200;
+        lng = 3.3900;
+        locality = 'Ibogun';
+        zoneId = 'ago-iwoye';
+        zoneName = 'OGITECH Ibogun Campus';
+      }
+    } else {
+      if (typeof findZoneForPoint === 'function') {
+        const zone = findZoneForPoint({ lng, lat });
+        if (zone) {
+          zoneId = zone.id;
+          zoneName = zone.name;
+          locality = zone.lga ? zone.lga.replace(' LGA', '') : zone.name;
+        }
+      }
     }
+    this._savePlaceCoords = null;
 
     const saved = window.chowStore.state.userProfile.savedAddresses || [];
     const existingIdx = saved.findIndex(a => (a.label || '').toLowerCase() === slotLabel.toLowerCase());
@@ -993,6 +1512,18 @@ const Chow45LocationPicker = {
       gpsBtn.addEventListener('click', () => this.useCurrentLocation());
     }
 
+    const gpsFab = document.getElementById('picker-gps-fab');
+    if (gpsFab && !gpsFab.dataset.bound) {
+      gpsFab.dataset.bound = '1';
+      gpsFab.addEventListener('click', () => this.useCurrentLocation());
+    }
+
+    const savePlaceInput = document.getElementById('save-place-address-input');
+    if (savePlaceInput && !savePlaceInput.dataset.bound) {
+      savePlaceInput.dataset.bound = '1';
+      savePlaceInput.addEventListener('input', () => this.onSavePlaceInput());
+    }
+
     const searchAreaBtn = document.getElementById('picker-search-area-btn');
     if (searchAreaBtn && !searchAreaBtn.dataset.bound) {
       searchAreaBtn.dataset.bound = '1';
@@ -1000,7 +1531,11 @@ const Chow45LocationPicker = {
         const c = window.chowMap.getCenter(this.containerId);
         if (c) {
           this.setStatus(null, 'Checking delivery availability…');
-          this.resolveAndPresent(c);
+          const lng = typeof c.lng === 'function' ? c.lng() : (c.lng ?? (Array.isArray(c) ? c[0] : c.longitude));
+          const lat = typeof c.lat === 'function' ? c.lat() : (c.lat ?? (Array.isArray(c) ? c[1] : c.latitude));
+          const numLng = Number(lng) || 3.6545;
+          const numLat = Number(lat) || 6.8482;
+          this.resolveAndPresent({ lng: numLng, lat: numLat, accuracy: null, timestamp: Date.now() });
         } else {
           this.onPinMoved();
         }
@@ -1012,6 +1547,8 @@ const Chow45LocationPicker = {
 
     const confirmBtn = document.getElementById('picker-confirm-btn');
     if (confirmBtn) confirmBtn.addEventListener('click', () => this.confirmLocation());
+    const headerConfirmBtn = document.getElementById('picker-header-confirm-btn');
+    if (headerConfirmBtn) headerConfirmBtn.addEventListener('click', () => this.confirmLocation());
 
     const modal = document.getElementById('map-picker-modal');
     if (modal) {

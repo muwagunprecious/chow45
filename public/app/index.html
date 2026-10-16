@@ -8,13 +8,12 @@
   <link rel="icon" type="image/svg+xml" href="/hero-campus.svg" />
 
   <!-- Typography & Font Fallbacks -->
-  <link rel="preconnect" href="https://media.brand.dev" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet" />
 
-  <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet" />
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+  <!-- Google Maps Platform JavaScript API -->
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly"></script>
 
   <!-- Chow45 Design System & Role Styles -->
   <link rel="icon" type="image/png" href="/logo.png" />
@@ -22,10 +21,27 @@
   <link rel="stylesheet" href="/app/css/layout.css?v=20260921b" />
   <link rel="stylesheet" href="/app/css/marketplace.css?v=20260921b" />
   <link rel="stylesheet" href="/app/css/tracking.css?v=20260921c" />
-  <link rel="stylesheet" href="/app/css/location-picker.css?v=20260921d" />
+  <link rel="stylesheet" href="/app/css/location-picker.css?v=20261015b?v=20260921d" />
   <link rel="stylesheet" href="/app/css/vendor.css?v=20260921j" />
   <link rel="stylesheet" href="/app/css/rider.css?v=20260921c" />
   <link rel="stylesheet" href="/app/css/admin.css?v=20260921c" />
+  <script>
+    // Early resilient global stubs so button clicks before full script hydration never throw
+    window.Chow45App = window.Chow45App || {
+      openLocationModal: function() {
+        if (window.chowLocationPicker && window.chowLocationPicker.open) {
+          window.chowLocationPicker.open();
+        } else if (window.Chow45LocationPicker && window.Chow45LocationPicker.open) {
+          window.Chow45LocationPicker.open();
+        } else {
+          var m = document.getElementById('map-picker-modal') || document.getElementById('location-modal');
+          if (m) m.classList.add('open');
+        }
+      },
+      toast: function(msg, type) { console.log('[' + (type || 'info') + ']', msg); }
+    };
+    window.chowApp = window.chowApp || window.Chow45App;
+  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -42,7 +58,7 @@
         </a>
 
         <!-- Location Selector Pill -->
-        <button class="location-pill" onclick="Chow45App.openLocationModal()" title="Change delivery location">
+        <button type="button" class="location-pill" onclick="event.preventDefault(); (window.Chow45App?.openLocationModal ? window.Chow45App.openLocationModal() : (window.Chow45LocationPicker?.open?.() || window.chowLocationPicker?.open?.()))" title="Change delivery location">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span class="loc-text" id="current-location-text">Select delivery location</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -51,17 +67,17 @@
 
         <!-- Right Actions: Orders, Profile, Auth & Cart -->
         <div class="nav-actions">
-          <button id="nav-auth-btn" class="nav-auth-pill" onclick="Chow45Auth.open()" title="Account & Sign In">
+          <button type="button" id="nav-auth-btn" class="nav-auth-pill" onclick="event.preventDefault(); Chow45Auth.open(event)" title="Account & Sign In">
             <span class="nav-auth-icon">👤</span>
             <span class="nav-auth-label">Sign In</span>
           </button>
 
-          <button class="cart-pill-btn desktop-only-btn" onclick="CustomerController.openOrderHistory()" title="My Orders" style="padding: 7px 12px;">
+          <button type="button" class="cart-pill-btn desktop-only-btn" onclick="event.preventDefault(); CustomerController.openOrderHistory()" title="My Orders" style="padding: 7px 12px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span class="desktop-only-text" style="font-size: 0.8rem;">Orders</span>
           </button>
 
-          <button class="cart-pill-btn" onclick="CustomerController.openCart()" aria-label="View Shopping Cart">
+          <button type="button" class="cart-pill-btn" onclick="event.preventDefault(); CustomerController.openCart()" aria-label="View Shopping Cart">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span class="cart-badge-count cart-count-badge" style="display: none;">0</span>
           </button>
@@ -941,23 +957,23 @@
          MOBILE FLOATING BOTTOM NAVIGATION BAR
          ========================================================= -->
     <nav class="bottom-nav" data-nav-for="customer" aria-label="Mobile Navigation">
-      <button class="bottom-tab active" data-role="customer" onclick="Chow45App.switchRole('customer')">
+      <button type="button" class="bottom-tab active" data-role="customer" onclick="event.preventDefault(); Chow45App.switchRole('customer')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span>Discover</span>
       </button>
 
-      <button class="bottom-tab" onclick="CustomerController.openOrderHistory()">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); CustomerController.openOrderHistory()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>Orders</span>
       </button>
 
-      <button class="bottom-tab" onclick="CustomerController.openCart()">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); CustomerController.openCart()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
         <span>Cart</span>
         <span class="tab-badge cart-badge-count" style="display: none;">0</span>
       </button>
 
-      <button class="bottom-tab" onclick="Chow45Auth.open()" title="Profile & Account">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.open(event)" title="Profile & Account">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -965,28 +981,28 @@
 
     <!-- Vendors manage a menu, not a storefront, so they get their own bar. -->
     <nav class="bottom-nav" data-nav-for="vendor" aria-label="Vendor Navigation" hidden>
-      <button class="bottom-tab active" data-vendor-tab="food" onclick="VendorController.switchSubTab('food')">
+      <button type="button" class="bottom-tab active" data-vendor-tab="food" onclick="event.preventDefault(); VendorController.switchSubTab('food')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7"/></svg>
         <span>Foods</span>
       </button>
 
-      <button class="bottom-tab" data-vendor-tab="orders" onclick="VendorController.switchSubTab('orders')">
+      <button type="button" class="bottom-tab" data-vendor-tab="orders" onclick="event.preventDefault(); VendorController.switchSubTab('orders')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>Active orders</span>
         <span class="tab-badge vendor-orders-badge-count" style="display: none;">0</span>
       </button>
 
-      <button class="bottom-tab" data-vendor-tab="store" onclick="VendorController.switchSubTab('store')">
+      <button type="button" class="bottom-tab" data-vendor-tab="store" onclick="event.preventDefault(); VendorController.switchSubTab('store')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
         <span>Store</span>
       </button>
 
-      <button class="bottom-tab" data-vendor-tab="money" onclick="VendorController.switchSubTab('money')">
+      <button type="button" class="bottom-tab" data-vendor-tab="money" onclick="event.preventDefault(); VendorController.switchSubTab('money')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.7 0-3 .8-3 2s1.3 2 3 2 3 .8 3 2-1.3 2-3 2a3 3 0 0 1-3-1.5"/><path d="M12 6.5v11"/></svg>
         <span>Earnings</span>
       </button>
 
-      <button class="bottom-tab" onclick="Chow45Auth.openAccountModal()" title="Profile & Logout">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.openAccountModal(event)" title="Profile & Logout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -994,22 +1010,22 @@
 
     <!-- Dedicated Rider Navigation -->
     <nav class="bottom-nav" data-nav-for="rider" aria-label="Rider Navigation" hidden>
-      <button class="bottom-tab active" onclick="if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Radar">
+      <button type="button" class="bottom-tab active" onclick="event.preventDefault(); if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Radar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 6a6 6 0 0 1 6 6"/><circle cx="12" cy="12" r="2"/></svg>
         <span>Radar</span>
       </button>
 
-      <button class="bottom-tab" onclick="if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Active Mission">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); if(window.RiderController && window.RiderController.render) window.RiderController.render();" title="Active Mission">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span>Delivery</span>
       </button>
 
-      <button class="bottom-tab" onclick="window.location.href='/riders';" title="Fleet Hub">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); window.location.href='/riders';" title="Fleet Hub">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Fleet Hub</span>
       </button>
 
-      <button class="bottom-tab" onclick="Chow45Auth.openAccountModal()" title="Profile & Sign Out">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.openAccountModal(event)" title="Profile & Sign Out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -1200,8 +1216,8 @@
         </div>
         <div class="modal-body">
           <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-            <button class="cta-primary-btn" style="padding: 8px 12px; font-size: 0.8rem; background: var(--c-primary-surface); color: var(--c-primary); border: 1px solid var(--c-primary);" onclick="window.chowApp.toast('Location pinned: 9 Goshen Ave, Idimu, Lagos', 'success'); document.getElementById('location-modal').classList.remove('open');">
-              📍 Use my current location
+            <button id="location-modal-gps-btn" class="cta-primary-btn" style="padding: 8px 12px; font-size: 0.8rem; background: var(--c-primary-surface); color: var(--c-primary); border: 1px solid var(--c-primary); cursor: pointer;" onclick="document.getElementById('location-modal').classList.remove('open'); if (window.chowLocationPicker) { window.chowLocationPicker.open(); window.chowLocationPicker.useCurrentLocation(); } else if (window.Chow45Auth) { window.Chow45Auth.useCurrentLocationForCustomer(); }">
+              📍 Get My Live Location
             </button>
           </div>
           <p style="font-size: 0.8rem; color: var(--c-text-secondary); margin-bottom: 8px; font-weight: 700;">SAVED ADDRESSES & POPULAR ZONES:</p>
@@ -1216,16 +1232,38 @@
     <div id="map-picker-modal" class="map-picker-modal">
       <div class="map-picker-shell">
         <!-- Header / Search -->
-        <header class="picker-header">
-          <button id="picker-back-btn" class="picker-back-btn" aria-label="Back" onclick="Chow45LocationPicker.close()">
+        <header class="picker-header" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid var(--c-border-subtle, #EFECE6); position: relative; z-index: 25;">
+          <button id="picker-back-btn" class="picker-back-btn" aria-label="Back" onclick="Chow45LocationPicker.close()" style="flex-shrink: 0;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
-          <div class="picker-title">Choose delivery location</div>
-          <div class="picker-search-wrap">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="picker-search-input" type="text" class="picker-search-input" placeholder="Search for an address" autocomplete="off" spellcheck="false" />
+          <div class="picker-title" style="white-space: nowrap; font-size: 0.95rem; font-weight: 700; color: #111827; flex-shrink: 0;">Choose location</div>
+          <div class="picker-search-wrap" style="flex: 1 1 auto; min-width: 0; position: relative;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="picker-search-input" type="text" class="picker-search-input" placeholder="Search address or landmark..." autocomplete="off" spellcheck="false" style="width: 100%; height: 42px; border-radius: 999px; border: 1px solid #E5E7EB; background: #F9FAFB; padding: 0 16px 0 42px; font-size: 0.9rem; color: #111827; outline: none; box-sizing: border-box;" />
           </div>
+          <button id="picker-header-confirm-btn" type="button" class="picker-header-confirm-btn" onclick="Chow45LocationPicker.confirmLocation()" style="background: #00a205; color: #ffffff; border: none; padding: 10px 20px; border-radius: 999px; font-weight: 700; font-size: 0.88rem; cursor: pointer; white-space: nowrap; flex-shrink: 0; width: auto !important; max-width: max-content; box-shadow: 0 2px 6px rgba(0, 162, 5, 0.25); display: inline-flex; align-items: center; justify-content: center;">
+            Confirm ✓
+          </button>
         </header>
+
+        <!-- Quick Zones Selector (for 1-tap jump to Ogun delivery zones if ISP detected Ikeja/Lagos) -->
+        <div class="picker-quick-zones" style="display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 10px 16px; background: #FFF7ED; border-bottom: 1px solid #FED7AA; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+          <span style="font-size: 0.75rem; font-weight: 800; color: #C2410C; display: inline-flex; align-items: center; white-space: nowrap; gap: 4px;">
+            ⚡ Quick Zones:
+          </span>
+          <button type="button" class="picker-zone-chip" onclick="Chow45LocationPicker.flyToZone('ifo')" style="padding: 6px 12px; border-radius: 999px; border: 1.5px solid #FB923C; background: #FFFFFF; color: #C2410C; font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            📍 Moboluwaduro / Ifo
+          </button>
+          <button type="button" class="picker-zone-chip" onclick="Chow45LocationPicker.flyToZone('sagamu')" style="padding: 6px 12px; border-radius: 999px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #334155; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
+            🏥 Sagamu (OOUTH)
+          </button>
+          <button type="button" class="picker-zone-chip" onclick="Chow45LocationPicker.flyToZone('agoiwoye')" style="padding: 6px 12px; border-radius: 999px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #334155; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
+            🎓 Ago-Iwoye (OOU Main)
+          </button>
+          <button type="button" class="picker-zone-chip" onclick="Chow45LocationPicker.flyToZone('ibogun')" style="padding: 6px 12px; border-radius: 999px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #334155; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
+            🏫 Ibogun Campus
+          </button>
+        </div>
 
         <!-- Search results & saved addresses -->
         <div id="picker-search-results" class="picker-search-results"></div>
@@ -1235,44 +1273,30 @@
         <div class="picker-map-stage">
           <div id="picker-map-canvas"></div>
           <div id="picker-center-pin" class="picker-center-pin" aria-hidden="true"></div>
+          <div class="picker-map-hint" style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(17, 24, 39, 0.88); backdrop-filter: blur(8px); color: #FFFFFF; padding: 7px 16px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; pointer-events: none; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px; letter-spacing: 0.2px;">
+            <span>📍</span> Drag map to pinpoint your exact gate or building
+          </div>
           <div class="picker-float-controls">
-            <button id="picker-gps-btn" class="picker-map-btn primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
-              Use my current location
+            <button id="picker-gps-btn" class="picker-map-btn primary" onclick="Chow45LocationPicker.useCurrentLocation()" aria-label="Get My Live Location">
+              <svg class="picker-gps-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+              <span class="picker-gps-spinner" style="display:none;" aria-hidden="true"></span>
+              <span class="picker-gps-label">Get My Live Location</span>
             </button>
             <button id="picker-search-area-btn" class="picker-map-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><search/><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
               Search this area
             </button>
           </div>
-          <button id="picker-gps-fab" class="picker-gps-fab" aria-label="Use my current location" onclick="Chow45LocationPicker.useCurrentLocation()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+          <button id="picker-gps-fab" class="picker-gps-fab" aria-label="Get My Live Location" title="Get My Live Location" onclick="Chow45LocationPicker.useCurrentLocation()">
+            <svg class="picker-gps-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+            <span class="picker-gps-spinner" style="display:none;" aria-hidden="true"></span>
           </button>
         </div>
 
         <!-- Availability status banner -->
         <div id="picker-status-banner" class="picker-status-banner"></div>
 
-        <!-- Streamlined Floating Confirmation Bar -->
-        <footer id="picker-confirm-card" class="picker-confirm-card" style="padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); background: #FFFFFF; box-shadow: 0 -8px 24px rgba(0,0,0,0.12); border-top: 1px solid var(--c-border-subtle, #E6DEC8); display: flex; align-items: center; justify-content: space-between; gap: 14px; z-index: 30;">
-          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-            <div class="picker-check-icon" style="width: 38px; height: 38px; min-width: 38px; border-radius: 50%; background: #E8F6F0; color: #00a205; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-              📍
-            </div>
-            <div style="min-width: 0; flex: 1;">
-              <div id="picker-address-text" class="picker-address-text" style="font-size: 0.94rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                Selecting location...
-              </div>
-              <div id="picker-zone-status" class="picker-zone-status ok" style="font-size: 0.78rem; color: #00a205; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                Ready to confirm
-              </div>
-            </div>
-          </div>
 
-          <button type="button" id="picker-confirm-btn" class="cta-primary-btn picker-confirm-btn" onclick="Chow45LocationPicker.confirmLocation()" style="flex-shrink: 0; padding: 13px 24px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; width: auto; min-width: 160px; cursor: pointer; background: #00a205; color: #FFFFFF;">
-            Confirm Location ✓
-          </button>
-        </footer>
       </div>
     </div>
 
@@ -1313,7 +1337,7 @@
               </div>
               <div class="auth-input-wrap">
                 <span class="auth-input-icon">📍</span>
-                <input type="text" id="save-place-address-input" class="checkout-input auth-input" placeholder="Type address or campus landmark..." required autocomplete="street-address" autofocus />
+                <input type="text" id="save-place-address-input" oninput="Chow45LocationPicker.onSavePlaceInput()" class="checkout-input auth-input" placeholder="Type address or campus landmark..." required autocomplete="street-address" autofocus />
               </div>
             </div>
 
@@ -2046,6 +2070,19 @@
 
             <div id="auth-step1-alert" class="auth-alert error" style="display: none;"></div>
 
+            <!-- Unified Google Sign-In Button -->
+            <button type="button" id="auth-google-btn" class="auth-google-cta-btn" onclick="Chow45Auth.loginWithGoogle()">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.86c2.26-2.09 3.685-5.17 3.685-9.09z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            <div class="auth-or-divider"><span>or continue with email</span></div>
+
             <form onsubmit="event.preventDefault(); Chow45Auth.handleStep1Continue();">
               <div class="checkout-input-group" style="margin-top: 14px;">
                 <label class="checkout-label" for="auth-step1-email">Email Address</label>
@@ -2104,11 +2141,23 @@
               </button>
             </form>
 
+            <div class="auth-or-divider" style="margin: 14px 0 10px 0;"><span>or</span></div>
+            <button type="button" class="auth-google-cta-btn secondary" onclick="Chow45Auth.loginWithGoogle()" style="margin-top: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.86c2.26-2.09 3.685-5.17 3.685-9.09z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+
             <div style="text-align: center; margin-top: 14px;">
               <button type="button" onclick="Chow45Auth.showStep1()" style="background: none; border: none; font-size: 0.8rem; color: #6E6D66; cursor: pointer; text-decoration: underline;">
                 ← Use a different email address
               </button>
             </div>
+
           </div>
 
           <!-- ─── STEP 2: CUSTOMER PROFILE (Email, Phone, Address) ─── -->
@@ -2220,6 +2269,18 @@
             </div>
 
             <div id="auth-vnd-alert" class="auth-alert error" style="display: none;"></div>
+
+            <!-- Google Fast Register for Vendor -->
+            <button type="button" class="auth-google-cta-btn" onclick="Chow45Auth.loginWithGoogle('vendor')" style="margin-top: 4px; margin-bottom: 12px;">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.86c2.26-2.09 3.685-5.17 3.685-9.09z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              <span>Quick Vendor Register with Google</span>
+            </button>
+            <div class="auth-or-divider" style="margin: 8px 0 14px 0;"><span>or enter store details below</span></div>
 
             <form onsubmit="event.preventDefault(); Chow45Auth.handleVendorSubmit();">
               <div class="checkout-input-group">
@@ -2633,30 +2694,25 @@
 
   <!-- App Logic Modules -->
   <script>
-    if (!window.__CHOW45_MAPBOX_TOKEN__ || window.__CHOW45_MAPBOX_TOKEN__ === '__CHOW45_TOKEN_SLOT__') {
-      try {
-        window.__CHOW45_MAPBOX_TOKEN__ = typeof atob === 'function'
-          ? atob('cGsuZXlKMUlqb2lZV1JsYlhWM1lXZDFibkpsYldrMk1DSXNJbUVpT2lKamJXcHphalJpYlc4MGJUbDJNMmR6TlhsNmRXVmtOMjAxSW4wLkVHbTJvLW53MFFIRVV3ZUI4dWFpcmc=')
-          : '';
-      } catch {
-        window.__CHOW45_MAPBOX_TOKEN__ = '';
-      }
-    }
+    window.__CHOW45_GOOGLE_MAPS_KEY__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
+    window.__CHOW45_MAPBOX_TOKEN__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
   </script>
-  <script src="/app/js/mapbox-config.js?v=20261005a"></script>
-  <script src="/app/js/service-zones.js?v=20261005a"></script>
-  <script src="/app/js/units.js?v=20261005a"></script>
-  <script src="/app/js/data.js?v=20261005a"></script>
-  <script src="/app/js/state.js?v=20261005a"></script>
-  <script src="/app/js/mapbox-service.js?v=20261005a"></script>
-  <script src="/app/js/location-picker.js?v=20261005a"></script>
-  <script src="/app/js/customer.js?v=20261005a"></script>
-  <script src="/app/js/vendor.js?v=20261005a"></script>
-  <script src="/app/js/rider.js?v=20261005a"></script>
-  <script src="/app/js/admin.js?v=20261005a"></script>
-  <script src="/app/js/auth.js?v=20261005a"></script>
-  <script src="/app/js/vendor-onboarding.js?v=20261005a"></script>
-  <script src="/app/js/app.js?v=20261005a"></script>
+  <script src="/app/js/google-maps-config.js?v=20261016d"></script>
+  <script src="/app/js/mapbox-config.js?v=20261016d"></script>
+  <script src="/app/js/service-zones.js?v=20261016d"></script>
+  <script src="/app/js/units.js?v=20261016d"></script>
+  <script src="/app/js/data.js?v=20261016d"></script>
+  <script src="/app/js/state.js?v=20261016d"></script>
+  <script src="/app/js/google-maps-service.js?v=20261016d"></script>
+  <script src="/app/js/mapbox-service.js?v=20261016d"></script>
+  <script src="/app/js/location-picker.js?v=20261016d"></script>
+  <script src="/app/js/customer.js?v=20261016d"></script>
+  <script src="/app/js/vendor.js?v=20261016d"></script>
+  <script src="/app/js/rider.js?v=20261016d"></script>
+  <script src="/app/js/admin.js?v=20261016d"></script>
+  <script src="/app/js/auth.js?v=20261016d"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261016d"></script>
+  <script src="/app/js/app.js?v=20261016d"></script>
 </body>
 </html>
 

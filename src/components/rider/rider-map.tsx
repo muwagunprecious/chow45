@@ -4,8 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
-    mapboxgl?: any;
-    __CHOW45_MAPBOX_TOKEN__?: string;
+    google?: any;
+    __CHOW45_GOOGLE_MAPS_KEY__?: string;
   }
 }
 
@@ -37,40 +37,30 @@ export default function RiderMap({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Sagamu default center [lng, lat]
-  const defaultCenter = [3.6545, 6.8482];
+  // Sagamu default center { lat, lng }
+  const defaultCenter = { lat: 6.8482, lng: 3.6545 };
 
-  // Resolve Mapbox token
-  const getMapboxToken = () => {
-    let token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || (typeof window !== 'undefined' ? window.__CHOW45_MAPBOX_TOKEN__ : '') || '';
-    if (!token && typeof atob === 'function') {
-      try {
-        token = atob('cGsuZXlKMUlqb2lZV1JsYlhWM1lXZDFibkpsYldrMk1DSXNJbUVpT2lKamJXcHphalJpYlc4MGJUbDJNMmR6TlhsNmRXVmtOMjAxSW4wLkVHbTJvLW53MFFIRVV3ZUI4dWFpcmc=');
-      } catch {}
-    }
-    return token;
+  // Resolve Google Maps API Key
+  const getGoogleMapsKey = () => {
+    return (
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+      (typeof window !== 'undefined' ? window.__CHOW45_GOOGLE_MAPS_KEY__ : '') ||
+      'AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo'
+    );
   };
 
-  // 1. Ensure Mapbox GL JS & CSS are loaded
+  // 1. Ensure Google Maps JS API is loaded
   useEffect(() => {
     let isMounted = true;
 
-    const loadMapboxLib = async () => {
-      if (typeof window.mapboxgl !== 'undefined') {
+    const loadGoogleMaps = async () => {
+      if (typeof window.google !== 'undefined' && window.google.maps) {
         if (isMounted) initMap();
         return;
       }
 
-      // Add CSS if missing
-      if (!document.querySelector('link[href*="mapbox-gl"]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
-        document.head.appendChild(link);
-      }
-
-      // Add Script if missing
-      const existingScript = document.querySelector('script[src*="mapbox-gl"]');
+      const key = getGoogleMapsKey();
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
       if (existingScript) {
         existingScript.addEventListener('load', () => {
           if (isMounted) initMap();
@@ -79,147 +69,191 @@ export default function RiderMap({
       }
 
       const script = document.createElement('script');
-      script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places,geometry,marker&loading=async&v=weekly`;
       script.async = true;
       script.onload = () => {
         if (isMounted) initMap();
       };
       script.onerror = () => {
-        if (isMounted) setLoadError('Unable to load Mapbox engine.');
+        if (isMounted) setLoadError('Unable to load Google Maps engine.');
       };
       document.body.appendChild(script);
     };
 
-    const initMap = () => {
+    const initMap = async () => {
       if (!mapContainerRef.current || mapInstanceRef.current) return;
-      const mapboxgl = window.mapboxgl;
-      if (!mapboxgl) return;
+      if (!window.google || !window.google.maps) return;
 
-      const token = getMapboxToken();
-      if (!token) {
-        setLoadError('Mapbox access token is missing.');
-        return;
+      if (typeof window.google.maps.importLibrary === 'function') {
+        try {
+          const [mapsLib, markerLib] = await Promise.all([
+            window.google.maps.importLibrary('maps'),
+            window.google.maps.importLibrary('marker').catch(() => null),
+          ]);
+          if (mapsLib) Object.assign(window.google.maps, mapsLib);
+          if (markerLib) {
+            Object.assign(window.google.maps, markerLib);
+            window.google.maps.marker = window.google.maps.marker || {};
+            if (markerLib.AdvancedMarkerElement) {
+              window.google.maps.marker.AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
+              window.google.maps.marker.PinElement = markerLib.PinElement;
+            }
+          }
+        } catch (e) {
+          console.warn('[rider-map] importLibrary warning:', e);
+        }
       }
-      mapboxgl.accessToken = token;
+
+      const MapConstructor = window.google.maps && window.google.maps.Map;
+      if (typeof MapConstructor !== 'function') return;
 
       const initialCenter = riderLocation
-        ? [riderLocation.lng, riderLocation.lat]
+        ? { lat: riderLocation.lat, lng: riderLocation.lng }
         : pickupLocation
-        ? [pickupLocation.lng, pickupLocation.lat]
+        ? { lat: pickupLocation.lat, lng: pickupLocation.lng }
         : defaultCenter;
 
       try {
-        const map = new mapboxgl.Map({
-          container: mapContainerRef.current,
-          style: 'mapbox://styles/mapbox/streets-v12',
+        const map = new MapConstructor(mapContainerRef.current, {
           center: initialCenter,
           zoom: 14.5,
-          attributionControl: false,
+          mapId: 'DEMO_MAP_ID',
+          internalUsageAttributionIds: ['gmp_git_agentskills_v1'],
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
         });
 
-        map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
-
-        map.on('load', () => {
+        window.google.maps.event.addListenerOnce(map, 'idle', () => {
           mapInstanceRef.current = map;
           setMapLoaded(true);
-          map.resize();
         });
       } catch (err: any) {
-        console.error('Failed to create rider map:', err);
-        setLoadError('Map failed to initialize.');
+        console.error('Failed to create rider Google Map:', err);
+        setLoadError('Google Map failed to initialize.');
       }
     };
 
-    loadMapboxLib();
+    loadGoogleMaps();
 
     return () => {
       isMounted = false;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      mapInstanceRef.current = null;
     };
   }, []);
 
   // 2. Manage and update Markers whenever locations change
   useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || !window.mapboxgl) return;
+    if (!mapLoaded || !mapInstanceRef.current || !window.google || !window.google.maps) return;
     const map = mapInstanceRef.current;
-    const mapboxgl = window.mapboxgl;
+    const google = window.google;
 
-    const boundsPoints: [number, number][] = [];
+    const boundsPoints: { lat: number; lng: number }[] = [];
+
+    const createOrUpdateMarker = (
+      markerRef: React.MutableRefObject<any>,
+      coord: { lat: number; lng: number },
+      contentEl: HTMLElement,
+      popupHtml: string
+    ) => {
+      boundsPoints.push(coord);
+      if (!markerRef.current) {
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position: coord,
+            content: contentEl,
+          });
+          const info = new google.maps.InfoWindow({ content: popupHtml });
+          if (typeof marker.addEventListener === 'function') {
+            marker.addEventListener('gmp-click', () => info.open({ anchor: marker, map }));
+          } else {
+            marker.addListener('click', () => info.open({ anchor: marker, map }));
+          }
+          markerRef.current = marker;
+        } else {
+          const marker = new google.maps.Marker({
+            map,
+            position: coord,
+          });
+          const info = new google.maps.InfoWindow({ content: popupHtml });
+          marker.addListener('click', () => info.open({ anchor: marker, map }));
+          markerRef.current = marker;
+        }
+      } else {
+        if (markerRef.current.position !== undefined) {
+          markerRef.current.position = coord;
+        } else if (typeof markerRef.current.setPosition === 'function') {
+          markerRef.current.setPosition(coord);
+        }
+      }
+    };
 
     // --- Rider Marker ---
     if (riderLocation && Number.isFinite(riderLocation.lng) && Number.isFinite(riderLocation.lat)) {
-      const riderCoord: [number, number] = [riderLocation.lng, riderLocation.lat];
-      boundsPoints.push(riderCoord);
-
-      if (!riderMarkerRef.current) {
-        const el = document.createElement('div');
-        el.className = 'chow45-rider-live-marker';
-        el.innerHTML = `
-          <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(0, 162, 5, 0.25); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-            <div style="width: 34px; height: 34px; border-radius: 50%; background: #00a205; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 17px; z-index: 2;">
-              🛵
-            </div>
+      const riderCoord = { lat: riderLocation.lat, lng: riderLocation.lng };
+      const el = document.createElement('div');
+      el.className = 'chow45-rider-live-marker';
+      el.innerHTML = `
+        <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(0, 162, 5, 0.25); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="width: 34px; height: 34px; border-radius: 50%; background: #00a205; border: 3px solid #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 17px; z-index: 2;">
+            🛵
           </div>
-        `;
-        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML('<strong>You (Chow45 Rider)</strong><br><small>Live GPS Location</small>');
-        riderMarkerRef.current = new mapboxgl.Marker(el).setLngLat(riderCoord).setPopup(popup).addTo(map);
-      } else {
-        riderMarkerRef.current.setLngLat(riderCoord);
-      }
+        </div>
+      `;
+      createOrUpdateMarker(
+        riderMarkerRef,
+        riderCoord,
+        el,
+        '<strong>You (Chow45 Rider)</strong><br><small>Live GPS Location</small>'
+      );
     }
 
     // --- Store / Pickup Marker ---
     if (pickupLocation && Number.isFinite(pickupLocation.lng) && Number.isFinite(pickupLocation.lat)) {
-      const pickupCoord: [number, number] = [pickupLocation.lng, pickupLocation.lat];
-      boundsPoints.push(pickupCoord);
-
-      if (!pickupMarkerRef.current) {
-        const el = document.createElement('div');
-        el.innerHTML = `
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: #075B4D; border: 2.5px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 15px;">
-            🏪
-          </div>
-        `;
-        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`<strong>Pickup: ${pickupLocation.name || 'Store'}</strong><br><small>${pickupLocation.address || 'Vendor Spot'}</small>`);
-        pickupMarkerRef.current = new mapboxgl.Marker(el).setLngLat(pickupCoord).setPopup(popup).addTo(map);
-      } else {
-        pickupMarkerRef.current.setLngLat(pickupCoord);
-      }
+      const pickupCoord = { lat: pickupLocation.lat, lng: pickupLocation.lng };
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #075B4D; border: 2.5px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 15px;">
+          🏪
+        </div>
+      `;
+      createOrUpdateMarker(
+        pickupMarkerRef,
+        pickupCoord,
+        el,
+        `<strong>Pickup: ${pickupLocation.name || 'Store'}</strong><br><small>${pickupLocation.address || 'Vendor Spot'}</small>`
+      );
     }
 
     // --- Customer / Dropoff Marker ---
     if (dropoffLocation && Number.isFinite(dropoffLocation.lng) && Number.isFinite(dropoffLocation.lat)) {
-      const dropoffCoord: [number, number] = [dropoffLocation.lng, dropoffLocation.lat];
-      boundsPoints.push(dropoffCoord);
-
-      if (!dropoffMarkerRef.current) {
-        const el = document.createElement('div');
-        el.innerHTML = `
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: #E75A24; border: 2.5px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 15px;">
-            📍
-          </div>
-        `;
-        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`<strong>Dropoff: ${dropoffLocation.name || 'Customer'}</strong><br><small>${dropoffLocation.address || 'Destination'}</small>`);
-        dropoffMarkerRef.current = new mapboxgl.Marker(el).setLngLat(dropoffCoord).setPopup(popup).addTo(map);
-      } else {
-        dropoffMarkerRef.current.setLngLat(dropoffCoord);
-      }
+      const dropoffCoord = { lat: dropoffLocation.lat, lng: dropoffLocation.lng };
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #E75A24; border: 2.5px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 15px;">
+          📍
+        </div>
+      `;
+      createOrUpdateMarker(
+        dropoffMarkerRef,
+        dropoffCoord,
+        el,
+        `<strong>Dropoff: ${dropoffLocation.name || 'Customer'}</strong><br><small>${dropoffLocation.address || 'Destination'}</small>`
+      );
     }
 
     // Fit map bounds to show rider, pickup, and dropoff together
     if (boundsPoints.length > 1) {
-      const bounds = boundsPoints.reduce(
-        (b, coord) => b.extend(coord),
-        new mapboxgl.LngLatBounds(boundsPoints[0], boundsPoints[0])
-      );
-      map.fitBounds(bounds, { padding: 60, maxZoom: 16 });
+      const bounds = new google.maps.LatLngBounds();
+      boundsPoints.forEach((p) => bounds.extend(p));
+      map.fitBounds(bounds, 60);
     } else if (boundsPoints.length === 1 && !pickupLocation && !dropoffLocation) {
-      // Just rider - gently pan
-      map.easeTo({ center: boundsPoints[0], zoom: 15 });
+      map.panTo(boundsPoints[0]);
+      map.setZoom(15);
     }
   }, [mapLoaded, riderLocation, pickupLocation, dropoffLocation]);
 
@@ -227,11 +261,12 @@ export default function RiderMap({
   const handleRecenter = () => {
     if (!mapInstanceRef.current) return;
     const center = riderLocation
-      ? [riderLocation.lng, riderLocation.lat]
+      ? { lat: riderLocation.lat, lng: riderLocation.lng }
       : pickupLocation
-      ? [pickupLocation.lng, pickupLocation.lat]
+      ? { lat: pickupLocation.lat, lng: pickupLocation.lng }
       : defaultCenter;
-    mapInstanceRef.current.flyTo({ center, zoom: 15.5, duration: 600 });
+    mapInstanceRef.current.panTo(center);
+    mapInstanceRef.current.setZoom(15.5);
   };
 
   // Google Maps navigation direction URL

@@ -23,28 +23,41 @@ import * as riderFinanceSchema from "./schema/rider-finance";
 import * as categoriesSchema from "./schema/categories";
 import * as waitlistSchema from "./schema/waitlist";
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL!,
-    ssl: { rejectUnauthorized: false },
-});
+const fullSchema = {
+    ...usersSchema,
+    ...vendorsSchema,
+    ...menuItemsSchema,
+    ...menuExtrasSchema,
+    ...menuItemSizesSchema,
+    ...deliverySchema,
+    ...ridersSchema,
+    ...ordersSchema,
+    ...cartSchema,
+    ...vendorFinanceSchema,
+    ...riderFinanceSchema,
+    ...categoriesSchema,
+    ...waitlistSchema,
+};
 
-export const db = drizzle({ client: pool,
-    schema: {
-        ...usersSchema,
-        ...vendorsSchema,
-        ...menuItemsSchema,
-        ...menuExtrasSchema,
-        ...menuItemSizesSchema,
-        ...deliverySchema,
-        ...ridersSchema,
-        ...ordersSchema,
-        ...cartSchema,
-        ...vendorFinanceSchema,
-        ...riderFinanceSchema,
-        ...categoriesSchema,
-        ...waitlistSchema,
-    },
-});
+const globalForDb = globalThis as unknown as {
+    pool: Pool | undefined;
+};
+
+const pool =
+    globalForDb.pool ??
+    new Pool({
+        connectionString: process.env.DATABASE_URL!,
+        ssl: { rejectUnauthorized: false },
+        max: 5,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+    });
+
+if (process.env.NODE_ENV !== "production") {
+    globalForDb.pool = pool;
+}
+
+export const db = drizzle({ client: pool, schema: fullSchema });
 
 export * from "./schema/users";
 export * from "./schema/vendors";

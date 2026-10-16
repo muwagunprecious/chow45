@@ -14,6 +14,28 @@
 
 const CHOW45_SERVICE_ZONES = [
   {
+    id: 'ifo-moboluwaduro',
+    name: 'Ifo & Moboluwaduro Zone',
+    active: true,
+    state: 'Ogun',
+    lga: 'Ifo LGA',
+    center: [3.1975, 6.8111],
+    maxDeliveryDistance: 8000, // meters
+    deliveryRules: {
+      baseFee: 300,
+      ratePerMeter: 0.15,
+      serviceFee: 400
+    },
+    operatingHours: { open: '07:00', close: '23:30' },
+    polygon: [
+      [3.1400, 6.7700],
+      [3.2600, 6.7700],
+      [3.2600, 6.8600],
+      [3.1400, 6.8600],
+      [3.1400, 6.7700]
+    ]
+  },
+  {
     id: 'ibogun-campus',
     name: 'Ibogun Campus',
     active: true,
@@ -235,12 +257,28 @@ function formatDurationSeconds(seconds) {
 // -------------------------------------------------------------
 
 /**
+ * Normalizes point to ensure finite number { lng, lat } coordinates
+ */
+function normalizePoint(point) {
+  if (!point) return { lng: 3.6545, lat: 6.8482 };
+  const rawLng = typeof point.lng === 'function' ? point.lng() : (point.lng ?? point.longitude ?? point[0]);
+  const rawLat = typeof point.lat === 'function' ? point.lat() : (point.lat ?? point.latitude ?? point[1]);
+  const numLng = Number(rawLng);
+  const numLat = Number(rawLat);
+  return {
+    lng: Number.isFinite(numLng) ? numLng : 3.6545,
+    lat: Number.isFinite(numLat) ? numLat : 6.8482
+  };
+}
+
+/**
  * Find the zone whose polygon contains the given point.
  * @param {{lng:number, lat:number}} point
  * @returns {object|null} zone definition (active or not)
  */
 function findZoneForPoint(point) {
-  const coord = [point.lng, point.lat];
+  const p = normalizePoint(point);
+  const coord = [p.lng, p.lat];
   for (const zone of CHOW45_SERVICE_ZONES) {
     if (isPointInPolygon(coord, zone.polygon)) {
       return zone;
@@ -253,7 +291,8 @@ function findZoneForPoint(point) {
  * Determine whether a point is inside Ogun State's outer boundary.
  */
 function isPointInOgun(point) {
-  return isPointInPolygon([point.lng, point.lat], OGUN_STATE_BOUNDARY);
+  const p = normalizePoint(point);
+  return isPointInPolygon([p.lng, p.lat], OGUN_STATE_BOUNDARY);
 }
 
 /**
@@ -262,19 +301,14 @@ function isPointInOgun(point) {
  * @returns {{status:'available'|'ogun_outside_zone'|'outside_ogun', inOgun:boolean, zone:object|null, zoneActive:boolean}}
  */
 function getServiceAvailability(point) {
-  const inOgun = isPointInOgun(point);
-  const zone = findZoneForPoint(point);
+  const p = normalizePoint(point);
+  const inOgun = isPointInOgun(p);
+  const zone = findZoneForPoint(p);
 
-  if (zone && zone.active) {
+  if (zone) {
     return { status: 'available', inOgun: true, zone, zoneActive: true };
   }
-  if (zone && !zone.active) {
-    return { status: 'ogun_outside_zone', inOgun: true, zone, zoneActive: false };
-  }
-  if (inOgun) {
-    return { status: 'ogun_outside_zone', inOgun: true, zone: null, zoneActive: false };
-  }
-  return { status: 'outside_ogun', inOgun: false, zone: null, zoneActive: false };
+  return { status: 'available', inOgun: inOgun, zone: null, zoneActive: true };
 }
 
 /**

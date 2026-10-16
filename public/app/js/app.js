@@ -13,14 +13,16 @@ const Chow45App = {
 
     console.log('🚀 Initializing Chow45 Food Delivery Marketplace');
 
-    // Initialize all controllers
+    // Initialize auth first so user profile & role session are restored before controllers boot
+    if (typeof Chow45Auth !== 'undefined') {
+      Chow45Auth.init();
+    }
+
+    // Initialize all controllers with restored session in place
     CustomerController.init();
     VendorController.init();
     RiderController.init();
     AdminController.init();
-    if (typeof Chow45Auth !== 'undefined') {
-      Chow45Auth.init();
-    }
 
     this.bindGlobalEvents();
 
@@ -31,11 +33,20 @@ const Chow45App = {
 
     if (pathname.startsWith('/vendor')) {
       initialRole = 'vendor';
+    } else if (pathname === '/app' || pathname === '/') {
+      // On marketplace route, if no ?role= is provided, ensure customer role
+      if (!initialRole) {
+        initialRole = 'customer';
+        if (window.chowStore && window.chowStore.state) {
+          window.chowStore.state.currentRole = 'customer';
+          window.chowStore.save();
+        }
+      }
     }
 
     const isVendorContext = pathname.startsWith('/vendor') ||
       initialRole === 'vendor' ||
-      window.chowStore?.state?.currentRole === 'vendor' ||
+      (pathname !== '/app' && window.chowStore?.state?.currentRole === 'vendor') ||
       sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true';
 
     // Pull the vendor's real profile from the server whenever in vendor context
@@ -70,23 +81,37 @@ const Chow45App = {
 
   async syncFromServer() {
     try {
-      const res = await fetch('/api/bootstrap');
+      const isVendor = (typeof VendorController !== 'undefined' && VendorController.isVendorContext && VendorController.isVendorContext());
+      const ident = (isVendor && typeof VendorController._resolveVendorIdentity === 'function')
+        ? VendorController._resolveVendorIdentity()
+        : null;
+      const headers = { 'Content-Type': 'application/json' };
+      if (ident?.storeId) headers['x-vendor-store-id'] = String(ident.storeId);
+      if (ident?.vendorId) headers['x-vendor-id'] = String(ident.vendorId);
+      if (ident?.email) headers['x-vendor-email'] = String(ident.email);
+
+      const res = await fetch('/api/bootstrap', { headers, credentials: 'include' });
       if (!res.ok) return;
       const data = await res.json();
       if (Array.isArray(data.stores)) {
         window.chowStore.state.restaurants = data.stores;
+        if (data.favorites) {
+          if (!window.chowStore.state.userProfile) window.chowStore.state.userProfile = {};
+          window.chowStore.state.userProfile.favorites = data.favorites;
+        }
         window.chowStore.save();
         if (typeof CustomerController !== 'undefined' && CustomerController.render) {
           CustomerController.render();
         }
-        if (typeof VendorController !== 'undefined' && VendorController.render) {
-          VendorController.render();
+        if (isVendor && typeof VendorController !== 'undefined') {
+          if (VendorController.render) VendorController.render();
+          if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
         }
       }
 
       if (data.signedIn && data.user) {
         const u = data.user;
-        const role = data.role === 'VENDOR' ? 'vendor' : 'customer';
+        const role = data.role === 'VENDOR' ? 'vendor' : (u.role === 'VENDOR' ? 'vendor' : 'customer');
         const profile = {
           id: u.id,
           name: u.name,
@@ -99,24 +124,29 @@ const Chow45App = {
         if (role === 'vendor' && Array.isArray(data.stores)) {
           const myStore = data.stores.find(s => 
             (s.userId && String(s.userId) === String(u.id)) ||
-            (s.numericId && String(s.numericId) === String(u.vendorId)) ||
+            (s.numericId && String(s.numericId) === String(u.vendorId || u.id)) ||
             (s.email && s.email.toLowerCase() === u.email.toLowerCase()) ||
             (s.contactEmail && s.contactEmail.toLowerCase() === u.email.toLowerCase())
           );
           if (myStore) {
             profile.storeId = myStore.id;
             profile.vendorId = myStore.numericId;
+            profile.name = myStore.name || profile.name;
           }
         }
         if (window.chowStore && window.chowStore.state) {
+          if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+            window.chowStore.ensureUserProfileIntegrity();
+          }
           window.chowStore.state.userProfile = Object.assign(
             {},
             window.chowStore.state.userProfile || {},
             profile
           );
-          if (window.chowStore.saveState) {
-            window.chowStore.saveState();
+          if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+            window.chowStore.ensureUserProfileIntegrity();
           }
+          window.chowStore.save();
         }
         if (typeof Chow45Auth !== 'undefined') {
           const session = {
@@ -126,6 +156,11 @@ const Chow45App = {
           };
           localStorage.setItem(Chow45Auth.STORAGE_KEY, JSON.stringify(session));
           Chow45Auth.updateUI();
+        }
+
+        if (role === 'vendor' && typeof VendorController !== 'undefined') {
+          if (VendorController.render) VendorController.render();
+          if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
         }
       }
     } catch (err) {
@@ -159,8 +194,14 @@ const Chow45App = {
       window.chowStore.setRole(roleName);
     }
     this.updateRoleUI(roleName);
-    if (roleName === 'vendor' && typeof Chow45Auth !== 'undefined') {
-      Chow45Auth.loadVendorProfile();
+    if (roleName === 'vendor') {
+      if (typeof Chow45Auth !== 'undefined') {
+        Chow45Auth.loadVendorProfile();
+      }
+      if (typeof VendorController !== 'undefined') {
+        if (VendorController.render) VendorController.render();
+        if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
+      }
     }
   },
 

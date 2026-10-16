@@ -14,9 +14,114 @@ const Chow45Auth = {
 
   init() {
     this.restoreSession();
+    this.syncServerSession();
+    this.handleUrlParams();
     this.updateUI();
     this.bindEmailInputs();
   },
+
+  async loginWithGoogle(intent = null) {
+    try {
+      const effectiveIntent = intent || this.intent || (window.location.pathname.startsWith('/vendor') ? 'vendor' : 'customer');
+      const callbackURL = `${window.location.origin}/api/auth/post-login?intent=${encodeURIComponent(effectiveIntent)}`;
+
+      const btn = document.getElementById('auth-google-btn');
+      if (btn) {
+        btn.disabled = true;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Connecting to Google...';
+      }
+
+      const res = await fetch('/api/auth/sign-in/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          provider: 'google',
+          callbackURL: callbackURL,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      if (res.ok) {
+        window.location.href = callbackURL;
+        return;
+      }
+
+      const msg = data?.message || data?.error || 'Could not connect with Google. Please try again.';
+      this.showAlert(this.currentStep || 'step1', msg);
+    } catch (e) {
+      console.error('[auth] Google sign-in failed:', e);
+      this.showAlert(this.currentStep || 'step1', 'Network error during Google sign in.');
+    } finally {
+      const btn = document.getElementById('auth-google-btn');
+      if (btn) {
+        btn.disabled = false;
+        const span = btn.querySelector('span');
+        if (span) span.textContent = 'Continue with Google';
+      }
+    }
+  },
+
+  async syncServerSession() {
+    try {
+      const res = await fetch('/api/auth/get-session', {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.user) {
+          const u = data.user;
+          const currentProfile = window.chowStore?.state?.userProfile || {};
+          const isVendor = u.role?.toLowerCase() === 'vendor' || window.location.pathname.startsWith('/vendor');
+          const updatedUser = {
+            ...currentProfile,
+            id: u.id,
+            name: u.name || currentProfile.name || 'User',
+            email: u.email || currentProfile.email || '',
+            role: isVendor ? 'vendor' : (u.role?.toLowerCase() === 'rider' ? 'rider' : 'customer'),
+            isLoggedIn: true,
+          };
+          this.completeLogin(updatedUser);
+        }
+      }
+    } catch (e) {
+      // Background sync silent on network hiccup
+    }
+  },
+
+  handleUrlParams() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auth') === 'google_success') {
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('Successfully signed in with Google!', 'success');
+        }
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      if (params.get('role') === 'vendor' && params.get('action') === 'onboard') {
+        const em = params.get('email') || '';
+        const nm = params.get('name') || '';
+        this.open('vendor');
+        this.showVendorStep(em);
+        const storeInput = document.getElementById('auth-vnd-store-name');
+        if (storeInput && nm && !storeInput.value) {
+          storeInput.value = `${nm}'s Kitchen`;
+        }
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('Google account linked! Please enter your store details to start selling.', 'info');
+        }
+      }
+    } catch (e) {}
+  },
+
 
   async checkEmailAccount(email) {
     if (!email || typeof email !== 'string') return null;
@@ -149,12 +254,18 @@ const Chow45Auth = {
         const session = JSON.parse(raw);
         if (session && session.user) {
           if (window.chowStore && window.chowStore.state) {
+            if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+              window.chowStore.ensureUserProfileIntegrity();
+            }
             window.chowStore.state.userProfile = Object.assign(
               {},
               window.chowStore.state.userProfile || {},
               session.user,
               { isLoggedIn: true }
             );
+            if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+              window.chowStore.ensureUserProfileIntegrity();
+            }
           }
           return;
         }
@@ -184,132 +295,160 @@ const Chow45Auth = {
   },
 
   /**
-   * @param {'vendor'} [intent] Marks where the flow was started from, so an
+   * @param {'vendor'|Event} [intentOrEvent] Marks where the flow was started from, so an
    *   unknown email opens vendor registration instead of customer sign-up.
    */
-  open(intent) {
-    if (this.isLoggedIn()) {
-      this.openAccountModal();
-      return;
+  open(intentOrEvent) {
+    let intent = null;
+    if (intentOrEvent) {
+      if (typeof intentOrEvent === 'string') {
+        intent = intentOrEvent;
+      } else if (intentOrEvent && typeof intentOrEvent.preventDefault === 'function') {
+        try { intentOrEvent.preventDefault(); } catch (e) {}
+      }
     }
 
-    const modal = document.getElementById('auth-modal');
-    if (!modal) return;
+    try {
+      if (this.isLoggedIn()) {
+        this.openAccountModal();
+        return;
+      }
 
-    this.showStep1();
-    // Automatically detect vendor context if on /vendor or current role is vendor
-    const isVendorContext = intent === 'vendor' || window.location.pathname.startsWith('/vendor') || (window.chowStore?.state?.currentRole === 'vendor');
-    this.intent = isVendorContext ? 'vendor' : (intent || null);
-    modal.classList.add('open');
+      const modal = document.getElementById('auth-modal');
+      if (!modal) return;
+
+      this.showStep1();
+      // Automatically detect vendor context if on /vendor or current role is vendor
+      const isVendorContext = intent === 'vendor' || window.location.pathname.startsWith('/vendor') || (window.chowStore?.state?.currentRole === 'vendor');
+      this.intent = isVendorContext ? 'vendor' : (intent || null);
+      modal.classList.add('open');
+    } catch (err) {
+      console.error('[auth] Error opening auth modal:', err);
+    }
   },
 
   close() {
-    const authModal = document.getElementById('auth-modal');
-    if (authModal) authModal.classList.remove('open');
+    try {
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('open');
 
-    const accountModal = document.getElementById('account-modal');
-    if (accountModal) accountModal.classList.remove('open');
+      const accountModal = document.getElementById('account-modal');
+      if (accountModal) accountModal.classList.remove('open');
+    } catch (e) {}
   },
 
-  openAccountModal() {
-    const modal = document.getElementById('account-modal');
-    if (!modal) return;
-
-    const user = this.getUser();
-    const isVendor = (user.role === 'vendor') ||
-      window.location.pathname.startsWith('/vendor') ||
-      (window.chowStore?.state?.currentRole === 'vendor');
-
-    const headerTitle = document.getElementById('account-modal-header-title');
-    const custSec = document.getElementById('account-customer-section');
-    const vndSec = document.getElementById('account-vendor-section');
-
-    if (isVendor) {
-      if (headerTitle) headerTitle.textContent = 'Vendor Store Profile';
-      if (custSec) custSec.style.display = 'none';
-      if (vndSec) vndSec.style.display = 'block';
-
-      const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
-        ? window.VendorController.getStore()
-        : null;
-
-      const storeName = store?.name || user.name || 'Your Kitchen';
-      const storePhone = store?.phone || user.phone || '+234 812 450 4500';
-      const storeEmail = store?.email || store?.contactEmail || user.email || 'vendor@chow45.com';
-      const storeAddress = store?.address || 'Sagamu Campus (OSUTH), Sagamu';
-      const isOpen = store ? store.isOpen !== false : true;
-
-      const vndTitleEl = document.getElementById('account-vnd-title');
-      const vndStatusBadge = document.getElementById('account-vnd-status-badge');
-      const vndPhoneEl = document.getElementById('account-vnd-phone-text');
-      const vndEmailEl = document.getElementById('account-vnd-email-text');
-      const vndAddrEl = document.getElementById('account-vnd-address-text');
-      const vndAvatarEl = document.getElementById('account-vnd-avatar');
-
-      if (vndTitleEl) vndTitleEl.textContent = storeName;
-      if (vndStatusBadge) {
-        vndStatusBadge.textContent = isOpen ? '● OPEN' : '○ CLOSED';
-        vndStatusBadge.style.background = isOpen ? '#DCFCE7' : '#FEE2E2';
-        vndStatusBadge.style.color = isOpen ? '#15803D' : '#B91C1C';
-      }
-      if (vndPhoneEl) vndPhoneEl.textContent = storePhone;
-      if (vndEmailEl) vndEmailEl.textContent = storeEmail;
-      if (vndAddrEl) vndAddrEl.textContent = '📍 ' + storeAddress;
-      if (vndAvatarEl && store?.image) {
-        vndAvatarEl.src = store.image;
-      }
-    } else {
-      if (headerTitle) headerTitle.textContent = 'My Profile';
-      if (custSec) custSec.style.display = 'block';
-      if (vndSec) vndSec.style.display = 'none';
-
-      const nameEl = document.getElementById('account-display-name');
-      const emailEl = document.getElementById('account-display-email');
-      const phoneEl = document.getElementById('account-display-phone');
-      const badgeEl = document.getElementById('account-role-badge');
-      const avatarEl = document.getElementById('account-avatar-char');
-      const locsCountEl = document.getElementById('account-locations-count');
-      const addrTextEl = document.getElementById('account-display-address-text');
-
-      const currentAddress = user.address ||
-        window.chowStore?.state?.selectedLocation?.formattedAddress ||
-        window.chowStore?.state?.selectedLocation?.name ||
-        '';
-
-      if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
-      if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
-      if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
-      if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
-
-      if (badgeEl) {
-        badgeEl.textContent = 'Customer';
-        badgeEl.className = 'account-badge customer';
-      }
-      if (avatarEl) {
-        const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
-        avatarEl.textContent = initial || 'C';
-      }
-
-      if (locsCountEl && user.savedAddresses) {
-        const count = user.savedAddresses.length;
-        locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
-      }
-
-      const vendorBtn = document.getElementById('account-vendor-dash-btn');
-      if (vendorBtn) {
-        vendorBtn.style.display = (user.role === 'vendor' || user.storeId) ? 'flex' : 'none';
-      }
-
-      // Pre-fill edit inputs
-      const editName = document.getElementById('account-edit-name');
-      const editPhone = document.getElementById('account-edit-phone');
-      const editAddr = document.getElementById('account-edit-address');
-      if (editName) editName.value = user.name || '';
-      if (editPhone) editPhone.value = user.phone || '';
-      if (editAddr) editAddr.value = currentAddress || '';
+  openAccountModal(event) {
+    if (event && typeof event.preventDefault === 'function') {
+      try { event.preventDefault(); } catch (e) {}
     }
 
-    modal.classList.add('open');
+    try {
+      const modal = document.getElementById('account-modal');
+      if (!modal) {
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) authModal.classList.add('open');
+        return;
+      }
+
+      const user = this.getUser() || {};
+      const isVendor = (user.role === 'vendor') ||
+        window.location.pathname.startsWith('/vendor') ||
+        (window.chowStore?.state?.currentRole === 'vendor');
+
+      const headerTitle = document.getElementById('account-modal-header-title');
+      const custSec = document.getElementById('account-customer-section');
+      const vndSec = document.getElementById('account-vendor-section');
+
+      if (isVendor) {
+        if (headerTitle) headerTitle.textContent = 'Vendor Store Profile';
+        if (custSec) custSec.style.display = 'none';
+        if (vndSec) vndSec.style.display = 'block';
+
+        const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
+          ? window.VendorController.getStore()
+          : null;
+
+        const storeName = store?.name || user.name || 'Your Kitchen';
+        const storePhone = store?.phone || user.phone || '+234 812 450 4500';
+        const storeEmail = store?.email || store?.contactEmail || user.email || 'vendor@chow45.com';
+        const storeAddress = store?.address || 'Sagamu Campus (OSUTH), Sagamu';
+        const isOpen = store ? store.isOpen !== false : true;
+
+        const vndTitleEl = document.getElementById('account-vnd-title');
+        const vndStatusBadge = document.getElementById('account-vnd-status-badge');
+        const vndPhoneEl = document.getElementById('account-vnd-phone-text');
+        const vndEmailEl = document.getElementById('account-vnd-email-text');
+        const vndAddrEl = document.getElementById('account-vnd-address-text');
+        const vndAvatarEl = document.getElementById('account-vnd-avatar');
+
+        if (vndTitleEl) vndTitleEl.textContent = storeName;
+        if (vndStatusBadge) {
+          vndStatusBadge.textContent = isOpen ? '● OPEN' : '○ CLOSED';
+          vndStatusBadge.style.background = isOpen ? '#DCFCE7' : '#FEE2E2';
+          vndStatusBadge.style.color = isOpen ? '#15803D' : '#B91C1C';
+        }
+        if (vndPhoneEl) vndPhoneEl.textContent = storePhone;
+        if (vndEmailEl) vndEmailEl.textContent = storeEmail;
+        if (vndAddrEl) vndAddrEl.textContent = '📍 ' + storeAddress;
+        if (vndAvatarEl && store?.image) {
+          vndAvatarEl.src = store.image;
+        }
+      } else {
+        if (headerTitle) headerTitle.textContent = 'My Profile';
+        if (custSec) custSec.style.display = 'block';
+        if (vndSec) vndSec.style.display = 'none';
+
+        const nameEl = document.getElementById('account-display-name');
+        const emailEl = document.getElementById('account-display-email');
+        const phoneEl = document.getElementById('account-display-phone');
+        const badgeEl = document.getElementById('account-role-badge');
+        const avatarEl = document.getElementById('account-avatar-char');
+        const locsCountEl = document.getElementById('account-locations-count');
+        const addrTextEl = document.getElementById('account-display-address-text');
+
+        const currentAddress = user.address ||
+          window.chowStore?.state?.selectedLocation?.formattedAddress ||
+          window.chowStore?.state?.selectedLocation?.name ||
+          '';
+
+        if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
+        if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
+        if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
+        if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
+
+        if (badgeEl) {
+          badgeEl.textContent = 'Customer';
+          badgeEl.className = 'account-badge customer';
+        }
+        if (avatarEl) {
+          const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
+          avatarEl.textContent = initial || 'C';
+        }
+
+        if (locsCountEl) {
+          const saved = Array.isArray(user.savedAddresses) ? user.savedAddresses : [];
+          const count = saved.length;
+          locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
+        }
+
+        const vendorBtn = document.getElementById('account-vendor-dash-btn');
+        if (vendorBtn) {
+          vendorBtn.style.display = (user.role === 'vendor' || user.storeId) ? 'flex' : 'none';
+        }
+
+        // Pre-fill edit inputs
+        const editName = document.getElementById('account-edit-name');
+        const editPhone = document.getElementById('account-edit-phone');
+        const editAddr = document.getElementById('account-edit-address');
+        if (editName) editName.value = user.name || '';
+        if (editPhone) editPhone.value = user.phone || '';
+        if (editAddr) editAddr.value = currentAddress || '';
+      }
+
+      modal.classList.add('open');
+    } catch (err) {
+      console.error('[auth] Error opening account modal:', err);
+    }
   },
 
   toggleEditProfile(forceState) {
@@ -674,12 +813,44 @@ const Chow45Auth = {
       // Reflect the signed-in user locally so the shell renders correctly if
       // the destination page is ever loaded without a full reload.
       let name = email.split('@')[0];
+      let resUser = null;
       try {
         const body = await res.json();
+        if (body?.user) resUser = body.user;
         if (body?.user?.name) name = body.user.name;
       } catch { /* fall back to the email local-part */ }
 
-      this.completeLogin({ name, email, role: role === 'VENDOR' ? 'vendor' : 'customer' });
+      this.completeLogin({
+        id: resUser?.id,
+        name,
+        email,
+        role: role === 'VENDOR' ? 'vendor' : 'customer'
+      });
+
+      // If logging in as vendor, prime store profile immediately
+      if (role === 'VENDOR') {
+        try {
+          const profRes = await fetch(`/api/vendor/profile?email=${encodeURIComponent(email)}`, {
+            headers: { 'x-vendor-email': email },
+            credentials: 'include'
+          });
+          if (profRes.ok) {
+            const profData = await profRes.json();
+            if (profData?.vendor) {
+              const v = profData.vendor;
+              this.completeLogin({
+                id: resUser?.id || v.userId,
+                name: v.businessName || name,
+                email: v.contactEmail || email,
+                role: 'vendor',
+                vendorId: v.id,
+                storeId: v.storeId
+              });
+            }
+          }
+        } catch {}
+      }
+
       this.close();
 
       if (email.toLowerCase().trim() === 'tolaniakin2022@gmail.com') {
@@ -944,31 +1115,50 @@ const Chow45Auth = {
     }
     addrInput.value = 'Locating street address…';
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const streetText = await this._reverseGeocodeToStreet(lat, lng);
+    const handlePos = async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const streetText = await this._reverseGeocodeToStreet(lat, lng);
 
-        setAddr(streetText, { lat, lng });
-        if (label && window.chowApp && window.chowApp.toast) {
-          const shortName = streetText.split(',')[0];
-          window.chowApp.toast(`${label} set to ${shortName}`, 'success');
-        }
-      },
+      setAddr(streetText, { lat, lng });
+      if (label && window.chowApp && window.chowApp.toast) {
+        const shortName = streetText.split(',')[0];
+        window.chowApp.toast(`${label} set to ${shortName}`, 'success');
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      handlePos,
       (err) => {
-        addrInput.value = '';
-        const denied = err && err.code === 1;
-        if (window.chowApp && window.chowApp.toast) {
-          window.chowApp.toast(
-            denied
-              ? 'Location permission denied. Type your address instead.'
-              : 'Could not get your location. Type your address instead.',
-            'warning'
-          );
-        }
+        // Fallback to standard accuracy
+        navigator.geolocation.getCurrentPosition(
+          handlePos,
+          async (err2) => {
+            try {
+              const res = await fetch('https://ipwho.is/');
+              if (res.ok) {
+                const d = await res.json();
+                if (d.success !== false && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)) {
+                  await handlePos({ coords: { latitude: d.latitude, longitude: d.longitude, accuracy: 2500 } });
+                  return;
+                }
+              }
+            } catch (e) {}
+            addrInput.value = '';
+            const denied = (err && err.code === 1) || (err2 && err2.code === 1);
+            if (window.chowApp && window.chowApp.toast) {
+              window.chowApp.toast(
+                denied
+                  ? 'Location permission denied. Type your address instead.'
+                  : 'Could not get your location. Type your address instead.',
+                'warning'
+              );
+            }
+          },
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        );
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
     );
   },
 
@@ -978,36 +1168,46 @@ const Chow45Auth = {
    * Never falls back to raw latitude and longitude strings.
    */
   async _reverseGeocodeToStreet(lat, lng) {
+    const isPlusCode = (s) => /^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(\b|$)/i.test((s || '').trim());
+    const cleanAddr = (s) => {
+      if (!s) return '';
+      return s.replace(/^[A-Z0-9]{2,8}\+[A-Z0-9]{2,4}(?:,\s*|\s+)?/i, '')
+              .replace(/^\d{5,6}(?:,\s*|\s+)?/, '')
+              .trim();
+    };
+
     // 1. First priority: Server-side geocoding endpoint (zero CORS, server-side Mapbox + OSM)
     try {
       const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
       if (res.ok) {
         const data = await res.json();
         if (data.address && !data.address.startsWith('Location near')) {
-          return data.address;
+          const cleaned = cleanAddr(data.address) || data.address;
+          return data.street && !isPlusCode(data.street) ? data.street : cleaned;
         }
       }
     } catch (e) {
       console.warn('[auth] Server reverse geocode error:', e);
     }
 
-    // 2. Direct Mapbox if client token is available
-    const token = window.__CHOW45_MAPBOX_TOKEN__
-      || (window.CHOW45_MAPBOX_CONFIG && window.CHOW45_MAPBOX_CONFIG.token)
-      || '';
-    if (token) {
+    // 2. Client Google Maps Geocoder if available
+    if (window.google && window.google.maps) {
       try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(token)}&limit=1`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const json = await res.json();
-          const place = json && json.features && json.features[0] && json.features[0].place_name;
-          if (place && !place.startsWith('Lat:')) {
-            return place;
-          }
-        }
+        const gRes = await new Promise((resolve) => {
+          const geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && Array.isArray(results) && results.length > 0) {
+              const best = results.find(r => r.types && !r.types.includes('plus_code') && !isPlusCode(r.formatted_address)) || results[0];
+              const cleaned = cleanAddr(best.formatted_address) || best.formatted_address;
+              resolve(cleaned);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+        if (gRes) return gRes;
       } catch (e) {
-        console.warn('Mapbox reverse geocode error:', e);
+        console.warn('[auth] Google Maps reverse geocode error:', e);
       }
     }
 
@@ -1188,8 +1388,42 @@ const Chow45Auth = {
           matched.name = profile.businessName;
           matched.address = profile.address || matched.address;
           matched.email = profile.contactEmail || matched.email;
+          matched.contactEmail = profile.contactEmail || matched.contactEmail;
+        } else {
+          matched = {
+            id: profile.storeId,
+            numericId: profile.id,
+            name: profile.businessName,
+            address: profile.address || '',
+            email: profile.contactEmail,
+            contactEmail: profile.contactEmail,
+            phone: profile.contactPhone || '',
+            bannerImg: profile.image || profile.bannerImage || '',
+            image: profile.image || '',
+            open: true,
+            isOpen: true,
+            tags: ['Store', 'Campus Delivery'],
+            menu: []
+          };
+          rests.unshift(matched);
         }
+        window.chowStore.state.restaurants = rests;
         window.chowStore.save();
+
+        // Also persist storeId and vendorId to the session storage so reloads know it immediately
+        try {
+          const rawS = localStorage.getItem(this.STORAGE_KEY);
+          if (rawS) {
+            const parsedS = JSON.parse(rawS);
+            if (parsedS && parsedS.user) {
+              parsedS.user.storeId = profile.storeId;
+              parsedS.user.vendorId = profile.id;
+              parsedS.user.name = profile.businessName;
+              parsedS.user.role = 'vendor';
+              localStorage.setItem(this.STORAGE_KEY, JSON.stringify(parsedS));
+            }
+          }
+        } catch {}
       }
 
       // Refresh vendor dashboard views and sync menu items from server immediately
@@ -1498,27 +1732,44 @@ const Chow45Auth = {
     const session = {
       token: 'chow45_session_' + Date.now(),
       user: {
+        id: userData.id || userData.userId || undefined,
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
         role: userData.role || 'customer',
         address: userData.address || '',
+        vendorId: userData.vendorId || undefined,
+        storeId: userData.storeId || undefined,
+        storeType: userData.storeType || undefined,
         isLoggedIn: true
       },
       createdAt: new Date().toISOString()
     };
 
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+    try {
+      localStorage.setItem('chow45_user', JSON.stringify(session.user));
+    } catch {}
 
     if (window.chowStore && window.chowStore.state) {
+      if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+        window.chowStore.ensureUserProfileIntegrity();
+      }
       window.chowStore.state.userProfile = Object.assign(
         {},
         window.chowStore.state.userProfile || {},
         session.user
       );
-      if (window.chowStore.saveState) {
-        window.chowStore.saveState();
+      if (typeof window.chowStore.ensureUserProfileIntegrity === 'function') {
+        window.chowStore.ensureUserProfileIntegrity();
       }
+      if (session.user.role === 'vendor' && session.user.storeId) {
+        if (!window.chowStore.state.vendorOnboarding) window.chowStore.state.vendorOnboarding = {};
+        window.chowStore.state.vendorOnboarding.storeId = session.user.storeId;
+        window.chowStore.state.vendorOnboarding.status = 'approved';
+        window.chowStore.state.vendorOnboarding.storeName = session.user.name;
+      }
+      window.chowStore.save();
     }
 
     this.updateUI();
@@ -1561,10 +1812,9 @@ const Chow45Auth = {
         email: '',
         role: 'customer'
       };
-      if (window.chowStore.saveState) {
-        window.chowStore.saveState();
-      }
+      window.chowStore.save();
     }
+    try { localStorage.removeItem('chow45_user'); } catch {}
 
     this.close();
     this.updateUI();

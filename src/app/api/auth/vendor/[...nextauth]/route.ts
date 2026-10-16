@@ -1,15 +1,28 @@
-import { vendorAuth } from "@/auth";
+import { auth } from "@/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 import { NextResponse } from "next/server";
 
-const authHandler = toNextJsHandler(vendorAuth.handler);
+const authHandler = toNextJsHandler(auth.handler);
 
-export const GET = authHandler.GET;
+function normalizeRequest(request: Request): Request {
+    const url = new URL(request.url);
+    if (url.pathname.includes("/api/auth/vendor")) {
+        const newUrl = new URL(request.url);
+        newUrl.pathname = url.pathname.replace("/api/auth/vendor", "/api/auth");
+        return new Request(newUrl.toString(), request);
+    }
+    return request;
+}
+
+export async function GET(request: Request) {
+    return authHandler.GET(normalizeRequest(request));
+}
 
 export async function POST(request: Request) {
-    const url = new URL(request.url);
+    const normReq = normalizeRequest(request);
+    const url = new URL(normReq.url);
     if (url.pathname.endsWith("/sign-in/email")) {
-        const res = await authHandler.POST(request);
+        const res = await authHandler.POST(normReq);
         if (!res.ok) {
             let errData: any = {};
             try {
@@ -29,5 +42,5 @@ export async function POST(request: Request) {
         return res;
     }
 
-    return authHandler.POST(request);
-}
+    return authHandler.POST(normReq);
+}
