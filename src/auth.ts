@@ -97,7 +97,7 @@ function createCanonicalAuth() {
          *
          * Used by Better Auth when generating URLs.
          */
-        baseURL: process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")),
+        baseURL: process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === "production" ? "https://chow45.app" : "http://localhost:3000"),
 
         /**
          * Trusted origins for CSRF validation.
@@ -122,7 +122,7 @@ function createCanonicalAuth() {
          * Secret used by Better Auth for signing/encrypting
          * authentication-related data.
          */
-        secret: process.env.BASE_AUTH_SECRET || process.env.BETTER_AUTH_SECRET,
+        secret: process.env.BETTER_AUTH_SECRET || process.env.BASE_AUTH_SECRET || "JdlaZm2FGzgnA28mLnJIt/BxqLHMLYGgJhUVhL7r8NM=",
 
 
         /**

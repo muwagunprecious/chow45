@@ -14,9 +14,19 @@ function normalizeRequest(request: Request): Request {
 }
 
 export async function GET(request: Request) {
-  return rawHandler.GET(normalizeRequest(request));
+  try {
+    return await rawHandler.GET(normalizeRequest(request));
+  } catch (error) {
+    console.error("[auth] GET error:", error);
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
-  return rawHandler.POST(normalizeRequest(request));
+  try {
+    return await rawHandler.POST(normalizeRequest(request));
+  } catch (error) {
+    console.error("[auth] POST error:", error);
+    throw error;
+  }
 }
