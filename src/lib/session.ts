@@ -309,7 +309,10 @@ export async function requireVendor(
         await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, resolved.userId));
       }
 
-      if (roleUpper !== "ADMIN") {
+      const method = (request.method || "GET").toUpperCase();
+      const isMutatingMethod = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+      if (roleUpper !== "ADMIN" && isMutatingMethod) {
         const needsPasswordChange = vendorRequiresPasswordChange(
           targetVendor,
           resolved.user.email || targetVendor.contactEmail || undefined
@@ -319,7 +322,7 @@ export async function requireVendor(
             ok: false,
             status: 403,
             error: "PASSWORD_CHANGE_REQUIRED",
-            message: "You must change your temporary password before accessing the vendor dashboard.",
+            message: "You must change your temporary password before modifying vendor dashboard data.",
           };
         }
       }
@@ -354,17 +357,22 @@ export async function requireVendor(
     if (fallbackMatches.length > 0) {
       targetVendor = fallbackMatches[0];
 
-      const needsPasswordChange = vendorRequiresPasswordChange(
-        targetVendor,
-        targetVendor.contactEmail || undefined
-      );
-      if (needsPasswordChange && options?.allowPendingPasswordChange !== true) {
-        return {
-          ok: false,
-          status: 403,
-          error: "PASSWORD_CHANGE_REQUIRED",
-          message: "You must change your temporary password before accessing the vendor dashboard.",
-        };
+      const method = (request.method || "GET").toUpperCase();
+      const isMutatingMethod = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+      if (isMutatingMethod) {
+        const needsPasswordChange = vendorRequiresPasswordChange(
+          targetVendor,
+          targetVendor.contactEmail || undefined
+        );
+        if (needsPasswordChange && options?.allowPendingPasswordChange !== true) {
+          return {
+            ok: false,
+            status: 403,
+            error: "PASSWORD_CHANGE_REQUIRED",
+            message: "You must change your temporary password before modifying vendor dashboard data.",
+          };
+        }
       }
 
       let vendorUserRow = null;

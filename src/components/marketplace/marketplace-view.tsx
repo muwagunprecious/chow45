@@ -34,25 +34,24 @@ const GOOGLE_MAPS_SCRIPT =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261017d',
-  '/app/js/mapbox-config.js?v=20261017d',
-  '/app/js/service-zones.js?v=20261017d',
+  '/app/js/google-maps-config.js?v=20261017e',
+  '/app/js/mapbox-config.js?v=20261017e',
+  '/app/js/service-zones.js?v=20261017e',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261017d',
-  '/app/js/data.js?v=20261017d',
-  '/app/js/state.js?v=20261017d',
-  '/app/js/google-maps-service.js?v=20261017d',
-  '/app/js/mapbox-service.js?v=20261017d',
-  '/app/js/location-picker.js?v=20261017d',
-  '/app/js/customer.js?v=20261017d',
-  '/app/js/vendor.js?v=20261017d',
-  '/app/js/rider.js?v=20261017d',
-  '/app/js/admin.js?v=20261017d',
-  '/app/js/auth.js?v=20261017d',
+  '/app/js/units.js?v=20261017e',
+  '/app/js/data.js?v=20261017e',
+  '/app/js/state.js?v=20261017e',
+  '/app/js/google-maps-service.js?v=20261017e',
+  '/app/js/location-picker.js?v=20261017e',
+  '/app/js/customer.js?v=20261017e',
+  '/app/js/vendor.js?v=20261017e',
+  '/app/js/rider.js?v=20261017e',
+  '/app/js/admin.js?v=20261017e',
+  '/app/js/auth.js?v=20261017e',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261017d',
-  '/app/js/app.js?v=20261017d',
+  '/app/js/vendor-onboarding.js?v=20261017e',
+  '/app/js/app.js?v=20261017e',
 ];
 
 

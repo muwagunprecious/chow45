@@ -1214,5 +1214,6 @@ class GoogleMapsService {
 }
 
 // Instantiate and expose globally as window.chowMap and window.chowGoogleMap
-window.chowGoogleMap = new GoogleMapsService();
+window.GoogleMapsService = GoogleMapsService;
+window.chowGoogleMap = window.chowGoogleMap || new GoogleMapsService();
 window.chowMap = window.chowGoogleMap;
