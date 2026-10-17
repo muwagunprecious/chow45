@@ -101,23 +101,8 @@ class Chow45Store {
               a.formattedAddress !== 'Sagamu Campus, OOU Ijagun, Ogun State, Nigeria'
             );
           }
-          if (!parsed.selectedLocation) {
-            parsed.selectedLocation = {
-              id: 'oou-main',
-              name: 'OOU Main Campus Gate, Ago-Iwoye',
-              label: 'Campus',
-              latitude: 6.8482,
-              longitude: 3.6545,
-              lat: 6.8482,
-              lng: 3.6545,
-              locality: 'Ago-Iwoye',
-              lga: 'Ijebu North LGA',
-              state: 'Ogun',
-              formattedAddress: 'OOU Main Campus Gate, Ago-Iwoye, Ogun State, Nigeria',
-              zoneId: 'ago-iwoye',
-              zoneName: 'Ago-Iwoye (OOU Main Campus)',
-              deliveryInstructions: ''
-            };
+          if (parsed.selectedLocation && (parsed.selectedLocation.id === 'oou-main' || (parsed.selectedLocation.name && parsed.selectedLocation.name.includes('OOU Main Campus')))) {
+            parsed.selectedLocation = null;
           }
 
           // Purge demo restaurants from cached localStorage so /app only shows real vendor foods
@@ -180,24 +165,7 @@ class Chow45Store {
 
     return {
       currentRole: 'customer', // 'customer' | 'vendor' | 'rider' | 'admin'
-      selectedLocation: {
-        id: 'oou-main',
-        name: 'OOU Main Campus Gate, Ago-Iwoye',
-        label: 'Campus',
-        latitude: 6.8482,
-        longitude: 3.6545,
-        lat: 6.8482,
-        lng: 3.6545,
-        accuracy: null,
-        locality: 'Ago-Iwoye',
-        lga: 'Ijebu North LGA',
-        state: 'Ogun',
-        country: 'Nigeria',
-        formattedAddress: 'OOU Main Campus Gate, Ago-Iwoye, Ogun State, Nigeria',
-        zoneId: 'ago-iwoye',
-        zoneName: 'Ago-Iwoye (OOU Main Campus)',
-        deliveryInstructions: ''
-      },
+      selectedLocation: null,
       deliveryConfig: Object.assign({}, DEFAULT_DELIVERY_FEE_CONFIG),
       serviceZones: JSON.parse(JSON.stringify(CHOW45_SERVICE_ZONES)),
       activeCategory: 'all',
@@ -547,7 +515,7 @@ class Chow45Store {
       storeName: orderDetails.storeName,
       customerName: orderDetails.customerName || this.state.userProfile.name,
       customerPhone: orderDetails.customerPhone || this.state.userProfile.phone,
-      deliveryAddress: orderDetails.deliveryAddress || this.state.selectedLocation.name,
+      deliveryAddress: orderDetails.deliveryAddress || (this.state.selectedLocation ? this.state.selectedLocation.name : 'Sagamu Campus'),
       deliveryNotes: orderDetails.deliveryNotes || '',
       paymentMethod: orderDetails.paymentMethod || 'Debit Card (Paystack)',
       items: JSON.parse(JSON.stringify(this.state.cart.items)),

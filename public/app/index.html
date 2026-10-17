@@ -60,8 +60,21 @@
     window.Chow45Auth = window.Chow45Auth || {
       openProfile: function(event) {
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        var m = document.getElementById('signout-confirm-modal') || document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      openMobileProfile: function(event) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
         var m = document.getElementById('account-modal') || document.getElementById('auth-modal');
         if (m) m.classList.add('open');
+      },
+      openSignOutConfirm: function() {
+        var m = document.getElementById('signout-confirm-modal');
+        if (m) m.classList.add('open');
+      },
+      closeSignOutConfirm: function() {
+        var m = document.getElementById('signout-confirm-modal');
+        if (m) m.classList.remove('open');
       },
       open: function() {
         var m = document.getElementById('auth-modal');
@@ -77,6 +90,8 @@
         if (a) a.classList.remove('open');
         var acc = document.getElementById('account-modal');
         if (acc) acc.classList.remove('open');
+        var so = document.getElementById('signout-confirm-modal');
+        if (so) so.classList.remove('open');
       },
       signOut: function() {
         if (window.chowStore && window.chowStore.clearSession) window.chowStore.clearSession();
@@ -102,7 +117,7 @@
         <!-- Location Selector Pill -->
         <button type="button" class="location-pill" onclick="event.preventDefault(); (window.Chow45App?.openLocationModal ? window.Chow45App.openLocationModal() : (window.Chow45LocationPicker?.open?.() || window.chowLocationPicker?.open?.()))" title="Change delivery location">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span class="loc-text" id="current-location-text">Select delivery location</span>
+          <span class="loc-text" id="current-location-text">Select your location</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
 
@@ -129,11 +144,26 @@
       </div>
     </header>
 
-    <!-- Prevent flash of customer marketplace UI on /vendor path -->
+    <!-- Prevent flash of customer marketplace UI on /vendor path & enforce vendor auto-redirect -->
     <script>
       (function() {
-        if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/vendor') || window.location.search.includes('role=vendor'))) {
-          document.documentElement.classList.add('on-vendor-path');
+        if (typeof window !== 'undefined') {
+          var isVendorPath = window.location.pathname.startsWith('/vendor') || window.location.search.includes('role=vendor');
+          if (isVendorPath) {
+            document.documentElement.classList.add('on-vendor-path');
+          } else {
+            try {
+              var raw = localStorage.getItem('chow45_auth_session_v1') || localStorage.getItem('chow45_user');
+              if (raw) {
+                var sess = JSON.parse(raw);
+                var role = String((sess.user && sess.user.role) || sess.role || '').toLowerCase();
+                if (role === 'vendor') {
+                  window.location.replace('/vendor');
+                  return;
+                }
+              }
+            } catch (e) {}
+          }
         }
       })();
     </script>
@@ -1015,7 +1045,7 @@
         <span class="tab-badge cart-badge-count" style="display: none;">0</span>
       </button>
 
-      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.openProfile(event)" title="Profile & Account">
+      <button type="button" id="bottom-nav-profile-btn" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.openMobileProfile(event)" title="Profile & Account">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -2430,6 +2460,47 @@
     </div>
 
 
+    <!-- Modal 10b: Sign Out Confirmation Popup (for top profile button) -->
+    <div id="signout-confirm-modal" class="modal-backdrop" style="z-index: 280;">
+      <div class="modal-sheet" style="max-width: 400px; text-align: center; border-radius: 20px; overflow: hidden; padding: 26px 22px;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: #FEE2E2; color: #DC2626; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 14px;">
+          🚪
+        </div>
+        <h3 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0 0 6px 0;">Sign out of Chow45?</h3>
+        <p style="font-size: 0.88rem; color: #64748B; margin: 0 0 18px 0; line-height: 1.45;">
+          Are you sure you want to sign out of <strong id="signout-user-display-name" style="color: #0F172A;">your account</strong>?
+        </p>
+
+        <!-- Account user/store preview card -->
+        <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 12px 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; text-align: left;">
+          <div id="signout-user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #008751; color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0;">
+            U
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div id="signout-user-name" style="font-weight: 800; font-size: 0.92rem; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">User Name</div>
+            <div id="signout-user-email" style="font-size: 0.78rem; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">user@example.com</div>
+          </div>
+          <span id="signout-user-badge" style="background: #E8F6F0; color: #008751; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase;">Customer</span>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button type="button" id="signout-confirm-btn" onclick="Chow45Auth.signOut()" style="width: 100%; padding: 14px; background: #DC2626; color: #FFFFFF; border: none; border-radius: 14px; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(220,38,38,0.25);">
+            🚪 Yes, Sign Out
+          </button>
+          <button type="button" onclick="Chow45Auth.closeSignOutConfirm()" style="width: 100%; padding: 13px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; border-radius: 14px; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
+            Cancel
+          </button>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button type="button" onclick="Chow45Auth.closeSignOutConfirm(); Chow45Auth.openAccountModal();" style="background: none; border: none; color: #008751; font-weight: 700; font-size: 0.82rem; cursor: pointer; text-decoration: underline;">
+            View full profile & account details →
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal 10: User Account & Profile Sheet -->
     <div id="account-modal" class="modal-backdrop">
       <div class="modal-sheet" style="max-width: 460px;">
@@ -2611,15 +2682,6 @@
                 </div>
                 <span class="item-arrow">→</span>
               </button>
-
-              <button class="account-menu-item" onclick="window.location.href='/app'; document.getElementById('account-modal').classList.remove('open');" style="background: #F8FAFC;">
-                <span class="item-icon">🛒</span>
-                <div class="item-text">
-                  <strong>Switch to Customer Marketplace</strong>
-                  <small>Browse & order food like a customer</small>
-                </div>
-                <span class="item-arrow">→</span>
-              </button>
             </div>
           </div>
 
@@ -2779,22 +2841,22 @@
     window.__CHOW45_GOOGLE_MAPS_KEY__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
     window.__CHOW45_MAPBOX_TOKEN__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
   </script>
-  <script src="/app/js/google-maps-config.js?v=20261017b"></script>
-  <script src="/app/js/mapbox-config.js?v=20261017b"></script>
-  <script src="/app/js/service-zones.js?v=20261017b"></script>
-  <script src="/app/js/units.js?v=20261017b"></script>
-  <script src="/app/js/data.js?v=20261017b"></script>
-  <script src="/app/js/state.js?v=20261017b"></script>
-  <script src="/app/js/google-maps-service.js?v=20261017b"></script>
-  <script src="/app/js/mapbox-service.js?v=20261017b"></script>
-  <script src="/app/js/location-picker.js?v=20261017b"></script>
-  <script src="/app/js/customer.js?v=20261017b"></script>
-  <script src="/app/js/vendor.js?v=20261017b"></script>
-  <script src="/app/js/rider.js?v=20261017b"></script>
-  <script src="/app/js/admin.js?v=20261017b"></script>
-  <script src="/app/js/auth.js?v=20261017b"></script>
-  <script src="/app/js/vendor-onboarding.js?v=20261017b"></script>
-  <script src="/app/js/app.js?v=20261017b"></script>
+  <script src="/app/js/google-maps-config.js?v=20261017c"></script>
+  <script src="/app/js/mapbox-config.js?v=20261017c"></script>
+  <script src="/app/js/service-zones.js?v=20261017c"></script>
+  <script src="/app/js/units.js?v=20261017c"></script>
+  <script src="/app/js/data.js?v=20261017c"></script>
+  <script src="/app/js/state.js?v=20261017c"></script>
+  <script src="/app/js/google-maps-service.js?v=20261017c"></script>
+  <script src="/app/js/mapbox-service.js?v=20261017c"></script>
+  <script src="/app/js/location-picker.js?v=20261017c"></script>
+  <script src="/app/js/customer.js?v=20261017c"></script>
+  <script src="/app/js/vendor.js?v=20261017c"></script>
+  <script src="/app/js/rider.js?v=20261017c"></script>
+  <script src="/app/js/admin.js?v=20261017c"></script>
+  <script src="/app/js/auth.js?v=20261017c"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261017c"></script>
+  <script src="/app/js/app.js?v=20261017c"></script>
 </body>
 </html>
 

@@ -80,6 +80,33 @@ export default function MarketingPage() {
   const [addressInput, setAddressInput] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  // If a vendor visits chow45.app, automatically redirect directly to the vendor dashboard
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("chow45_auth_session_v1") || localStorage.getItem("chow45_user");
+      if (raw) {
+        const sess = JSON.parse(raw);
+        const role = String(sess?.user?.role || sess?.role || "").toLowerCase();
+        if (role === "vendor") {
+          window.location.replace("/vendor");
+          return;
+        }
+      }
+    } catch {}
+
+    fetch("/api/auth/get-session", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.user) {
+          const role = String(data.role || data.user.role || "").toLowerCase();
+          if (role === "vendor") {
+            window.location.replace("/vendor");
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const openModal = (role: "customer" | "vendor" | "rider" = "customer") => {
     setModalRole(role);
     setSubmitted(false);

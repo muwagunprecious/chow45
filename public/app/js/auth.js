@@ -18,6 +18,23 @@ const Chow45Auth = {
     this.handleUrlParams();
     this.updateUI();
     this.bindEmailInputs();
+    this.bindMobileProfileNav();
+  },
+
+  bindMobileProfileNav() {
+    const btn = document.getElementById('bottom-nav-profile-btn');
+    if (btn && btn.dataset.boundProfileClick !== 'true') {
+      btn.dataset.boundProfileClick = 'true';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openMobileProfile(e);
+      });
+    }
+  },
+
+  isVendorUser() {
+    const user = this.getUser();
+    return !!(user && user.isLoggedIn && (String(user.role).toLowerCase() === 'vendor' || !!user.storeId || !!user.vendorId));
   },
 
   async loginWithGoogle(intent = null) {
@@ -88,6 +105,11 @@ const Chow45Auth = {
             isLoggedIn: true,
           };
           this.completeLogin(updatedUser);
+
+          if (isVendor && !window.location.pathname.startsWith('/vendor')) {
+            window.location.replace('/vendor');
+            return;
+          }
         }
       }
     } catch (e) {
@@ -331,11 +353,72 @@ const Chow45Auth = {
     }
   },
 
+  openSignOutConfirm() {
+    const modal = document.getElementById('signout-confirm-modal');
+    if (!modal) {
+      if (confirm('Sign out of Chow45?')) {
+        this.signOut();
+      }
+      return;
+    }
+
+    const user = this.getUser() || {};
+    const isVendor = (String(user.role).toLowerCase() === 'vendor') ||
+      window.location.pathname.startsWith('/vendor') ||
+      (window.chowStore?.state?.currentRole === 'vendor');
+
+    const nameEl = document.getElementById('signout-user-name');
+    const dispNameEl = document.getElementById('signout-user-display-name');
+    const emailEl = document.getElementById('signout-user-email');
+    const badgeEl = document.getElementById('signout-user-badge');
+    const avatarEl = document.getElementById('signout-user-avatar');
+
+    let displayName = user.name || (user.email ? user.email.split('@')[0] : 'User');
+    if (isVendor) {
+      const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
+        ? window.VendorController.getStore()
+        : null;
+      if (store?.name) displayName = store.name;
+    }
+
+    if (nameEl) nameEl.textContent = displayName;
+    if (dispNameEl) dispNameEl.textContent = displayName;
+    if (emailEl) emailEl.textContent = user.email || 'account@chow45.com';
+    if (badgeEl) {
+      badgeEl.textContent = isVendor ? 'Vendor' : 'Customer';
+      badgeEl.style.background = isVendor ? '#DCFCE7' : '#E8F6F0';
+      badgeEl.style.color = isVendor ? '#15803D' : '#008751';
+    }
+    if (avatarEl) {
+      const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
+      avatarEl.textContent = initial;
+      avatarEl.style.background = isVendor ? '#15803D' : '#008751';
+    }
+
+    modal.classList.add('open');
+  },
+
+  closeSignOutConfirm() {
+    const modal = document.getElementById('signout-confirm-modal');
+    if (modal) modal.classList.remove('open');
+  },
+
   openProfile(event) {
     if (event && typeof event.preventDefault === 'function') {
       try { event.preventDefault(); } catch (e) {}
     }
-    this.openAccountModal();
+    if (this.isLoggedIn()) {
+      this.openSignOutConfirm();
+    } else {
+      this.open();
+    }
+  },
+
+  openMobileProfile(event) {
+    if (event && typeof event.preventDefault === 'function') {
+      try { event.preventDefault(); } catch (e) {}
+    }
+    this.openAccountModal(event);
   },
 
   openGuestSignIn() {
@@ -352,6 +435,9 @@ const Chow45Auth = {
 
       const accountModal = document.getElementById('account-modal');
       if (accountModal) accountModal.classList.remove('open');
+
+      const signoutModal = document.getElementById('signout-confirm-modal');
+      if (signoutModal) signoutModal.classList.remove('open');
     } catch (e) {}
   },
 
@@ -452,7 +538,7 @@ const Chow45Auth = {
         // Calculate orders from store state
         const allOrders = Array.isArray(window.chowStore?.state?.orders) ? window.chowStore.state.orders : [];
         const totalOrdersCount = allOrders.length;
-        const activeOrdersCount = allOrders.filter(o => !['DELIVERED', 'REJECTED'].includes(o.status)).length;
+        const activeOrdersCount = allOrders.filter(o => o && !['DELIVERED', 'REJECTED'].includes(o.status)).length;
 
         if (totalOrdersEl) totalOrdersEl.textContent = String(totalOrdersCount);
         if (activeOrdersEl) {

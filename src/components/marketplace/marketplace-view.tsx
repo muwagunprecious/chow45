@@ -34,25 +34,25 @@ const GOOGLE_MAPS_SCRIPT =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261017b',
-  '/app/js/mapbox-config.js?v=20261017b',
-  '/app/js/service-zones.js?v=20261017b',
+  '/app/js/google-maps-config.js?v=20261017c',
+  '/app/js/mapbox-config.js?v=20261017c',
+  '/app/js/service-zones.js?v=20261017c',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261017b',
-  '/app/js/data.js?v=20261017b',
-  '/app/js/state.js?v=20261017b',
-  '/app/js/google-maps-service.js?v=20261017b',
-  '/app/js/mapbox-service.js?v=20261017b',
-  '/app/js/location-picker.js?v=20261017b',
-  '/app/js/customer.js?v=20261017b',
-  '/app/js/vendor.js?v=20261017b',
-  '/app/js/rider.js?v=20261017b',
-  '/app/js/admin.js?v=20261017b',
-  '/app/js/auth.js?v=20261017b',
+  '/app/js/units.js?v=20261017c',
+  '/app/js/data.js?v=20261017c',
+  '/app/js/state.js?v=20261017c',
+  '/app/js/google-maps-service.js?v=20261017c',
+  '/app/js/mapbox-service.js?v=20261017c',
+  '/app/js/location-picker.js?v=20261017c',
+  '/app/js/customer.js?v=20261017c',
+  '/app/js/vendor.js?v=20261017c',
+  '/app/js/rider.js?v=20261017c',
+  '/app/js/admin.js?v=20261017c',
+  '/app/js/auth.js?v=20261017c',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261017b',
-  '/app/js/app.js?v=20261017b',
+  '/app/js/vendor-onboarding.js?v=20261017c',
+  '/app/js/app.js?v=20261017c',
 ];
 
 // Globals that must exist before the controllers can safely run. Without this
@@ -230,8 +230,21 @@ export function MarketplaceView({
     window.Chow45Auth = window.Chow45Auth || {
       openProfile: (event?: any) => {
         if (event?.preventDefault) event.preventDefault();
+        const m = document.getElementById('signout-confirm-modal') || document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      openMobileProfile: (event?: any) => {
+        if (event?.preventDefault) event.preventDefault();
         const m = document.getElementById('account-modal') || document.getElementById('auth-modal');
         if (m) m.classList.add('open');
+      },
+      openSignOutConfirm: () => {
+        const m = document.getElementById('signout-confirm-modal');
+        if (m) m.classList.add('open');
+      },
+      closeSignOutConfirm: () => {
+        const m = document.getElementById('signout-confirm-modal');
+        if (m) m.classList.remove('open');
       },
       open: () => {
         const m = document.getElementById('auth-modal');
@@ -247,6 +260,8 @@ export function MarketplaceView({
         if (a) a.classList.remove('open');
         const acc = document.getElementById('account-modal');
         if (acc) acc.classList.remove('open');
+        const so = document.getElementById('signout-confirm-modal');
+        if (so) so.classList.remove('open');
       },
       signOut: () => {
         if (window.chowStore?.clearSession) window.chowStore.clearSession();
@@ -255,6 +270,33 @@ export function MarketplaceView({
     };
 
     let cancelled = false;
+
+    // Strict vendor isolation: if the user has a vendor role, auto-redirect directly to /vendor
+    if (initialRole !== 'vendor') {
+      try {
+        const raw = localStorage.getItem('chow45_auth_session_v1') || localStorage.getItem('chow45_user');
+        if (raw) {
+          const sess = JSON.parse(raw);
+          const r = String(sess?.user?.role || sess?.role || '').toLowerCase();
+          if (r === 'vendor') {
+            window.location.replace('/vendor');
+            return;
+          }
+        }
+      } catch {}
+
+      fetch('/api/auth/get-session', { credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.user) {
+            const role = String(data.role || data.user.role || '').toLowerCase();
+            if (role === 'vendor') {
+              window.location.replace('/vendor');
+            }
+          }
+        })
+        .catch(() => {});
+    }
 
     const boot = async () => {
       // A Fast Refresh can re-run this effect while an earlier load is still
