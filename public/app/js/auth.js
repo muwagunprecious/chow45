@@ -2261,6 +2261,12 @@ const Chow45Auth = {
     const modal = document.getElementById('vendor-first-setup-modal');
     if (!modal) return;
 
+    // Portal: Ensure modal is attached directly to document.body so no container or ancestor
+    // styles/attributes (e.g. inert, display:none, overflow) can ever hide or obstruct it.
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+
     // Suppress/close lower-priority popups that might obscure or confuse the view
     this.closeErrorPopup();
 

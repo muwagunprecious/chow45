@@ -354,14 +354,14 @@ export function MarketplaceView({
   return (
     <div className="chow45-marketplace-wrapper min-h-screen relative">
       {/* Stylesheets for the marketplace shell */}
-      <link rel="stylesheet" href="/app/css/tokens.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/layout.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/marketplace.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/tracking.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/location-picker.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/vendor.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/rider.css?v=20261017d" />
-      <link rel="stylesheet" href="/app/css/admin.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/tokens.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/layout.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/marketplace.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/tracking.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/location-picker.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/vendor.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/rider.css?v=20261017e" />
+      <link rel="stylesheet" href="/app/css/admin.css?v=20261017e" />
 
 
       {/* When entering directly as vendor, prevent customer marketplace UI from flashing */}

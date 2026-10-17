@@ -52,6 +52,9 @@ const Chow45App = {
     // Pull the vendor's real profile from the server whenever in vendor context
     if (isVendorContext && typeof Chow45Auth !== 'undefined') {
       Chow45Auth.loadVendorProfile();
+      if (typeof Chow45Auth.checkFirstTimeVendorSetup === 'function') {
+        Chow45Auth.checkFirstTimeVendorSetup();
+      }
     }
 
     this.updateRoleUI(window.chowStore.state.currentRole);

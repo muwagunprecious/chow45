@@ -1911,6 +1911,7 @@ a.text-link, .link-btn {
 /* -------------------------------------------------------------
    Mandatory Vendor Password Change Modal (Top Stacking Context)
    ------------------------------------------------------------- */
+#vendor-first-setup-modal,
 #vendor-first-setup-modal.modal-backdrop,
 .vendor-password-overlay {
   position: fixed !important;
@@ -1928,6 +1929,7 @@ a.text-link, .link-btn {
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+#vendor-first-setup-modal.open,
 #vendor-first-setup-modal.modal-backdrop.open,
 .vendor-password-overlay.open {
   display: flex !important;
@@ -1940,9 +1942,10 @@ a.text-link, .link-btn {
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+#vendor-first-setup-modal.open .vendor-password-sheet,
 #vendor-first-setup-modal.modal-backdrop.open .vendor-password-sheet,
 .vendor-password-overlay.open .vendor-password-sheet {
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(1) !important;
 }
 
 body.vendor-password-locked {
