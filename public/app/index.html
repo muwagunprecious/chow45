@@ -41,6 +41,48 @@
       toast: function(msg, type) { console.log('[' + (type || 'info') + ']', msg); }
     };
     window.chowApp = window.chowApp || window.Chow45App;
+
+    window.CustomerController = window.CustomerController || {
+      openOrderHistory: function() {
+        var m = document.getElementById('order-history-modal');
+        if (m) m.classList.add('open');
+      },
+      openCart: function() {
+        var m = document.getElementById('cart-modal');
+        if (m) m.classList.add('open');
+      },
+      closeCart: function() {
+        var m = document.getElementById('cart-modal');
+        if (m) m.classList.remove('open');
+      }
+    };
+
+    window.Chow45Auth = window.Chow45Auth || {
+      openProfile: function(event) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        var m = document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      open: function() {
+        var m = document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      openAccountModal: function(event) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        var m = document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      close: function() {
+        var a = document.getElementById('auth-modal');
+        if (a) a.classList.remove('open');
+        var acc = document.getElementById('account-modal');
+        if (acc) acc.classList.remove('open');
+      },
+      signOut: function() {
+        if (window.chowStore && window.chowStore.clearSession) window.chowStore.clearSession();
+        window.location.reload();
+      }
+    };
   </script>
 </head>
 <body>
@@ -2737,22 +2779,22 @@
     window.__CHOW45_GOOGLE_MAPS_KEY__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
     window.__CHOW45_MAPBOX_TOKEN__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
   </script>
-  <script src="/app/js/google-maps-config.js?v=20261017a"></script>
-  <script src="/app/js/mapbox-config.js?v=20261017a"></script>
-  <script src="/app/js/service-zones.js?v=20261017a"></script>
-  <script src="/app/js/units.js?v=20261017a"></script>
-  <script src="/app/js/data.js?v=20261017a"></script>
-  <script src="/app/js/state.js?v=20261017a"></script>
-  <script src="/app/js/google-maps-service.js?v=20261017a"></script>
-  <script src="/app/js/mapbox-service.js?v=20261017a"></script>
-  <script src="/app/js/location-picker.js?v=20261017a"></script>
-  <script src="/app/js/customer.js?v=20261017a"></script>
-  <script src="/app/js/vendor.js?v=20261017a"></script>
-  <script src="/app/js/rider.js?v=20261017a"></script>
-  <script src="/app/js/admin.js?v=20261017a"></script>
-  <script src="/app/js/auth.js?v=20261017a"></script>
-  <script src="/app/js/vendor-onboarding.js?v=20261017a"></script>
-  <script src="/app/js/app.js?v=20261017a"></script>
+  <script src="/app/js/google-maps-config.js?v=20261017b"></script>
+  <script src="/app/js/mapbox-config.js?v=20261017b"></script>
+  <script src="/app/js/service-zones.js?v=20261017b"></script>
+  <script src="/app/js/units.js?v=20261017b"></script>
+  <script src="/app/js/data.js?v=20261017b"></script>
+  <script src="/app/js/state.js?v=20261017b"></script>
+  <script src="/app/js/google-maps-service.js?v=20261017b"></script>
+  <script src="/app/js/mapbox-service.js?v=20261017b"></script>
+  <script src="/app/js/location-picker.js?v=20261017b"></script>
+  <script src="/app/js/customer.js?v=20261017b"></script>
+  <script src="/app/js/vendor.js?v=20261017b"></script>
+  <script src="/app/js/rider.js?v=20261017b"></script>
+  <script src="/app/js/admin.js?v=20261017b"></script>
+  <script src="/app/js/auth.js?v=20261017b"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261017b"></script>
+  <script src="/app/js/app.js?v=20261017b"></script>
 </body>
 </html>
 

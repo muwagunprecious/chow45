@@ -30,25 +30,29 @@ declare global {
   }
 }
 
-const SCRIPTS_TO_LOAD = [
-  'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly',
-  '/app/js/google-maps-config.js?v=20261016d',
-  '/app/js/service-zones.js?v=20261016d',
+const GOOGLE_MAPS_SCRIPT =
+  'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
+
+const LOCAL_SCRIPTS_TO_LOAD = [
+  '/app/js/google-maps-config.js?v=20261017b',
+  '/app/js/mapbox-config.js?v=20261017b',
+  '/app/js/service-zones.js?v=20261017b',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261016d',
-  '/app/js/data.js?v=20261016d',
-  '/app/js/state.js?v=20261016d',
-  '/app/js/google-maps-service.js?v=20261016d',
-  '/app/js/location-picker.js?v=20261016d',
-  '/app/js/customer.js?v=20261016d',
-  '/app/js/vendor.js?v=20261016d',
-  '/app/js/rider.js?v=20261016d',
-  '/app/js/admin.js?v=20261016d',
-  '/app/js/auth.js?v=20261016d',
+  '/app/js/units.js?v=20261017b',
+  '/app/js/data.js?v=20261017b',
+  '/app/js/state.js?v=20261017b',
+  '/app/js/google-maps-service.js?v=20261017b',
+  '/app/js/mapbox-service.js?v=20261017b',
+  '/app/js/location-picker.js?v=20261017b',
+  '/app/js/customer.js?v=20261017b',
+  '/app/js/vendor.js?v=20261017b',
+  '/app/js/rider.js?v=20261017b',
+  '/app/js/admin.js?v=20261017b',
+  '/app/js/auth.js?v=20261017b',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261016d',
-  '/app/js/app.js?v=20261016d',
+  '/app/js/vendor-onboarding.js?v=20261017b',
+  '/app/js/app.js?v=20261017b',
 ];
 
 // Globals that must exist before the controllers can safely run. Without this
@@ -83,46 +87,58 @@ function loadScript(src: string): Promise<void> {
       `script[data-chow45-src="${CSS.escape(src)}"]`
     );
 
-    const script = existing ?? document.createElement('script');
-    const settleOk = () => resolve();
+    if (existing) {
+      if (
+        existing.getAttribute('data-chow45-loaded') === 'true' ||
+        (existing as any).readyState === 'complete' ||
+        (existing as any).readyState === 'loaded'
+      ) {
+        resolve();
+        return;
+      }
+      const onSettle = () => resolve();
+      existing.addEventListener('load', onSettle);
+      existing.addEventListener('error', onSettle);
+      setTimeout(resolve, 2500);
+      return;
+    }
+
+    const script = document.createElement('script');
+    let settled = false;
+
+    const settleOk = () => {
+      if (settled) return;
+      settled = true;
+      script.setAttribute('data-chow45-loaded', 'true');
+      resolve();
+    };
+
     const settleFail = () => {
-      // A 404 or network error leaves the page permanently half-initialised if
-      // it is swallowed, so the failure is surfaced and the entry is dropped so
-      // a later attempt can retry.
+      if (settled) return;
+      settled = true;
       delete cache[src];
-      script.remove();
-      reject(new Error(`Failed to load script ${src}`));
+      if (src.includes('maps.googleapis.com')) {
+        console.warn('[chow45] Google Maps failed to load; proceeding with offline fallback');
+        resolve();
+      } else {
+        script.remove();
+        reject(new Error(`Failed to load script ${src}`));
+      }
     };
 
     script.addEventListener('load', settleOk);
     script.addEventListener('error', settleFail);
+    script.src = src;
+    script.async = src.includes('maps.googleapis.com');
+    script.dataset.chow45Src = src;
+    document.body.appendChild(script);
 
-    if (!existing) {
-      script.src = src;
-      script.async = src.includes('maps.googleapis.com');
-      script.dataset.chow45Src = src;
-      document.body.appendChild(script);
-      return;
-    }
-
-    // A tag is already on the page (static shell, or a Fast Refresh re-run).
-    // If it has not finished loading we must wait for it rather than assume it
-    // is ready.
-    if (existing.getAttribute('data-chow45-loaded') === 'true') {
-      resolve();
+    if (src.includes('maps.googleapis.com')) {
+      setTimeout(settleOk, 3000);
     }
   });
 
   cache[src] = promise;
-  promise
-    .then(() => {
-      const el = document.querySelector<HTMLScriptElement>(
-        `script[data-chow45-src="${CSS.escape(src)}"]`
-      );
-      if (el) el.setAttribute('data-chow45-loaded', 'true');
-    })
-    .catch(() => {});
-
   return promise;
 }
 
@@ -147,7 +163,13 @@ async function loadAllScriptsSequentially() {
   }
 
   const loadPromise = (async () => {
-    for (const src of SCRIPTS_TO_LOAD) {
+    // Non-blocking load of Google Maps in parallel
+    void loadScript(GOOGLE_MAPS_SCRIPT).catch((err) => {
+      console.warn('[chow45] Google Maps async load bypassed:', err);
+    });
+
+    // Load local Chow45 application logic modules sequentially
+    for (const src of LOCAL_SCRIPTS_TO_LOAD) {
       await loadScript(src);
     }
   })();
@@ -189,6 +211,48 @@ export function MarketplaceView({
       toast: (msg: string, type: string) => console.log(`[Toast ${type}]`, msg)
     };
     window.chowApp = window.chowApp || window.Chow45App;
+
+    window.CustomerController = window.CustomerController || {
+      openOrderHistory: () => {
+        const m = document.getElementById('order-history-modal');
+        if (m) m.classList.add('open');
+      },
+      openCart: () => {
+        const m = document.getElementById('cart-modal');
+        if (m) m.classList.add('open');
+      },
+      closeCart: () => {
+        const m = document.getElementById('cart-modal');
+        if (m) m.classList.remove('open');
+      },
+    };
+
+    window.Chow45Auth = window.Chow45Auth || {
+      openProfile: (event?: any) => {
+        if (event?.preventDefault) event.preventDefault();
+        const m = document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      open: () => {
+        const m = document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      openAccountModal: (event?: any) => {
+        if (event?.preventDefault) event.preventDefault();
+        const m = document.getElementById('account-modal') || document.getElementById('auth-modal');
+        if (m) m.classList.add('open');
+      },
+      close: () => {
+        const a = document.getElementById('auth-modal');
+        if (a) a.classList.remove('open');
+        const acc = document.getElementById('account-modal');
+        if (acc) acc.classList.remove('open');
+      },
+      signOut: () => {
+        if (window.chowStore?.clearSession) window.chowStore.clearSession();
+        window.location.reload();
+      },
+    };
 
     let cancelled = false;
 
