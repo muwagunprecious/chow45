@@ -34,26 +34,27 @@ const GOOGLE_MAPS_SCRIPT =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261017c',
-  '/app/js/mapbox-config.js?v=20261017c',
-  '/app/js/service-zones.js?v=20261017c',
+  '/app/js/google-maps-config.js?v=20261017d',
+  '/app/js/mapbox-config.js?v=20261017d',
+  '/app/js/service-zones.js?v=20261017d',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261017c',
-  '/app/js/data.js?v=20261017c',
-  '/app/js/state.js?v=20261017c',
-  '/app/js/google-maps-service.js?v=20261017c',
-  '/app/js/mapbox-service.js?v=20261017c',
-  '/app/js/location-picker.js?v=20261017c',
-  '/app/js/customer.js?v=20261017c',
-  '/app/js/vendor.js?v=20261017c',
-  '/app/js/rider.js?v=20261017c',
-  '/app/js/admin.js?v=20261017c',
-  '/app/js/auth.js?v=20261017c',
+  '/app/js/units.js?v=20261017d',
+  '/app/js/data.js?v=20261017d',
+  '/app/js/state.js?v=20261017d',
+  '/app/js/google-maps-service.js?v=20261017d',
+  '/app/js/mapbox-service.js?v=20261017d',
+  '/app/js/location-picker.js?v=20261017d',
+  '/app/js/customer.js?v=20261017d',
+  '/app/js/vendor.js?v=20261017d',
+  '/app/js/rider.js?v=20261017d',
+  '/app/js/admin.js?v=20261017d',
+  '/app/js/auth.js?v=20261017d',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261017c',
-  '/app/js/app.js?v=20261017c',
+  '/app/js/vendor-onboarding.js?v=20261017d',
+  '/app/js/app.js?v=20261017d',
 ];
+
 
 // Globals that must exist before the controllers can safely run. Without this
 // gate a cached script tag could resolve early and boot the app against a
@@ -354,14 +355,15 @@ export function MarketplaceView({
   return (
     <div className="chow45-marketplace-wrapper min-h-screen relative">
       {/* Stylesheets for the marketplace shell */}
-      <link rel="stylesheet" href="/app/css/tokens.css" />
-      <link rel="stylesheet" href="/app/css/layout.css?v=20260928b" />
-      <link rel="stylesheet" href="/app/css/marketplace.css?v=20260928a" />
-      <link rel="stylesheet" href="/app/css/tracking.css" />
-      <link rel="stylesheet" href="/app/css/location-picker.css?v=20260928a" />
-      <link rel="stylesheet" href="/app/css/vendor.css?v=20260928a" />
-      <link rel="stylesheet" href="/app/css/rider.css" />
-      <link rel="stylesheet" href="/app/css/admin.css" />
+      <link rel="stylesheet" href="/app/css/tokens.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/layout.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/marketplace.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/tracking.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/location-picker.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/vendor.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/rider.css?v=20261017d" />
+      <link rel="stylesheet" href="/app/css/admin.css?v=20261017d" />
+
 
       {/* When entering directly as vendor, prevent customer marketplace UI from flashing */}
       {initialRole === 'vendor' && (

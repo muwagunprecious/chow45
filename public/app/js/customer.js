@@ -14,17 +14,78 @@ function _esc(str) {
     .replace(/'/g, '&#39;');
 }
 
+function safeFormatNaira(amount) {
+  if (typeof formatNaira === 'function') {
+    try {
+      return formatNaira(amount);
+    } catch (e) {}
+  }
+  const n = Number(amount) || 0;
+  return '₦' + n.toLocaleString('en-NG');
+}
+
+function safeDeliveryConfig() {
+  if (window.chowStore?.state?.deliveryConfig) return window.chowStore.state.deliveryConfig;
+  if (typeof DEFAULT_DELIVERY_FEE_CONFIG !== 'undefined') return DEFAULT_DELIVERY_FEE_CONFIG;
+  return { baseFee: 200, ratePerMeter: 0.1, minDeliveryFee: 350, serviceFee: 150 };
+}
+
 const CustomerController = {
   activeRestaurant: null,
   activeCustomizingDish: null,
   selectedAddons: [],
   customizingQty: 1,
   _esc,
+  safeFormatNaira,
+  safeDeliveryConfig,
+
+  openDiscover() {
+    try {
+      this.closeStoreMenu();
+    } catch (e) {}
+    try {
+      this.closeTracking();
+    } catch (e) {}
+    try {
+      this.closeCart();
+    } catch (e) {}
+    try {
+      const orderHistoryModal = document.getElementById('order-history-modal');
+      if (orderHistoryModal) orderHistoryModal.classList.remove('open');
+      const accountModal = document.getElementById('account-modal');
+      if (accountModal) accountModal.classList.remove('open');
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('open');
+      const signoutModal = document.getElementById('signout-confirm-modal');
+      if (signoutModal) signoutModal.classList.remove('open');
+      const dishModal = document.getElementById('dish-customizer-modal');
+      if (dishModal) dishModal.classList.remove('open');
+    } catch (e) {}
+
+    if (window.Chow45App && typeof window.Chow45App.switchRole === 'function') {
+      window.Chow45App.switchRole('customer');
+    }
+
+    const homeSec = document.getElementById('customer-home-section');
+    if (homeSec) homeSec.style.display = 'block';
+
+    const storeSec = document.getElementById('customer-store-section');
+    if (storeSec) storeSec.style.display = 'none';
+
+    document.querySelectorAll('.bottom-nav[data-nav-for="customer"] .bottom-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    const discoverBtn = document.querySelector('.bottom-nav[data-nav-for="customer"] .bottom-tab[data-role="customer"]');
+    if (discoverBtn) discoverBtn.classList.add('active');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
 
   init() {
     this.bindEvents();
     this.render();
   },
+
 
   bindEvents() {
     // Search input
@@ -1053,93 +1114,98 @@ const CustomerController = {
   openCart() {
     const modal = document.getElementById('cart-modal');
     if (!modal) return;
-    const itemsList = document.getElementById('cart-items-list');
-
-    const storeState = window.chowStore?.state || {};
-    const cart = storeState.cart || { items: [] };
-    const restaurants = storeState.restaurants || [];
-    const selectedLocation = storeState.selectedLocation || { name: 'Campus' };
-    const userProfile = storeState.userProfile || { name: '', phone: '' };
-
-    if (!cart.items || cart.items.length === 0) {
-      if (itemsList) {
-        itemsList.innerHTML = `
-          <div style="text-align: center; padding: 48px 16px;">
-            <div style="font-size: 2.8rem; margin-bottom: 8px;">🛒</div>
-            <h4 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">Your cart is waiting for something delicious</h4>
-            <p style="color: var(--c-text-secondary); font-size: 0.85rem; margin-bottom: 20px;">Explore nearby kitchens and add your favorite Nigerian meals.</p>
-            <button class="cta-primary-btn" onclick="CustomerController.closeCart()">Explore Food</button>
-          </div>
-        `;
-      }
-      const footer = document.getElementById('cart-checkout-footer');
-      if (footer) footer.style.display = 'none';
-      modal.classList.add('open');
-      return;
-    }
-
-    const store = restaurants.find(r => r.id === cart.storeId);
-    const config = storeState.deliveryConfig || DEFAULT_DELIVERY_FEE_CONFIG;
-    const subtotal = window.chowStore?.getCartSubtotal ? window.chowStore.getCartSubtotal() : (cart.items.reduce((s, i) => s + (i.itemTotal || (i.price * i.qty) || 0), 0));
-    const serviceFee = config?.serviceFee ?? 100;
-    const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store ? store.distanceKm : 1.8) * 1000, config) : 350;
-    const total = subtotal + serviceFee + deliveryFee;
-
-    const storeHeaderName = document.getElementById('cart-store-header-name');
-    if (storeHeaderName) storeHeaderName.innerText = cart.storeName || 'Restaurant';
-
-    if (itemsList) {
-      itemsList.innerHTML = cart.items.map((item, idx) => `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--c-border-subtle);">
-          <div style="flex: 1; padding-right: 12px;">
-            <div style="font-weight: 700; font-size: 0.92rem;">${item.name}</div>
-            ${item.selectedAddons && item.selectedAddons.length > 0 ? `
-              <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 2px;">
-                ${item.selectedAddons.map(a => a.name).join(', ')}
-              </div>
-            ` : ''}
-            <div style="font-weight: 800; font-size: 0.88rem; color: var(--c-primary); margin-top: 4px;">
-              ${formatNaira(item.itemTotal)}
-            </div>
-          </div>
-          <div class="qty-control" style="padding: 3px 8px;">
-            <button class="qty-btn" onclick="window.chowStore?.updateCartItemQty ? window.chowStore.updateCartItemQty(${idx}, -1) : null">−</button>
-            <span class="qty-display">${item.qty}</span>
-            <button class="qty-btn" onclick="window.chowStore?.updateCartItemQty ? window.chowStore.updateCartItemQty(${idx}, 1) : null">+</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // Update Pricing Breakdown matching Point 21 & 56
-    const subtotalEl = document.getElementById('cart-subtotal-val');
-    if (subtotalEl) subtotalEl.innerText = formatNaira(subtotal);
-    const serviceFeeEl = document.getElementById('cart-service-fee-val');
-    if (serviceFeeEl) serviceFeeEl.innerText = formatNaira(serviceFee);
-    const deliveryFeeEl = document.getElementById('cart-delivery-fee-val');
-    if (deliveryFeeEl) deliveryFeeEl.innerText = formatNaira(deliveryFee);
-    const grandTotalEl = document.getElementById('cart-grand-total-val');
-    if (grandTotalEl) grandTotalEl.innerText = formatNaira(total);
-
-    // Delivery destination preview
-    const addrInput = document.getElementById('checkout-address-input');
-    if (addrInput) addrInput.value = selectedLocation?.name || '';
-    const nameInput = document.getElementById('checkout-name-input');
-    if (nameInput) nameInput.value = userProfile?.name || '';
-    const phoneInput = document.getElementById('checkout-phone-input');
-    if (phoneInput) phoneInput.value = userProfile?.phone || '';
-
-    const payBtn = document.getElementById('cart-pay-cta-btn');
-    if (payBtn) payBtn.innerText = `Pay ${formatNaira(total)} & Place Order`;
-
-    const footer = document.getElementById('cart-checkout-footer');
-    if (footer) footer.style.display = 'block';
     modal.classList.add('open');
 
-    // Live distance-based delivery quote (Mapbox route + server-validated price)
-    this.quoteCache = null;
-    this.refreshDeliveryQuote(store);
+    try {
+      const itemsList = document.getElementById('cart-items-list');
+
+      const storeState = window.chowStore?.state || {};
+      const cart = storeState.cart || { items: [] };
+      const restaurants = storeState.restaurants || [];
+      const selectedLocation = storeState.selectedLocation || { name: 'Campus' };
+      const userProfile = storeState.userProfile || { name: '', phone: '' };
+
+      if (!cart.items || cart.items.length === 0) {
+        if (itemsList) {
+          itemsList.innerHTML = `
+            <div style="text-align: center; padding: 48px 16px;">
+              <div style="font-size: 2.8rem; margin-bottom: 8px;">🛒</div>
+              <h4 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">Your cart is waiting for something delicious</h4>
+              <p style="color: var(--c-text-secondary); font-size: 0.85rem; margin-bottom: 20px;">Explore nearby kitchens and add your favorite Nigerian meals.</p>
+              <button class="cta-primary-btn" onclick="CustomerController.closeCart()">Explore Food</button>
+            </div>
+          `;
+        }
+        const footer = document.getElementById('cart-checkout-footer');
+        if (footer) footer.style.display = 'none';
+        return;
+      }
+
+      const store = restaurants.find(r => r.id === cart.storeId);
+      const config = safeDeliveryConfig();
+      const subtotal = window.chowStore?.getCartSubtotal ? window.chowStore.getCartSubtotal() : (cart.items.reduce((s, i) => s + (i.itemTotal || (i.price * i.qty) || 0), 0));
+      const serviceFee = config?.serviceFee ?? 100;
+      const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store ? store.distanceKm : 1.8) * 1000, config) : 350;
+      const total = subtotal + serviceFee + deliveryFee;
+
+      const storeHeaderName = document.getElementById('cart-store-header-name');
+      if (storeHeaderName) storeHeaderName.innerText = cart.storeName || 'Restaurant';
+
+      if (itemsList) {
+        itemsList.innerHTML = cart.items.map((item, idx) => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--c-border-subtle);">
+            <div style="flex: 1; padding-right: 12px;">
+              <div style="font-weight: 700; font-size: 0.92rem;">${item.name}</div>
+              ${item.selectedAddons && item.selectedAddons.length > 0 ? `
+                <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 2px;">
+                  ${item.selectedAddons.map(a => a.name).join(', ')}
+                </div>
+              ` : ''}
+              <div style="font-weight: 800; font-size: 0.88rem; color: var(--c-primary); margin-top: 4px;">
+                ${safeFormatNaira(item.itemTotal)}
+              </div>
+            </div>
+            <div class="qty-control" style="padding: 3px 8px;">
+              <button class="qty-btn" onclick="window.chowStore?.updateCartItemQty ? window.chowStore.updateCartItemQty(${idx}, -1) : null">−</button>
+              <span class="qty-display">${item.qty}</span>
+              <button class="qty-btn" onclick="window.chowStore?.updateCartItemQty ? window.chowStore.updateCartItemQty(${idx}, 1) : null">+</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Update Pricing Breakdown matching Point 21 & 56
+      const subtotalEl = document.getElementById('cart-subtotal-val');
+      if (subtotalEl) subtotalEl.innerText = safeFormatNaira(subtotal);
+      const serviceFeeEl = document.getElementById('cart-service-fee-val');
+      if (serviceFeeEl) serviceFeeEl.innerText = safeFormatNaira(serviceFee);
+      const deliveryFeeEl = document.getElementById('cart-delivery-fee-val');
+      if (deliveryFeeEl) deliveryFeeEl.innerText = safeFormatNaira(deliveryFee);
+      const grandTotalEl = document.getElementById('cart-grand-total-val');
+      if (grandTotalEl) grandTotalEl.innerText = safeFormatNaira(total);
+
+      // Delivery destination preview
+      const addrInput = document.getElementById('checkout-address-input');
+      if (addrInput) addrInput.value = selectedLocation?.name || '';
+      const nameInput = document.getElementById('checkout-name-input');
+      if (nameInput) nameInput.value = userProfile?.name || '';
+      const phoneInput = document.getElementById('checkout-phone-input');
+      if (phoneInput) phoneInput.value = userProfile?.phone || '';
+
+      const payBtn = document.getElementById('cart-pay-cta-btn');
+      if (payBtn) payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
+
+      const footer = document.getElementById('cart-checkout-footer');
+      if (footer) footer.style.display = 'block';
+
+      // Live distance-based delivery quote (Mapbox route + server-validated price)
+      this.quoteCache = null;
+      this.refreshDeliveryQuote(store);
+    } catch (e) {
+      console.warn('[customer] error updating cart modal contents:', e);
+    }
   },
+
 
   /**
    * Fetch the live delivery route from the restaurant's coordinates to the
@@ -1180,12 +1246,16 @@ const CustomerController = {
     if (quote && typeof quote.deliveryFee === 'number') {
       this.quoteCache = quote;
       const fee = quote.deliveryFee;
-      const config = window.chowStore.state.deliveryConfig || DEFAULT_DELIVERY_FEE_CONFIG;
-      const total = window.chowStore.getCartSubtotal() + config.serviceFee + fee;
+      const config = safeDeliveryConfig();
+      const total = window.chowStore.getCartSubtotal() + (config.serviceFee || 100) + fee;
 
-      document.getElementById('cart-delivery-fee-val').innerText = formatNaira(fee);
-      document.getElementById('cart-grand-total-val').innerText = formatNaira(total);
-      document.getElementById('cart-pay-cta-btn').innerText = `Pay ${formatNaira(total)} & Place Order`;
+      const delFeeEl = document.getElementById('cart-delivery-fee-val');
+      if (delFeeEl) delFeeEl.innerText = safeFormatNaira(fee);
+      const grandTotalEl = document.getElementById('cart-grand-total-val');
+      if (grandTotalEl) grandTotalEl.innerText = safeFormatNaira(total);
+      const payBtn = document.getElementById('cart-pay-cta-btn');
+      if (payBtn) payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
+
 
       row.innerHTML = `
         <div class="dq-block">
@@ -1639,53 +1709,57 @@ const CustomerController = {
   openOrderHistory() {
     const modal = document.getElementById('order-history-modal');
     if (!modal) return;
-    const container = document.getElementById('order-history-list');
-
-    const orders = window.chowStore?.state?.orders || [];
-    if (container) {
-      if (orders.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 40px;">
-            <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
-            <p style="font-weight: 700;">You haven't placed an order yet.</p>
-            <button class="cta-primary-btn" style="margin-top: 12px;" onclick="document.getElementById('order-history-modal').classList.remove('open')">Find Food</button>
-          </div>
-        `;
-      } else {
-        container.innerHTML = orders.map(order => `
-          <div style="background: var(--c-bg-subtle); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-              <div>
-                <strong style="font-size: 1rem;">${order.storeName || 'Restaurant'}</strong>
-                <div style="font-size: 0.78rem; color: var(--c-text-muted);">#${order.id} • ${new Date(order.createdAt || Date.now()).toLocaleDateString()}</div>
-              </div>
-              <span class="table-status-tag" style="background: ${order.status === 'DELIVERED' ? 'var(--c-success-bg)' : 'var(--c-warning-bg)'}; color: ${order.status === 'DELIVERED' ? '#065F46' : '#92400E'};">
-                ${(typeof ORDER_STAGES !== 'undefined' && ORDER_STAGES[order.status]?.label) || order.status}
-              </span>
-            </div>
-
-            <div style="font-size: 0.85rem; margin-bottom: 10px;">
-              ${Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : ''}
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--c-border); padding-top: 8px;">
-              <strong style="font-size: 0.95rem; color: var(--c-primary);">${formatNaira(order.total || 0)}</strong>
-              <div style="display: flex; gap: 8px;">
-                ${order.status === 'DELIVERED' ? `
-                  <button class="action-btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="CustomerController.openReviewModal('${order.id}')">Rate Order</button>
-                  <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.reorder('${order.id}')">Reorder</button>
-                ` : `
-                  <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.openOrderTracking('${order.id}'); document.getElementById('order-history-modal').classList.remove('open');">Track Live</button>
-                `}
-              </div>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
-
     modal.classList.add('open');
+
+    try {
+      const container = document.getElementById('order-history-list');
+      const orders = window.chowStore?.state?.orders || [];
+      if (container) {
+        if (orders.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+              <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
+              <p style="font-weight: 700;">You haven't placed an order yet.</p>
+              <button class="cta-primary-btn" style="margin-top: 12px;" onclick="document.getElementById('order-history-modal').classList.remove('open')">Find Food</button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = orders.map(order => `
+            <div style="background: var(--c-bg-subtle); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                  <strong style="font-size: 1rem;">${order.storeName || 'Restaurant'}</strong>
+                  <div style="font-size: 0.78rem; color: var(--c-text-muted);">#${order.id} • ${new Date(order.createdAt || Date.now()).toLocaleDateString()}</div>
+                </div>
+                <span class="table-status-tag" style="background: ${order.status === 'DELIVERED' ? 'var(--c-success-bg)' : 'var(--c-warning-bg)'}; color: ${order.status === 'DELIVERED' ? '#065F46' : '#92400E'};">
+                  ${(typeof ORDER_STAGES !== 'undefined' && ORDER_STAGES[order.status]?.label) || order.status}
+                </span>
+              </div>
+
+              <div style="font-size: 0.85rem; margin-bottom: 10px;">
+                ${Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : ''}
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--c-border); padding-top: 8px;">
+                <strong style="font-size: 0.95rem; color: var(--c-primary);">${safeFormatNaira(order.total || 0)}</strong>
+                <div style="display: flex; gap: 8px;">
+                  ${order.status === 'DELIVERED' ? `
+                    <button class="action-btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="CustomerController.openReviewModal('${order.id}')">Rate Order</button>
+                    <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.reorder('${order.id}')">Reorder</button>
+                  ` : `
+                    <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.openOrderTracking('${order.id}'); document.getElementById('order-history-modal').classList.remove('open');">Track Live</button>
+                  `}
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    } catch (e) {
+      console.warn('[customer] error updating order history list:', e);
+    }
   },
+
 
   reorder(orderId) {
     const order = window.chowStore.state.orders.find(o => o.id === orderId);

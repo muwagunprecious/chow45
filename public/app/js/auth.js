@@ -101,10 +101,13 @@ const Chow45Auth = {
             id: u.id,
             name: u.name || currentProfile.name || 'User',
             email: u.email || currentProfile.email || '',
+            image: u.image || currentProfile.image || '',
+            avatar: u.image || u.avatar || currentProfile.avatar || '',
             role: isVendor ? 'vendor' : (u.role?.toLowerCase() === 'rider' ? 'rider' : 'customer'),
             isLoggedIn: true,
           };
           this.completeLogin(updatedUser);
+
 
           if (isVendor && !window.location.pathname.startsWith('/vendor')) {
             window.location.replace('/vendor');
@@ -390,12 +393,18 @@ const Chow45Auth = {
       badgeEl.style.color = isVendor ? '#15803D' : '#008751';
     }
     if (avatarEl) {
-      const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
-      avatarEl.textContent = initial;
-      avatarEl.style.background = isVendor ? '#15803D' : '#008751';
+      const avatarUrl = user.image || user.avatar || user.picture;
+      if (avatarUrl && typeof avatarUrl === 'string' && (avatarUrl.startsWith('http') || avatarUrl.startsWith('/'))) {
+        avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.textContent='${displayName.trim().charAt(0).toUpperCase() || 'U'}';" />`;
+      } else {
+        const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
+        avatarEl.textContent = initial;
+        avatarEl.style.background = isVendor ? '#15803D' : '#008751';
+      }
     }
 
     modal.classList.add('open');
+
   },
 
   closeSignOutConfirm() {
@@ -454,7 +463,10 @@ const Chow45Auth = {
         return;
       }
 
+      modal.classList.add('open');
+
       const user = this.getUser() || {};
+
       const isLoggedIn = !!user.isLoggedIn;
       const isVendor = (user.role === 'vendor') ||
         window.location.pathname.startsWith('/vendor') ||
@@ -571,9 +583,15 @@ const Chow45Auth = {
             badgeEl.style.color = 'var(--c-primary, #008751)';
           }
           if (avatarEl) {
-            const initial = displayName.trim().charAt(0).toUpperCase();
-            avatarEl.textContent = initial || 'C';
+            const avatarUrl = user.image || user.avatar || user.picture;
+            if (avatarUrl && typeof avatarUrl === 'string' && (avatarUrl.startsWith('http') || avatarUrl.startsWith('/'))) {
+              avatarEl.innerHTML = `<img src="${avatarUrl}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.parentElement.textContent='${displayName.trim().charAt(0).toUpperCase() || 'C'}';" />`;
+            } else {
+              const initial = displayName.trim().charAt(0).toUpperCase();
+              avatarEl.textContent = initial || 'C';
+            }
           }
+
 
           // Rewards calculation: 50 welcome points + 15 points per order placed
           const points = (user.rewardsPoints != null) ? user.rewardsPoints : (50 + totalOrdersCount * 15);
@@ -1934,11 +1952,14 @@ const Chow45Auth = {
         phone: userData.phone,
         role: userData.role || 'customer',
         address: userData.address || '',
+        image: userData.image || userData.avatar || userData.picture || undefined,
+        avatar: userData.avatar || userData.image || userData.picture || undefined,
         vendorId: userData.vendorId || undefined,
         storeId: userData.storeId || undefined,
         storeType: userData.storeType || undefined,
         isLoggedIn: true
       },
+
       createdAt: new Date().toISOString()
     };
 
@@ -2035,7 +2056,20 @@ const Chow45Auth = {
     if (user && user.isLoggedIn) {
       const firstName = (user.name || 'User').split(' ')[0];
       if (labelEl) labelEl.textContent = firstName;
-      if (iconEl) iconEl.textContent = '👤';
+
+      const avatarUrl = user.image || user.avatar || user.picture;
+      const initial = (user.name || user.email || 'U').trim().charAt(0).toUpperCase() || 'U';
+
+      if (avatarUrl && typeof avatarUrl === 'string' && (avatarUrl.startsWith('http') || avatarUrl.startsWith('/'))) {
+        if (iconEl) {
+          iconEl.innerHTML = `<img src="${avatarUrl}" alt="${user.name || 'Profile'}" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; display: inline-block; vertical-align: middle;" onerror="this.onerror=null; this.parentElement.innerHTML='<span style=\\'width:22px;height:22px;border-radius:50%;background:#008751;color:#fff;font-size:0.72rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;text-transform:uppercase;\\'>${initial}</span>';" />`;
+        }
+      } else {
+        if (iconEl) {
+          iconEl.innerHTML = `<span style="width: 22px; height: 22px; border-radius: 50%; background: #008751; color: #fff; font-size: 0.72rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase;">${initial}</span>`;
+        }
+      }
+
       navBtn.title = `Signed in as ${user.name} (Click for Account)`;
       navBtn.classList.add('logged-in');
     } else {
@@ -2044,6 +2078,7 @@ const Chow45Auth = {
       navBtn.title = 'Sign In or Create Account';
       navBtn.classList.remove('logged-in');
     }
+
 
     // Auto-fill checkout fields if user is logged in
     const checkoutName = document.getElementById('checkout-name-input');

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import MarketplaceView from '@/components/marketplace/marketplace-view';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Chow45 Marketplace | Order, Sell & Deliver Food',
   description: 'Food ordering, vendor kitchens, and rider dispatch across Lagos & Sagamu.',
@@ -9,3 +12,4 @@ export const metadata: Metadata = {
 export default function AppPage() {
   return <MarketplaceView initialRole="customer" />;
 }
+

@@ -117,6 +117,11 @@ const Chow45App = {
         }
       }
 
+      if (Array.isArray(data.orders) && window.chowStore && window.chowStore.state) {
+        window.chowStore.state.orders = data.orders;
+        window.chowStore.save();
+      }
+
       if (data.signedIn && data.user) {
         const u = data.user;
         const role = data.role === 'VENDOR' ? 'vendor' : (u.role === 'VENDOR' ? 'vendor' : 'customer');
@@ -125,9 +130,12 @@ const Chow45App = {
           name: u.name,
           email: u.email,
           phone: u.phone || '',
+          image: u.image || '',
+          avatar: u.image || '',
           role: role,
           isLoggedIn: true
         };
+
 
         if (role === 'vendor' && Array.isArray(data.stores)) {
           const myStore = data.stores.find(s => 
