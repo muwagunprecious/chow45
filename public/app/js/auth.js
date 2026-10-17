@@ -295,8 +295,7 @@ const Chow45Auth = {
   },
 
   /**
-   * @param {'vendor'|Event} [intentOrEvent] Marks where the flow was started from, so an
-   *   unknown email opens vendor registration instead of customer sign-up.
+   * @param {'vendor'|'profile'|Event} [intentOrEvent]
    */
   open(intentOrEvent) {
     let intent = null;
@@ -309,6 +308,11 @@ const Chow45Auth = {
     }
 
     try {
+      if (intent === 'profile') {
+        this.openProfile();
+        return;
+      }
+
       if (this.isLoggedIn()) {
         this.openAccountModal();
         return;
@@ -325,6 +329,20 @@ const Chow45Auth = {
     } catch (err) {
       console.error('[auth] Error opening auth modal:', err);
     }
+  },
+
+  openProfile(event) {
+    if (event && typeof event.preventDefault === 'function') {
+      try { event.preventDefault(); } catch (e) {}
+    }
+    this.openAccountModal();
+  },
+
+  openGuestSignIn() {
+    this.close();
+    this.showStep1();
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.add('open');
   },
 
   close() {
@@ -351,6 +369,7 @@ const Chow45Auth = {
       }
 
       const user = this.getUser() || {};
+      const isLoggedIn = !!user.isLoggedIn;
       const isVendor = (user.role === 'vendor') ||
         window.location.pathname.startsWith('/vendor') ||
         (window.chowStore?.state?.currentRole === 'vendor');
@@ -358,11 +377,15 @@ const Chow45Auth = {
       const headerTitle = document.getElementById('account-modal-header-title');
       const custSec = document.getElementById('account-customer-section');
       const vndSec = document.getElementById('account-vendor-section');
+      const signoutBtn = document.getElementById('account-signout-btn');
+      const guestSigninBtn = document.getElementById('account-guest-signin-btn');
 
       if (isVendor) {
         if (headerTitle) headerTitle.textContent = 'Vendor Store Profile';
         if (custSec) custSec.style.display = 'none';
         if (vndSec) vndSec.style.display = 'block';
+        if (signoutBtn) signoutBtn.style.display = 'flex';
+        if (guestSigninBtn) guestSigninBtn.style.display = 'none';
 
         const store = (window.VendorController && typeof window.VendorController.getStore === 'function')
           ? window.VendorController.getStore()
@@ -406,29 +429,116 @@ const Chow45Auth = {
         const locsCountEl = document.getElementById('account-locations-count');
         const addrTextEl = document.getElementById('account-display-address-text');
 
+        // Rewards elements
+        const ptsEl = document.getElementById('account-rewards-points');
+        const tierEl = document.getElementById('account-rewards-tier');
+        const barEl = document.getElementById('account-rewards-bar');
+        const perkEl = document.getElementById('account-rewards-perk-hint');
+
+        // Order metric elements
+        const totalOrdersEl = document.getElementById('account-total-orders-count');
+        const activeOrdersEl = document.getElementById('account-active-orders-count');
+        const savedLocsBadgeEl = document.getElementById('account-saved-locations-badge');
+        const orderHistoryHint = document.getElementById('account-order-history-hint');
+
         const currentAddress = user.address ||
           window.chowStore?.state?.selectedLocation?.formattedAddress ||
           window.chowStore?.state?.selectedLocation?.name ||
           '';
 
-        if (nameEl) nameEl.textContent = user.name || 'Chow45 Customer';
-        if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
-        if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
-        if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
+        const saved = Array.isArray(user.savedAddresses) ? user.savedAddresses : (window.chowStore?.state?.userProfile?.savedAddresses || []);
+        const savedCount = saved.length;
 
-        if (badgeEl) {
-          badgeEl.textContent = 'Customer';
-          badgeEl.className = 'account-badge customer';
+        // Calculate orders from store state
+        const allOrders = Array.isArray(window.chowStore?.state?.orders) ? window.chowStore.state.orders : [];
+        const totalOrdersCount = allOrders.length;
+        const activeOrdersCount = allOrders.filter(o => !['DELIVERED', 'REJECTED'].includes(o.status)).length;
+
+        if (totalOrdersEl) totalOrdersEl.textContent = String(totalOrdersCount);
+        if (activeOrdersEl) {
+          activeOrdersEl.textContent = String(activeOrdersCount);
+          activeOrdersEl.style.color = activeOrdersCount > 0 ? '#16A34A' : '#64748B';
         }
-        if (avatarEl) {
-          const initial = (user.name || 'C').trim().charAt(0).toUpperCase();
-          avatarEl.textContent = initial || 'C';
-        }
+        if (savedLocsBadgeEl) savedLocsBadgeEl.textContent = String(savedCount);
 
         if (locsCountEl) {
-          const saved = Array.isArray(user.savedAddresses) ? user.savedAddresses : [];
-          const count = saved.length;
-          locsCountEl.textContent = count > 0 ? `${count} saved location${count > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
+          locsCountEl.textContent = savedCount > 0 ? `${savedCount} saved location${savedCount > 1 ? 's' : ''}` : 'Set Campus, Home & Work';
+        }
+
+        if (orderHistoryHint) {
+          orderHistoryHint.textContent = totalOrdersCount > 0
+            ? `${totalOrdersCount} past order${totalOrdersCount > 1 ? 's' : ''} • View status & receipts`
+            : 'View past orders and order status';
+        }
+
+        if (isLoggedIn) {
+          const displayName = user.name || (user.email ? user.email.split('@')[0] : 'Chow45 Customer');
+          if (nameEl) nameEl.textContent = displayName;
+          if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
+          if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
+          if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
+
+          if (badgeEl) {
+            badgeEl.textContent = 'Customer';
+            badgeEl.className = 'account-badge customer';
+            badgeEl.style.background = '#E8F6F0';
+            badgeEl.style.color = 'var(--c-primary, #008751)';
+          }
+          if (avatarEl) {
+            const initial = displayName.trim().charAt(0).toUpperCase();
+            avatarEl.textContent = initial || 'C';
+          }
+
+          // Rewards calculation: 50 welcome points + 15 points per order placed
+          const points = (user.rewardsPoints != null) ? user.rewardsPoints : (50 + totalOrdersCount * 15);
+          if (ptsEl) ptsEl.textContent = String(points);
+
+          let tier = 'Campus Bronze';
+          let perk = 'Earn 15 pts on every order • Redeem for delivery discounts';
+          let progressPercent = 35;
+
+          if (points >= 250) {
+            tier = '🥇 Campus VIP';
+            perk = 'Free delivery perks unlocked! • 10% off selected restaurants';
+            progressPercent = 100;
+          } else if (points >= 100) {
+            tier = '🥈 Silver Gourmet';
+            perk = '₦200 off campus delivery • Priority rider dispatch';
+            progressPercent = Math.min(90, Math.round((points / 250) * 100));
+          } else {
+            tier = '🥉 Campus Bronze';
+            perk = 'Earn 15 pts on every order • Reach 100 pts for Silver Gourmet';
+            progressPercent = Math.min(65, Math.max(25, Math.round((points / 100) * 100)));
+          }
+
+          if (tierEl) tierEl.textContent = tier;
+          if (barEl) barEl.style.width = `${progressPercent}%`;
+          if (perkEl) perkEl.textContent = perk;
+
+          if (signoutBtn) signoutBtn.style.display = 'flex';
+          if (guestSigninBtn) guestSigninBtn.style.display = 'none';
+        } else {
+          // Guest State
+          if (nameEl) nameEl.textContent = 'Guest Explorer';
+          if (emailEl) emailEl.textContent = 'Sign in to access your account';
+          if (phoneEl) phoneEl.textContent = 'No phone attached';
+          if (addrTextEl) addrTextEl.textContent = currentAddress || 'Pick delivery location';
+
+          if (badgeEl) {
+            badgeEl.textContent = 'Guest';
+            badgeEl.className = 'account-badge';
+            badgeEl.style.background = '#E2E8F0';
+            badgeEl.style.color = '#475569';
+          }
+          if (avatarEl) avatarEl.textContent = 'G';
+
+          if (ptsEl) ptsEl.textContent = '50';
+          if (tierEl) tierEl.textContent = '🎁 Welcome Bonus';
+          if (barEl) barEl.style.width = '30%';
+          if (perkEl) perkEl.textContent = 'Sign in to claim your 50 ChowPoints welcome bonus!';
+
+          if (signoutBtn) signoutBtn.style.display = 'none';
+          if (guestSigninBtn) guestSigninBtn.style.display = 'flex';
         }
 
         const vendorBtn = document.getElementById('account-vendor-dash-btn');
@@ -440,8 +550,8 @@ const Chow45Auth = {
         const editName = document.getElementById('account-edit-name');
         const editPhone = document.getElementById('account-edit-phone');
         const editAddr = document.getElementById('account-edit-address');
-        if (editName) editName.value = user.name || '';
-        if (editPhone) editPhone.value = user.phone || '';
+        if (editName) editName.value = (isLoggedIn && user.name) ? user.name : '';
+        if (editPhone) editPhone.value = (isLoggedIn && user.phone) ? user.phone : '';
         if (editAddr) editAddr.value = currentAddress || '';
       }
 

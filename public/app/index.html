@@ -67,7 +67,7 @@
 
         <!-- Right Actions: Orders, Profile, Auth & Cart -->
         <div class="nav-actions">
-          <button type="button" id="nav-auth-btn" class="nav-auth-pill" onclick="event.preventDefault(); Chow45Auth.open(event)" title="Account & Sign In">
+          <button type="button" id="nav-auth-btn" class="nav-auth-pill" onclick="event.preventDefault(); Chow45Auth.openProfile(event)" title="Account & Profile">
             <span class="nav-auth-icon">👤</span>
             <span class="nav-auth-label">Sign In</span>
           </button>
@@ -973,7 +973,7 @@
         <span class="tab-badge cart-badge-count" style="display: none;">0</span>
       </button>
 
-      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.open(event)" title="Profile & Account">
+      <button type="button" class="bottom-tab" onclick="event.preventDefault(); Chow45Auth.openProfile(event)" title="Profile & Account">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Profile</span>
       </button>
@@ -2399,7 +2399,7 @@
 
           <!-- SECTION A: CUSTOMER PROFILE -->
           <div id="account-customer-section">
-            <div class="account-card-header">
+            <div class="account-card-header" style="margin-bottom: 14px;">
               <div class="account-avatar" id="account-avatar-char">C</div>
               <div class="account-details">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -2412,15 +2412,52 @@
               </div>
             </div>
 
+            <!-- ChowRewards & Loyalty Card -->
+            <div id="account-rewards-card" style="background: linear-gradient(135deg, #064E3B 0%, #059669 100%); color: #FFFFFF; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 6px 18px rgba(6, 78, 59, 0.22); position: relative; overflow: hidden;">
+              <div style="position: absolute; right: -10px; top: -10px; font-size: 4.5rem; opacity: 0.12; pointer-events: none; user-select: none;">🪙</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;">
+                  <span>🪙 ChowRewards</span>
+                </div>
+                <span id="account-rewards-tier" style="background: rgba(255,255,255,0.22); backdrop-filter: blur(4px); padding: 3px 10px; border-radius: 999px; font-weight: 800; font-size: 0.74rem; letter-spacing: 0.02em;">Campus VIP</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 6px; margin: 6px 0 6px;">
+                <span id="account-rewards-points" style="font-size: 1.85rem; font-weight: 900; line-height: 1;">120</span>
+                <span style="font-size: 0.86rem; font-weight: 700; opacity: 0.9;">ChowPoints</span>
+              </div>
+              <div style="background: rgba(255,255,255,0.24); border-radius: 999px; height: 6px; overflow: hidden; margin-bottom: 8px;">
+                <div id="account-rewards-bar" style="background: #FCD34D; height: 100%; width: 60%; border-radius: 999px; transition: width 0.4s ease;"></div>
+              </div>
+              <div id="account-rewards-perk-hint" style="font-size: 0.74rem; opacity: 0.94; line-height: 1.35;">
+                Earn 15 pts on every order • Redeem for free delivery discounts
+              </div>
+            </div>
+
+            <!-- Activity & Orders Metric Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+              <div onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');" style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer;">
+                <div style="font-size: 1.25rem; font-weight: 900; color: #0F172A; line-height: 1.1;" id="account-total-orders-count">0</div>
+                <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; margin-top: 3px;">Orders</div>
+              </div>
+              <div onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');" style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer;">
+                <div style="font-size: 1.25rem; font-weight: 900; color: #00a205; line-height: 1.1;" id="account-active-orders-count">0</div>
+                <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; margin-top: 3px;">Active</div>
+              </div>
+              <div onclick="Chow45App.openLocationModal(); document.getElementById('account-modal').classList.remove('open');" style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer;">
+                <div style="font-size: 1.25rem; font-weight: 900; color: #0F172A; line-height: 1.1;" id="account-saved-locations-badge">0</div>
+                <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; margin-top: 3px;">Locations</div>
+              </div>
+            </div>
+
             <!-- Profile Action Toggle: Edit Profile -->
-            <div style="margin-bottom: 16px;">
+            <div style="margin-bottom: 14px;">
               <button type="button" class="account-edit-toggle-btn" onclick="Chow45Auth.toggleEditProfile()" style="width: 100%; padding: 10px 14px; background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 12px; font-weight: 700; font-size: 0.85rem; color: #1E293B; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
                 <span id="account-edit-toggle-icon">✏️</span> <span id="account-edit-toggle-label">Edit Personal Profile</span>
               </button>
             </div>
 
             <!-- Inline Edit Profile Form (collapsible) -->
-            <div id="account-profile-edit-form" style="display: none; background: #FFF; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <div id="account-profile-edit-form" style="display: none; background: #FFF; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
               <h4 style="font-size: 0.88rem; font-weight: 800; color: #0F172A; margin: 0 0 12px;">Update Your Information</h4>
               
               <div style="margin-bottom: 12px;">
@@ -2452,20 +2489,20 @@
             </div>
 
             <div class="account-menu-list">
+              <button class="account-menu-item" onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');">
+                <span class="item-icon">🛍️</span>
+                <div class="item-text">
+                  <strong>Order History & Receipts</strong>
+                  <small id="account-order-history-hint">View past orders and order status</small>
+                </div>
+                <span class="item-arrow">→</span>
+              </button>
+
               <button class="account-menu-item" onclick="Chow45App.openLocationModal(); document.getElementById('account-modal').classList.remove('open');">
                 <span class="item-icon">📍</span>
                 <div class="item-text">
                   <strong>Saved Delivery Locations</strong>
                   <small id="account-locations-count">Campus, Home, Work</small>
-                </div>
-                <span class="item-arrow">→</span>
-              </button>
-
-              <button class="account-menu-item" onclick="CustomerController.openOrderHistory(); document.getElementById('account-modal').classList.remove('open');">
-                <span class="item-icon">🛍️</span>
-                <div class="item-text">
-                  <strong>Order History & Receipts</strong>
-                  <small>View past orders and order status</small>
                 </div>
                 <span class="item-arrow">→</span>
               </button>
@@ -2544,10 +2581,13 @@
             </div>
           </div>
 
-          <!-- Common Sign Out -->
-          <div class="account-logout-wrap" style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--c-border-subtle, #f1f5f9);">
-            <button class="account-logout-btn" onclick="Chow45Auth.signOut()" style="width: 100%; padding: 13px 18px; background: #fff1f2; border: 1.5px solid #fda4af; border-radius: 14px; color: #e11d48; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;">
+          <!-- Common Sign Out & Guest Sign In -->
+          <div id="account-logout-section" class="account-logout-wrap" style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--c-border-subtle, #f1f5f9);">
+            <button id="account-signout-btn" class="account-logout-btn" onclick="Chow45Auth.signOut()" style="width: 100%; padding: 13px 18px; background: #fff1f2; border: 1.5px solid #fda4af; border-radius: 14px; color: #e11d48; font-weight: 800; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;">
               🚪 Sign Out of Chow45
+            </button>
+            <button id="account-guest-signin-btn" type="button" onclick="Chow45Auth.openGuestSignIn()" style="display: none; width: 100%; padding: 13px 18px; background: #00a205; border: none; border-radius: 14px; color: #ffffff; font-weight: 800; font-size: 0.98rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,162,5,0.3); transition: all 0.2s ease;">
+              🔑 Sign In or Create Account
             </button>
           </div>
         </div>
@@ -2697,22 +2737,22 @@
     window.__CHOW45_GOOGLE_MAPS_KEY__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
     window.__CHOW45_MAPBOX_TOKEN__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
   </script>
-  <script src="/app/js/google-maps-config.js?v=20261016d"></script>
-  <script src="/app/js/mapbox-config.js?v=20261016d"></script>
-  <script src="/app/js/service-zones.js?v=20261016d"></script>
-  <script src="/app/js/units.js?v=20261016d"></script>
-  <script src="/app/js/data.js?v=20261016d"></script>
-  <script src="/app/js/state.js?v=20261016d"></script>
-  <script src="/app/js/google-maps-service.js?v=20261016d"></script>
-  <script src="/app/js/mapbox-service.js?v=20261016d"></script>
-  <script src="/app/js/location-picker.js?v=20261016d"></script>
-  <script src="/app/js/customer.js?v=20261016d"></script>
-  <script src="/app/js/vendor.js?v=20261016d"></script>
-  <script src="/app/js/rider.js?v=20261016d"></script>
-  <script src="/app/js/admin.js?v=20261016d"></script>
-  <script src="/app/js/auth.js?v=20261016d"></script>
-  <script src="/app/js/vendor-onboarding.js?v=20261016d"></script>
-  <script src="/app/js/app.js?v=20261016d"></script>
+  <script src="/app/js/google-maps-config.js?v=20261017a"></script>
+  <script src="/app/js/mapbox-config.js?v=20261017a"></script>
+  <script src="/app/js/service-zones.js?v=20261017a"></script>
+  <script src="/app/js/units.js?v=20261017a"></script>
+  <script src="/app/js/data.js?v=20261017a"></script>
+  <script src="/app/js/state.js?v=20261017a"></script>
+  <script src="/app/js/google-maps-service.js?v=20261017a"></script>
+  <script src="/app/js/mapbox-service.js?v=20261017a"></script>
+  <script src="/app/js/location-picker.js?v=20261017a"></script>
+  <script src="/app/js/customer.js?v=20261017a"></script>
+  <script src="/app/js/vendor.js?v=20261017a"></script>
+  <script src="/app/js/rider.js?v=20261017a"></script>
+  <script src="/app/js/admin.js?v=20261017a"></script>
+  <script src="/app/js/auth.js?v=20261017a"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261017a"></script>
+  <script src="/app/js/app.js?v=20261017a"></script>
 </body>
 </html>
 
