@@ -23,13 +23,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!address || address.length < 2) {
-      return NextResponse.json(
-        { error: "Please enter a valid pickup address." },
-        { status: 400 }
-      );
-    }
-
     // Fallback: look up user by email if session cookie was not provided
     if (userId === null && email) {
       const existingUser = await db
@@ -42,12 +35,32 @@ export async function POST(request: Request) {
       }
     }
 
+    // Resolve vendor row
+    let vendorRow: typeof vendors.$inferSelect | null = null;
+    if (userId !== null) {
+      const v = await db.select().from(vendors).where(eq(vendors.userId, userId)).limit(1);
+      if (v[0]) vendorRow = v[0];
+    }
+    if (!vendorRow && email) {
+      const v = await db.select().from(vendors).where(sql`LOWER(${vendors.contactEmail}) = ${email}`).limit(1);
+      if (v[0]) {
+        vendorRow = v[0];
+        if (userId === null && vendorRow.userId) {
+          userId = Number(vendorRow.userId);
+        }
+      }
+    }
+
     if (userId === null) {
       return NextResponse.json(
         { error: "Unauthorized. Please sign in first." },
         { status: 401 }
       );
     }
+
+    const finalAddress = address && address.length >= 2
+      ? address
+      : (vendorRow?.address || "OSUTH Campus, Sagamu");
 
     // 1. Hash the new password and update the accounts table
     const hashedPassword = await hashPassword(newPassword);
@@ -75,34 +88,33 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. Update vendor's pickup address and mark first_time_setup_done
-    const vendorRows = await db
-      .select()
-      .from(vendors)
-      .where(eq(vendors.userId, userId))
-      .limit(1);
-
-    if (vendorRows.length > 0) {
-      const vnd = vendorRows[0];
-      const existingTags = Array.isArray(vnd.tags) ? vnd.tags : [];
-      const updatedTags = Array.from(new Set([...existingTags, "first_time_setup_done"]));
+    // 2. Update vendor's pickup address and mark password changed
+    if (vendorRow) {
+      const existingTags = Array.isArray(vendorRow.tags) ? vendorRow.tags : [];
+      const updatedTags = Array.from(
+        new Set([
+          ...existingTags.filter((t) => t !== "must_change_password"),
+          "first_time_setup_done",
+          "password_changed",
+        ])
+      );
 
       await db
         .update(vendors)
         .set({
-          address,
-          latitude: latitude || vnd.latitude,
-          longitude: longitude || vnd.longitude,
+          address: finalAddress,
+          latitude: latitude || vendorRow.latitude,
+          longitude: longitude || vendorRow.longitude,
           tags: updatedTags,
           updatedAt: new Date(),
         })
-        .where(eq(vendors.id, vnd.id));
+        .where(eq(vendors.id, vendorRow.id));
     }
 
     return NextResponse.json({
       success: true,
-      message: "Password and store location updated successfully!",
-      address,
+      message: "Password updated successfully!",
+      address: finalAddress,
     });
   } catch (error: any) {
     console.error("[first-login-setup] error:", error);

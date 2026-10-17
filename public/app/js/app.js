@@ -197,12 +197,12 @@ const Chow45App = {
       this.updateLocationUI(state.selectedLocation);
     });
 
-    // Close modals on backdrop click (except mandatory first-time setup modal)
+    // Close modals on backdrop click (strictly ignoring mandatory vendor password change modal)
     document.querySelectorAll('.modal-backdrop').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          if (modal.id === 'vendor-first-setup-modal' && typeof Chow45Auth !== 'undefined' && Chow45Auth.closeFirstTimeSetup) {
-            Chow45Auth.closeFirstTimeSetup();
+          if (modal.id === 'vendor-first-setup-modal') {
+            // Strictly mandatory; backdrop clicks cannot dismiss
             return;
           }
           modal.classList.remove('open');

@@ -2242,49 +2242,63 @@ const Chow45Auth = {
       ''
     ).toLowerCase().trim();
 
-    // STRICT: Only for this email!
-    if (email !== 'tolaniakin2022@gmail.com') return;
-
-    // Check tags from profile / database
     const tags = profile?.tags || serverData?.vendor?.tags || [];
-    if (Array.isArray(tags) && tags.includes('first_time_setup_done')) {
-      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
-      return;
-    }
+    const isTarget = email === 'tolaniakin2022@gmail.com';
+    const hasChanged = Array.isArray(tags) && (tags.includes('first_time_setup_done') || tags.includes('password_changed'));
+    const explicitlyFlagged = Array.isArray(tags) && tags.includes('must_change_password');
 
-    if (serverData && serverData.requiresFirstTimeSetup === false) {
-      return;
-    }
+    const needsPasswordChange =
+      explicitlyFlagged ||
+      (isTarget && !hasChanged) ||
+      serverData?.requiresPasswordChange === true ||
+      serverData?.requiresFirstTimeSetup === true;
 
-    // Do not show if dismissed during this session
-    if (sessionStorage.getItem('chow45_vendor_setup_dismissed') === 'true') {
+    if (!needsPasswordChange) {
+      this._unlockVendorDashboard();
       return;
     }
 
     const modal = document.getElementById('vendor-first-setup-modal');
     if (!modal) return;
 
-    const addrInput = document.getElementById('vnd-setup-address');
-    if (addrInput && (profile?.address || serverData?.vendor?.address)) {
-      addrInput.value = profile?.address || serverData?.vendor?.address;
+    // Suppress/close lower-priority popups that might obscure or confuse the view
+    this.closeErrorPopup();
+
+    // Lock body scrolling and mark vendor dashboard inert
+    document.body.classList.add('vendor-password-locked');
+    const view = document.getElementById('view-vendor');
+    if (view) {
+      view.setAttribute('inert', '');
+      view.setAttribute('aria-hidden', 'true');
     }
 
-    // Immediately trigger popup
-    setTimeout(() => {
-      modal.classList.add('open');
-    }, 250);
+    // Immediately display the modal above all layers
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+  },
+
+  _unlockVendorDashboard() {
+    document.body.classList.remove('vendor-password-locked');
+    const view = document.getElementById('view-vendor');
+    if (view) {
+      view.removeAttribute('inert');
+      view.removeAttribute('aria-hidden');
+    }
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (modal) {
+      modal.classList.remove('open');
+      modal.style.display = 'none';
+    }
   },
 
   closeFirstTimeSetup() {
-    const modal = document.getElementById('vendor-first-setup-modal');
-    if (modal) modal.classList.remove('open');
-    sessionStorage.setItem('chow45_vendor_setup_dismissed', 'true');
+    // Zero bypass: Mandatory password change cannot be closed or dismissed!
+    console.warn('[Chow45Auth] Password change is mandatory and cannot be dismissed.');
   },
 
   async submitFirstTimeSetup() {
-    const pw = document.getElementById('vnd-setup-password')?.value || '';
-    const confirm = document.getElementById('vnd-setup-password-confirm')?.value || '';
-    const addr = (document.getElementById('vnd-setup-address')?.value || '').trim();
+    const pw = (document.getElementById('vnd-setup-password')?.value || '').trim();
+    const confirm = (document.getElementById('vnd-setup-password-confirm')?.value || '').trim();
     const errEl = document.getElementById('vnd-setup-error');
     const btn = document.getElementById('vnd-setup-submit-btn');
 
@@ -2307,51 +2321,54 @@ const Chow45Auth = {
       return;
     }
 
-    if (!addr || addr.length < 2) {
-      showError('Please enter your store / pickup location.');
-      return;
-    }
-
     if (btn) {
       btn.disabled = true;
       const span = btn.querySelector('span');
-      if (span) span.textContent = 'Saving your account...';
+      if (span) span.textContent = 'Updating Password...';
     }
 
     try {
+      const session = this.getSession();
+      const email = (
+        session?.email ||
+        window.chowStore?.state?.userProfile?.email ||
+        'tolaniakin2022@gmail.com'
+      ).toLowerCase().trim();
+
       const res = await fetch('/api/vendor/first-login-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: 'tolaniakin2022@gmail.com',
+          email: email || 'tolaniakin2022@gmail.com',
           newPassword: pw,
-          address: addr,
         })
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) {
-        showError(data.error || 'Failed to save setup. Please try again.');
+        showError(data.error || 'Failed to update password. Please try again.');
         return;
       }
 
-      // Mark completed permanently
-      localStorage.setItem('chow45_first_setup_done_tolaniakin2022@gmail.com', 'true');
+      // Mark completed permanently in storage
+      localStorage.setItem(`chow45_first_setup_done_${email}`, 'true');
       sessionStorage.removeItem('chow45_vendor_trigger_setup');
+      sessionStorage.removeItem('chow45_vendor_setup_dismissed');
 
-      // Update saved credentials for instant auto-fill next time
-      this.saveCredentials('tolaniakin2022@gmail.com', pw, 'VENDOR');
+      // Update saved credentials for seamless future auto-fills
+      this.saveCredentials(email, pw, 'VENDOR');
 
-      // Update location displays in DOM
-      const locEl = document.getElementById('vendor-store-location');
-      if (locEl) locEl.textContent = addr;
-
-      // Close modal
-      const modal = document.getElementById('vendor-first-setup-modal');
-      if (modal) modal.classList.remove('open');
+      // Unlock dashboard and close modal
+      this._unlockVendorDashboard();
 
       if (window.chowApp && window.chowApp.toast) {
-        window.chowApp.toast('🎉 Welcome, Tolani! Your password and store location are saved.', 'success');
+        window.chowApp.toast('🎉 Password updated successfully! Welcome to your dashboard.', 'success');
+      }
+
+      // Refresh vendor dashboard views now that password change requirement is resolved
+      if (typeof VendorController !== 'undefined') {
+        if (VendorController.render) VendorController.render();
+        if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
       }
     } catch (e) {
       showError('Network error. Please check your connection and try again.');
@@ -2359,10 +2376,21 @@ const Chow45Auth = {
       if (btn) {
         btn.disabled = false;
         const span = btn.querySelector('span');
-        if (span) span.textContent = 'Save & Continue to Dashboard ➔';
+        if (span) span.textContent = 'Update Password & Continue ➔';
       }
     }
   }
 };
+
+// Global trap: Prevent Escape key from dismissing the mandatory vendor password modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('vendor-first-setup-modal');
+    if (modal && modal.classList.contains('open')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+}, true);
 
 window.Chow45Auth = Chow45Auth;

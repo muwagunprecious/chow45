@@ -160,6 +160,7 @@ export interface FailedVendorContext {
   ok: false;
   status: 401 | 403;
   error: string;
+  message?: string;
 }
 
 export type VendorAuthResult = AuthenticatedVendorContext | FailedVendorContext;
@@ -171,6 +172,26 @@ export interface FallbackVendorData {
   vendorEmail?: unknown;
 }
 
+export interface RequireVendorOptions {
+  allowPendingPasswordChange?: boolean;
+}
+
+/**
+ * Checks whether a vendor account is required to change their temporary password
+ * before accessing protected store management features.
+ */
+export function vendorRequiresPasswordChange(
+  vendor: typeof vendors.$inferSelect,
+  userEmail?: string
+): boolean {
+  const email = (userEmail || vendor.contactEmail || "").toLowerCase().trim();
+  const isTarget = email === "tolaniakin2022@gmail.com";
+  const tags = Array.isArray(vendor.tags) ? vendor.tags : [];
+  const hasChanged = tags.includes("first_time_setup_done") || tags.includes("password_changed");
+  const explicitlyFlagged = tags.includes("must_change_password");
+  return explicitlyFlagged || (isTarget && !hasChanged);
+}
+
 /**
  * Strict and resilient server-side vendor guard.
  *
@@ -179,10 +200,12 @@ export interface FallbackVendorData {
  * 3. Resolves the database vendor row belonging to the user ID or registered email.
  * 4. In production environments where cookies may be lost or desynced, falls back
  *    to explicit vendor identification headers/body if a verified vendor record exists.
+ * 5. Strictly blocks mutating operations if temporary password change is pending.
  */
 export async function requireVendor(
   request: Request,
-  fallbackData?: FallbackVendorData
+  fallbackData?: FallbackVendorData,
+  options?: RequireVendorOptions
 ): Promise<VendorAuthResult> {
   const resolved = await resolveSessionUser(request);
 
@@ -285,6 +308,22 @@ export async function requireVendor(
       if (roleUpper !== "VENDOR" && roleUpper !== "ADMIN") {
         await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, resolved.userId));
       }
+
+      if (roleUpper !== "ADMIN") {
+        const needsPasswordChange = vendorRequiresPasswordChange(
+          targetVendor,
+          resolved.user.email || targetVendor.contactEmail || undefined
+        );
+        if (needsPasswordChange && options?.allowPendingPasswordChange !== true) {
+          return {
+            ok: false,
+            status: 403,
+            error: "PASSWORD_CHANGE_REQUIRED",
+            message: "You must change your temporary password before accessing the vendor dashboard.",
+          };
+        }
+      }
+
       return {
         ok: true,
         userId: resolved.userId,
@@ -314,6 +353,19 @@ export async function requireVendor(
 
     if (fallbackMatches.length > 0) {
       targetVendor = fallbackMatches[0];
+
+      const needsPasswordChange = vendorRequiresPasswordChange(
+        targetVendor,
+        targetVendor.contactEmail || undefined
+      );
+      if (needsPasswordChange && options?.allowPendingPasswordChange !== true) {
+        return {
+          ok: false,
+          status: 403,
+          error: "PASSWORD_CHANGE_REQUIRED",
+          message: "You must change your temporary password before accessing the vendor dashboard.",
+        };
+      }
 
       let vendorUserRow = null;
       if (targetVendor.userId) {

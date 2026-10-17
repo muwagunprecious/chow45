@@ -1907,3 +1907,45 @@ a.text-link, .link-btn {
     font-size: 0.75rem;
   }
 }
+
+/* -------------------------------------------------------------
+   Mandatory Vendor Password Change Modal (Top Stacking Context)
+   ------------------------------------------------------------- */
+#vendor-first-setup-modal.modal-backdrop,
+.vendor-password-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#vendor-first-setup-modal.modal-backdrop.open,
+.vendor-password-overlay.open {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.vendor-password-sheet {
+  transform: translateY(20px) scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#vendor-first-setup-modal.modal-backdrop.open .vendor-password-sheet,
+.vendor-password-overlay.open .vendor-password-sheet {
+  transform: translateY(0) scale(1);
+}
+
+body.vendor-password-locked {
+  overflow: hidden !important;
+  touch-action: none !important;
+}

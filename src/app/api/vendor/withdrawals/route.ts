@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { vendors, vendorWallets, vendorWithdrawals } from "@/db";
-import { currentRole, currentVendorUserId } from "@/lib/session";
+import { currentRole, currentVendorUserId, vendorRequiresPasswordChange } from "@/lib/session";
 import { optionalText } from "@/lib/validation";
 import { serializeWallet, serializeWithdrawal } from "@/lib/serializers";
 
@@ -50,6 +50,13 @@ export async function POST(request: Request) {
     const vendor = found[0];
     if (!vendor) {
       return NextResponse.json({ error: "No store found for this account." }, { status: 404 });
+    }
+
+    if (vendorRequiresPasswordChange(vendor)) {
+      return NextResponse.json(
+        { error: "PASSWORD_CHANGE_REQUIRED", message: "You must change your temporary password before requesting withdrawals." },
+        { status: 403 }
+      );
     }
 
     // Reserve the money in the same transaction that records the request, so a

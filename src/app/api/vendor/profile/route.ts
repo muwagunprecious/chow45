@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { vendors, vendorWallets, users } from "@/db";
-import { requireVendor } from "@/lib/session";
+import { requireVendor, vendorRequiresPasswordChange } from "@/lib/session";
 import { isValidEmail, normalizeEmail } from "@/lib/validation";
 
 /**
@@ -42,25 +42,28 @@ export async function GET(request: Request) {
     const vendorId = url.searchParams.get("vendorId");
     const email = url.searchParams.get("email");
 
-    const authResult = await requireVendor(request, {
-      storeId: storeId || undefined,
-      vendorId: vendorId || undefined,
-      email: email || undefined,
-    });
+    const authResult = await requireVendor(
+      request,
+      {
+        storeId: storeId || undefined,
+        vendorId: vendorId || undefined,
+        email: email || undefined,
+      },
+      { allowPendingPasswordChange: true }
+    );
 
     if (!authResult.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: authResult.error, message: authResult.message }, { status: authResult.status });
     }
 
     const vendor = authResult.vendor;
     const userEmail = (authResult.user?.email || vendor?.contactEmail || "").toLowerCase();
-    const isTargetUser = userEmail === "tolaniakin2022@gmail.com";
-    const hasDoneSetup = vendor?.tags?.includes("first_time_setup_done") ?? false;
-    const requiresFirstTimeSetup = isTargetUser && !hasDoneSetup;
+    const requiresPasswordChange = vendorRequiresPasswordChange(vendor, userEmail);
 
     return NextResponse.json({
       vendor,
-      requiresFirstTimeSetup,
+      requiresPasswordChange,
+      requiresFirstTimeSetup: requiresPasswordChange,
       userEmail,
     });
   } catch (e: any) {
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
     });
 
     if (!authResult.ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: authResult.error, message: authResult.message || "Unauthorized" }, { status: authResult.status });
     }
 
     const userId = authResult.userId;
