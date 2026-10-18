@@ -102,8 +102,22 @@
         if (so) so.classList.remove('open');
       },
       signOut: function() {
-        if (window.chowStore && window.chowStore.clearSession) window.chowStore.clearSession();
-        window.location.reload();
+        try {
+          fetch('/api/auth/sign-out', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({})
+          });
+        } catch (e) {}
+        try {
+          localStorage.removeItem('chow45_auth_session_v1');
+          localStorage.removeItem('chow45_user');
+          localStorage.removeItem('chow45_marketplace_state_v2');
+          localStorage.removeItem('chow45_vendor_trigger_setup');
+          sessionStorage.clear();
+        } catch (e) {}
+        window.location.replace('/app');
       }
     };
   </script>
@@ -153,25 +167,13 @@
       </div>
     </header>
 
-    <!-- Prevent flash of customer marketplace UI on /vendor path & enforce vendor auto-redirect -->
+    <!-- Prevent flash of customer marketplace UI on /vendor path -->
     <script>
       (function() {
         if (typeof window !== 'undefined') {
           var isVendorPath = window.location.pathname.startsWith('/vendor') || window.location.search.includes('role=vendor');
           if (isVendorPath) {
             document.documentElement.classList.add('on-vendor-path');
-          } else {
-            try {
-              var raw = localStorage.getItem('chow45_auth_session_v1') || localStorage.getItem('chow45_user');
-              if (raw) {
-                var sess = JSON.parse(raw);
-                var role = String((sess.user && sess.user.role) || sess.role || '').toLowerCase();
-                if (role === 'vendor') {
-                  window.location.replace('/vendor');
-                  return;
-                }
-              }
-            } catch (e) {}
           }
         }
       })();

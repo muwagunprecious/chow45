@@ -109,16 +109,57 @@ const Chow45Auth = {
             isLoggedIn: true,
           };
           this.completeLogin(updatedUser);
+        } else {
+          this.clearLocalSessionIfUnauthenticated();
         }
+      } else if (res.status === 401 || res.status === 403) {
+        this.clearLocalSessionIfUnauthenticated();
       }
     } catch (e) {
       // Background sync silent on network hiccup
     }
   },
 
+  clearLocalSessionIfUnauthenticated() {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+      localStorage.removeItem('chow45_auth_session_v1');
+      localStorage.removeItem('chow45_user');
+      localStorage.removeItem('chow45_marketplace_state_v2');
+      localStorage.removeItem('chow45_vendor_trigger_setup');
+      sessionStorage.removeItem('chow45_vendor_trigger_setup');
+      sessionStorage.removeItem('chow45_vendor_setup_dismissed');
+      if (window.chowStore && window.chowStore.state) {
+        window.chowStore.state.currentRole = 'customer';
+        window.chowStore.state.userProfile = {
+          isLoggedIn: false,
+          name: 'Guest',
+          phone: '',
+          email: '',
+          role: 'customer'
+        };
+        if (window.chowStore.state.vendorOnboarding) {
+          window.chowStore.state.vendorOnboarding = { status: 'none', storeId: null, applicationId: null, storeName: null, appliedAt: null, approvedAt: null };
+        }
+        window.chowStore.save();
+      }
+      this.updateUI();
+    } catch (e) {}
+  },
+
   handleUrlParams() {
     try {
       const params = new URLSearchParams(window.location.search);
+      if (params.get('signed_out') === '1') {
+        this.clearLocalSessionIfUnauthenticated();
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('Signed out successfully', 'info');
+        }
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        return;
+      }
+
       if (params.get('auth') === 'google_success') {
         if (window.chowApp && window.chowApp.toast) {
           window.chowApp.toast('Successfully signed in with Google!', 'success');
@@ -2014,17 +2055,45 @@ const Chow45Auth = {
   async signOut() {
     try {
       await Promise.allSettled([
-        fetch('/api/auth/vendor/sign-out', { method: 'POST', credentials: 'include' }),
-        fetch('/api/auth/sign-out', { method: 'POST', credentials: 'include' })
+        fetch('/api/auth/vendor/sign-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({})
+        }),
+        fetch('/api/auth/sign-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({})
+        })
       ]);
     } catch (e) {
       console.warn('[auth] sign-out request failed:', e);
     }
 
+    // Explicitly expire all client-accessible auth cookies
+    const cookiesToClear = [
+      'better-auth.session_token',
+      'better-auth.session_data',
+      'better-auth_session_token',
+      'better-auth.csrf_token',
+      'session_token'
+    ];
+    cookiesToClear.forEach(name => {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0`;
+      document.cookie = `${name}=; path=/app; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0`;
+      document.cookie = `${name}=; path=/vendor; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0`;
+    });
+
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('chow45_auth_session_v1');
+    localStorage.removeItem('chow45_user');
+    localStorage.removeItem('chow45_marketplace_state_v2');
     localStorage.removeItem('chow45_vendor_trigger_setup');
     sessionStorage.removeItem('chow45_vendor_trigger_setup');
     sessionStorage.removeItem('chow45_vendor_setup_dismissed');
+    try { sessionStorage.clear(); } catch {}
 
     if (window.chowStore && window.chowStore.state) {
       window.chowStore.state.currentRole = 'customer';
@@ -2040,7 +2109,6 @@ const Chow45Auth = {
       }
       window.chowStore.save();
     }
-    try { localStorage.removeItem('chow45_user'); } catch {}
 
     this.close();
     this.updateUI();
@@ -2050,8 +2118,8 @@ const Chow45Auth = {
     }
 
     setTimeout(() => {
-      window.location.href = '/app';
-    }, 250);
+      window.location.replace('/app?signed_out=1');
+    }, 100);
   },
 
   updateUI() {

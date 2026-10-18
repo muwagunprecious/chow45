@@ -263,40 +263,27 @@ export function MarketplaceView({
         const so = document.getElementById('signout-confirm-modal');
         if (so) so.classList.remove('open');
       },
-      signOut: () => {
-        if (window.chowStore?.clearSession) window.chowStore.clearSession();
-        window.location.reload();
+      signOut: async () => {
+        try {
+          await fetch('/api/auth/sign-out', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({}),
+          });
+        } catch {}
+        try {
+          localStorage.removeItem('chow45_auth_session_v1');
+          localStorage.removeItem('chow45_user');
+          localStorage.removeItem('chow45_marketplace_state_v2');
+          localStorage.removeItem('chow45_vendor_trigger_setup');
+          sessionStorage.clear();
+        } catch {}
+        window.location.replace('/app');
       },
     };
 
     let cancelled = false;
-
-    // Strict vendor isolation: if the user has a vendor role, auto-redirect directly to /vendor
-    if (initialRole !== 'vendor') {
-      try {
-        const raw = localStorage.getItem('chow45_auth_session_v1') || localStorage.getItem('chow45_user');
-        if (raw) {
-          const sess = JSON.parse(raw);
-          const r = String(sess?.user?.role || sess?.role || '').toLowerCase();
-          if (r === 'vendor') {
-            window.location.replace('/vendor');
-            return;
-          }
-        }
-      } catch {}
-
-      fetch('/api/auth/get-session', { credentials: 'include' })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.user) {
-            const role = String(data.role || data.user.role || '').toLowerCase();
-            if (role === 'vendor') {
-              window.location.replace('/vendor');
-            }
-          }
-        })
-        .catch(() => {});
-    }
 
     const boot = async () => {
       // A Fast Refresh can re-run this effect while an earlier load is still

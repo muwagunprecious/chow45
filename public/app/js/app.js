@@ -60,14 +60,6 @@ const Chow45App = {
     this.updateRoleUI(window.chowStore.state.currentRole);
     this.updateLocationUI(window.chowStore.state.selectedLocation);
 
-    // Strict vendor isolation: if authenticated as vendor, redirect to /vendor
-    if (typeof Chow45Auth !== 'undefined' && Chow45Auth.isVendorUser && Chow45Auth.isVendorUser()) {
-      if (!window.location.pathname.startsWith('/vendor')) {
-        window.location.replace('/vendor');
-        return;
-      }
-    }
-
     if (initialRole && ['customer', 'vendor', 'rider', 'admin'].includes(initialRole)) {
       this.switchRole(initialRole);
     } else {
@@ -177,11 +169,7 @@ const Chow45App = {
           Chow45Auth.updateUI();
         }
 
-        if (role === 'vendor') {
-          if (!window.location.pathname.startsWith('/vendor')) {
-            window.location.replace('/vendor');
-            return;
-          }
+        if (role === 'vendor' && window.location.pathname.startsWith('/vendor')) {
           if (typeof VendorController !== 'undefined') {
             if (VendorController.render) VendorController.render();
             if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
@@ -215,17 +203,6 @@ const Chow45App = {
   },
 
   switchRole(roleName) {
-    const isVendor = (typeof Chow45Auth !== 'undefined' && Chow45Auth.isVendorUser && Chow45Auth.isVendorUser());
-    if (isVendor && roleName === 'customer') {
-      console.warn('[Chow45] Vendors are restricted to the vendor dashboard.');
-      if (this.toast) this.toast('Vendor accounts manage their store on the Vendor Dashboard.', 'warning');
-      this.updateRoleUI('vendor');
-      if (!window.location.pathname.startsWith('/vendor')) {
-        window.location.replace('/vendor');
-      }
-      return;
-    }
-
     if (window.chowStore && window.chowStore.setRole) {
       window.chowStore.setRole(roleName);
     }
