@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -241,6 +241,57 @@ export async function POST(request: Request) {
       },
       { status: 201 },
     );
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const userId = await currentUserId(request);
+    if (userId === null) {
+      return NextResponse.json({ success: true, orders: [] });
+    }
+
+    const orderRows = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.userId, userId))
+      .orderBy(desc(orders.createdAt))
+      .limit(50);
+
+    if (orderRows.length === 0) {
+      return NextResponse.json({ success: true, orders: [] });
+    }
+
+    const orderIds = orderRows.map((o) => o.id);
+    const itemRows = await db
+      .select()
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, orderIds));
+
+    const itemsByOrder = new Map<string, typeof itemRows>();
+    for (const item of itemRows) {
+      if (!itemsByOrder.has(item.orderId)) {
+        itemsByOrder.set(item.orderId, []);
+      }
+      itemsByOrder.get(item.orderId)!.push(item);
+    }
+
+    const enrichedOrders = orderRows.map((o) => ({
+      ...o,
+      items: (itemsByOrder.get(o.id) || []).map((i) => ({
+        id: i.id,
+        name: i.name,
+        qty: i.qty,
+        unitPrice: i.unitPrice,
+        price: i.unitPrice,
+        itemTotal: i.itemTotal,
+        selectedAddons: i.selectedAddons || [],
+      })),
+    }));
+
+    return NextResponse.json({ success: true, orders: enrichedOrders });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }

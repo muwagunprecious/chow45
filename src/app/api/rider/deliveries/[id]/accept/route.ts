@@ -10,16 +10,18 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireRider(request, true);
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: auth.error, message: auth.message },
-      { status: auth.status }
-    );
-  }
+  try {
+    const auth = await requireRider(request, true);
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.error, message: auth.message },
+        { status: auth.status }
+      );
+    }
 
-  const { rider } = auth;
-  const { id: orderId } = await params;
+    const { rider } = auth;
+    const resolvedParams = await Promise.resolve(params);
+    const orderId = String(resolvedParams.id);
 
   // 1. Check if rider is online
   if (!rider.isOnline) {
@@ -117,13 +119,17 @@ export async function POST(
     vendorInfo = v[0] || null;
   }
 
-  return NextResponse.json({
-    success: true,
-    message: "Delivery offer accepted! Proceed to the restaurant.",
-    delivery: {
-      ...assignedOrder,
-      items,
-      vendor: vendorInfo,
-    },
-  });
+    return NextResponse.json({
+      success: true,
+      message: "Delivery offer accepted! Proceed to the restaurant.",
+      delivery: {
+        ...assignedOrder,
+        items,
+        vendor: vendorInfo,
+      },
+    });
+  } catch (err: any) {
+    console.error("[rider-accept-error]:", err);
+    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
+  }
 }

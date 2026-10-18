@@ -116,5 +116,6 @@ export async function GET(request: Request) {
   // Preserves customer marketplace state, cart, and location
   const customerRedirect = new URL("/app", request.url);
   customerRedirect.searchParams.set("auth", "google_success");
+  customerRedirect.searchParams.set("role", "customer");
   return NextResponse.redirect(customerRedirect);
 }

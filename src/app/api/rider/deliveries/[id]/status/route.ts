@@ -16,17 +16,19 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireRider(request, true);
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: auth.error, message: auth.message },
-      { status: auth.status }
-    );
-  }
+  try {
+    const auth = await requireRider(request, true);
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.error, message: auth.message },
+        { status: auth.status }
+      );
+    }
 
-  const { rider } = auth;
-  const { id: orderId } = await params;
-  const body = await request.json().catch(() => ({}));
+    const { rider } = auth;
+    const resolvedParams = await Promise.resolve(params);
+    const orderId = String(resolvedParams.id);
+    const body = await request.json().catch(() => ({}));
   const targetStatus = String(body.status ?? "").trim();
   const note = String(body.note ?? "").trim();
 
@@ -88,9 +90,13 @@ export async function POST(
     actor: "rider",
   });
 
-  return NextResponse.json({
-    success: true,
-    status: updatedOrder.status,
-    delivery: updatedOrder,
-  });
+    return NextResponse.json({
+      success: true,
+      status: updatedOrder.status,
+      delivery: updatedOrder,
+    });
+  } catch (err: any) {
+    console.error("[rider-status-error]:", err);
+    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
+  }
 }

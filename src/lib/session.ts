@@ -442,21 +442,26 @@ export async function requireRider(
   request: Request,
   allowPending = false
 ): Promise<RiderAuthResult> {
-  let session = await riderAuth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) {
-    session = await userAuth.api.getSession({ headers: request.headers });
-  }
-  if (!session?.user?.id) {
-    session = await vendorAuth.api.getSession({ headers: request.headers });
+  const resolved = await resolveSessionUser(request);
+  let sessionUser: SessionUser | null = resolved?.user ?? null;
+  let userId: number | null = resolved?.userId ?? null;
+
+  if (!sessionUser || !userId) {
+    let session = await riderAuth.api.getSession({ headers: request.headers });
+    if (!session?.user?.id) {
+      session = await userAuth.api.getSession({ headers: request.headers });
+    }
+    if (!session?.user?.id) {
+      session = await vendorAuth.api.getSession({ headers: request.headers });
+    }
+    if (session?.user?.id) {
+      sessionUser = session.user;
+      userId = Number(session.user.id);
+    }
   }
 
-  if (!session?.user?.id) {
+  if (!sessionUser || !userId || !Number.isFinite(userId) || userId <= 0) {
     return { ok: false, status: 401, error: "UNAUTHORIZED", message: "Sign in as a rider first." };
-  }
-
-  const userId = Number(session.user.id);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    return { ok: false, status: 401, error: "UNAUTHORIZED", message: "Invalid session." };
   }
 
   // 1. Locate rider by userId
@@ -471,7 +476,7 @@ export async function requireRider(
       .where(eq(users.id, userId))
       .limit(1);
 
-    const userEmail = (userRow[0]?.email || session.user.email || "").toLowerCase().trim();
+    const userEmail = (userRow[0]?.email || sessionUser.email || "").toLowerCase().trim();
     if (userEmail) {
       // Find rider by matching user ID in users table with this email
       const userMatches = await db
@@ -560,7 +565,7 @@ export async function requireRider(
   return {
     ok: true,
     userId,
-    user: session.user,
+    user: sessionUser,
     rider,
     wallet,
   };
@@ -584,26 +589,31 @@ export type AdminAuthResult = AuthenticatedAdminContext | FailedAdminContext;
  * Strict server-side admin guard.
  */
 export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
-  let session = await userAuth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) {
-    session = await vendorAuth.api.getSession({ headers: request.headers });
-  }
-  if (!session?.user?.id) {
-    session = await riderAuth.api.getSession({ headers: request.headers });
+  const resolved = await resolveSessionUser(request);
+  let sessionUser: SessionUser | null = resolved?.user ?? null;
+  let userId: number | null = resolved?.userId ?? null;
+
+  if (!sessionUser || !userId) {
+    let session = await userAuth.api.getSession({ headers: request.headers });
+    if (!session?.user?.id) {
+      session = await vendorAuth.api.getSession({ headers: request.headers });
+    }
+    if (!session?.user?.id) {
+      session = await riderAuth.api.getSession({ headers: request.headers });
+    }
+    if (session?.user?.id) {
+      sessionUser = session.user;
+      userId = Number(session.user.id);
+    }
   }
 
-  if (!session?.user?.id) {
+  if (!sessionUser || !userId || !Number.isFinite(userId) || userId <= 0) {
     return { ok: false, status: 401, error: "UNAUTHORIZED" };
   }
 
-  const userId = Number(session.user.id);
-  if (!Number.isFinite(userId) || userId <= 0) {
-    return { ok: false, status: 401, error: "UNAUTHORIZED" };
-  }
-
-  const userRole = String(session.user.role || "").toUpperCase();
+  const userRole = String(sessionUser.role || "").toUpperCase();
   if (userRole === "ADMIN") {
-    return { ok: true, userId, user: session.user };
+    return { ok: true, userId, user: sessionUser };
   }
 
   // Double check database user role
@@ -614,7 +624,7 @@ export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
     .limit(1);
 
   if (userRow[0]?.role?.toUpperCase() === "ADMIN") {
-    return { ok: true, userId, user: session.user };
+    return { ok: true, userId, user: sessionUser };
   }
 
   return { ok: false, status: 403, error: "FORBIDDEN_ADMIN_ONLY" };

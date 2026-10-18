@@ -334,12 +334,10 @@ function isZoneOpen(zone, date = new Date()) {
  * @returns {number} fee in Naira
  */
 function calculateDeliveryFee(routeDistanceMeters, config = {}) {
-  const baseFee = config.baseFee !== undefined ? config.baseFee : DEFAULT_DELIVERY_FEE_CONFIG.baseFee;
-  const rate = config.ratePerMeter !== undefined ? config.ratePerMeter : DEFAULT_DELIVERY_FEE_CONFIG.ratePerMeter;
-  const minFee = config.minDeliveryFee !== undefined ? config.minDeliveryFee : DEFAULT_DELIVERY_FEE_CONFIG.minDeliveryFee;
+  const minFee = config.minDeliveryFee !== undefined ? config.minDeliveryFee : 200;
   const distance = Math.max(0, routeDistanceMeters || 0);
-  const fee = baseFee + distance * rate;
-  return Math.max(minFee, Math.round(fee));
+  const fee = Math.ceil((distance / 1000) * 200);
+  return Math.max(minFee, fee);
 }
 
 /**

@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     // A dropoff outside every active zone still gets a quote, but is flagged so
     // the checkout can warn instead of silently setting expectations.
     const inZone = zone !== null;
-    const deliveryFee = Math.max(min, Math.round(base + distance * rate));
+    const deliveryFee = Math.max(200, Math.ceil((distance / 1000) * 200));
 
     return NextResponse.json({
       distanceMeters: distance,

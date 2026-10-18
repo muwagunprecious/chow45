@@ -95,7 +95,9 @@ const Chow45Auth = {
         if (data && data.user) {
           const u = data.user;
           const currentProfile = window.chowStore?.state?.userProfile || {};
-          const isVendor = u.role?.toLowerCase() === 'vendor' || window.location.pathname.startsWith('/vendor');
+          const isVendor = u.role?.toLowerCase() === 'vendor';
+          const isRider = u.role?.toLowerCase() === 'rider';
+          const role = isVendor ? 'vendor' : (isRider ? 'rider' : 'customer');
           const updatedUser = {
             ...currentProfile,
             id: u.id,
@@ -103,16 +105,10 @@ const Chow45Auth = {
             email: u.email || currentProfile.email || '',
             image: u.image || currentProfile.image || '',
             avatar: u.image || u.avatar || currentProfile.avatar || '',
-            role: isVendor ? 'vendor' : (u.role?.toLowerCase() === 'rider' ? 'rider' : 'customer'),
+            role: role,
             isLoggedIn: true,
           };
           this.completeLogin(updatedUser);
-
-
-          if (isVendor && !window.location.pathname.startsWith('/vendor')) {
-            window.location.replace('/vendor');
-            return;
-          }
         }
       }
     } catch (e) {
@@ -421,6 +417,13 @@ const Chow45Auth = {
     } else {
       this.open();
     }
+  },
+
+  openProfile(event) {
+    if (event && typeof event.preventDefault === 'function') {
+      try { event.preventDefault(); } catch (e) {}
+    }
+    this.openAccountModal(event);
   },
 
   openMobileProfile(event) {
@@ -2019,9 +2022,12 @@ const Chow45Auth = {
     }
 
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('chow45_vendor_trigger_setup');
     sessionStorage.removeItem('chow45_vendor_trigger_setup');
+    sessionStorage.removeItem('chow45_vendor_setup_dismissed');
 
     if (window.chowStore && window.chowStore.state) {
+      window.chowStore.state.currentRole = 'customer';
       window.chowStore.state.userProfile = {
         isLoggedIn: false,
         name: 'Guest',
@@ -2029,6 +2035,9 @@ const Chow45Auth = {
         email: '',
         role: 'customer'
       };
+      if (window.chowStore.state.vendorOnboarding) {
+        window.chowStore.state.vendorOnboarding = { status: 'none', storeId: null, applicationId: null, storeName: null, appliedAt: null, approvedAt: null };
+      }
       window.chowStore.save();
     }
     try { localStorage.removeItem('chow45_user'); } catch {}

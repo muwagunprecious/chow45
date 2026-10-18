@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { orders, orderEvents, platformLedgers, riders, vendors } from "@/db";
+import { orders, orderEvents, orderItems, platformLedgers, riders, vendors } from "@/db";
 import { currentRole, currentUserId } from "@/lib/session";
 import { optionalText, readClientId } from "@/lib/validation";
 import { canTransition, STATUS_NOTES, type Actor } from "@/lib/order-status";
@@ -37,10 +37,32 @@ export async function GET(request: Request, ctx: Ctx) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
+    const userId = await currentUserId(request);
+    const role = await currentRole(request);
+
+    // If authenticated as a customer, ensure caller owns this order
+    if (userId !== null && role === "USER" && order.userId && order.userId !== userId) {
+      return NextResponse.json({ error: "Access denied. You do not have permission to view this order." }, { status: 403 });
+    }
+
+    const itemRows = await db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+
     return NextResponse.json({
       success: true,
       order: {
         ...order,
+        items: itemRows.map((i) => ({
+          id: i.id,
+          name: i.name,
+          qty: i.qty,
+          unitPrice: i.unitPrice,
+          price: i.unitPrice,
+          itemTotal: i.itemTotal,
+          selectedAddons: i.selectedAddons || [],
+        })),
         pointsAwarded: order.status === "DELIVERED" ? 0.7 : 0,
       },
     });

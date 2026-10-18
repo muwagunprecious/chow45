@@ -24,12 +24,14 @@ export async function POST(request: Request) {
     
     const subtotal = Math.round(Number(rawOrder.subtotal) || 2000);
     const serviceFee = Math.round(Number(rawOrder.serviceFee) || 400);
-    const deliveryFee = Math.max(800, Math.round(Number(rawOrder.deliveryFee) || 800));
+    const routeDistanceMeters = rawOrder.routeDistanceMeters ? Math.round(Number(rawOrder.routeDistanceMeters)) : null;
+    const deliveryFee = routeDistanceMeters
+      ? Math.max(200, Math.ceil((routeDistanceMeters / 1000) * 200))
+      : Math.max(200, Math.round(Number(rawOrder.deliveryFee) || 200));
     const total = Math.round(Number(rawOrder.total) || (subtotal + serviceFee + deliveryFee));
 
     const pin = String(rawOrder.pin || Math.floor(1000 + Math.random() * 9000)).trim();
     const status = String(rawOrder.status || "PAID").toUpperCase();
-    const routeDistanceMeters = rawOrder.routeDistanceMeters ? Math.round(Number(rawOrder.routeDistanceMeters)) : null;
     const estimatedDurationSeconds = rawOrder.estimatedDurationSeconds ? Math.round(Number(rawOrder.estimatedDurationSeconds)) : null;
 
     // 1. Resolve userId

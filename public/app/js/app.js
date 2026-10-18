@@ -256,9 +256,17 @@ const Chow45App = {
     });
 
     // Update bottom navigation tabs
-    document.querySelectorAll('.bottom-tab').forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.role === role);
-    });
+    if (role === 'customer') {
+      const activeTab = document.querySelector('.bottom-nav[data-nav-for="customer"] .bottom-tab.active');
+      if (!activeTab) {
+        const discoverTab = document.querySelector('.bottom-nav[data-nav-for="customer"] .bottom-tab[data-tab="discover"]');
+        if (discoverTab) discoverTab.classList.add('active');
+      }
+    } else {
+      document.querySelectorAll(`.bottom-nav[data-nav-for="${role}"] .bottom-tab`).forEach(tab => {
+        if (tab.dataset.role) tab.classList.toggle('active', tab.dataset.role === role);
+      });
+    }
 
     // Vendor bars highlight the sub-tab that is currently open.
     const activeSubTab = (window.VendorController && window.VendorController.activeSubTab) || 'food';

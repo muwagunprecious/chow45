@@ -39,6 +39,12 @@ const CustomerController = {
   safeFormatNaira,
   safeDeliveryConfig,
 
+  setActiveCustomerTab(tabName) {
+    document.querySelectorAll('.bottom-nav[data-nav-for="customer"] .bottom-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+  },
+
   openDiscover() {
     try {
       this.closeStoreMenu();
@@ -72,11 +78,7 @@ const CustomerController = {
     const storeSec = document.getElementById('customer-store-section');
     if (storeSec) storeSec.style.display = 'none';
 
-    document.querySelectorAll('.bottom-nav[data-nav-for="customer"] .bottom-tab').forEach(tab => {
-      tab.classList.remove('active');
-    });
-    const discoverBtn = document.querySelector('.bottom-nav[data-nav-for="customer"] .bottom-tab[data-role="customer"]');
-    if (discoverBtn) discoverBtn.classList.add('active');
+    this.setActiveCustomerTab('discover');
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
@@ -1112,6 +1114,7 @@ const CustomerController = {
   },
 
   openCart() {
+    this.setActiveCustomerTab('cart');
     const modal = document.getElementById('cart-modal');
     if (!modal) return;
     modal.classList.add('open');
@@ -1144,8 +1147,8 @@ const CustomerController = {
       const store = restaurants.find(r => r.id === cart.storeId);
       const config = safeDeliveryConfig();
       const subtotal = window.chowStore?.getCartSubtotal ? window.chowStore.getCartSubtotal() : (cart.items.reduce((s, i) => s + (i.itemTotal || (i.price * i.qty) || 0), 0));
-      const serviceFee = config?.serviceFee ?? 100;
-      const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store ? store.distanceKm : 1.8) * 1000, config) : 350;
+      const serviceFee = config?.serviceFee ?? 400;
+      const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store ? store.distanceKm : 1.8) * 1000, config) : 200;
       const total = subtotal + serviceFee + deliveryFee;
 
       const storeHeaderName = document.getElementById('cart-store-header-name');
@@ -1286,7 +1289,9 @@ const CustomerController = {
   },
 
   closeCart() {
-    document.getElementById('cart-modal').classList.remove('open');
+    const modal = document.getElementById('cart-modal');
+    if (modal) modal.classList.remove('open');
+    this.setActiveCustomerTab('discover');
   },
 
   async placeOrder() {
@@ -1402,9 +1407,27 @@ const CustomerController = {
   // -------------------------------------------------------------
   // Live Mapbox Order Tracking View (Matches media_1790893892975.png)
   // -------------------------------------------------------------
-  openOrderTracking(orderId) {
-    const order = window.chowStore.state.orders.find(o => o.id === orderId);
-    if (!order) return;
+  async openOrderTracking(orderId) {
+    let order = window.chowStore.state.orders.find(o => o.id === orderId);
+    if (!order) {
+      try {
+        const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.order) {
+            order = data.order;
+            window.chowStore.state.orders.unshift(order);
+            window.chowStore.save();
+          }
+        }
+      } catch (e) {}
+    }
+    if (!order) {
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Order details not found.', 'warning');
+      }
+      return;
+    }
 
     this.activeTrackingOrderId = orderId;
     const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId) || window.chowStore.state.restaurants[0];
@@ -1538,8 +1561,8 @@ const CustomerController = {
   updateTrackingStatusUI(order) {
     const status = order.status;
     let stepIndex = 1;
-    let heading = 'Order in transit';
-    let subtext = 'Your Order Is On The Way';
+    let heading = 'Order Confirmed';
+    let subtext = 'Your order is being processed';
 
     if (status === 'PENDING_PAYMENT') {
       stepIndex = 1;
@@ -1547,27 +1570,35 @@ const CustomerController = {
       subtext = 'Authorizing payment with bank';
     } else if (status === 'PAID') {
       stepIndex = 1;
-      heading = 'Payment Received';
-      subtext = 'Ticket transmitted to restaurant';
+      heading = 'Order Confirmed';
+      subtext = 'Sent to restaurant kitchen';
     } else if (status === 'RESTAURANT_ACCEPTED') {
-      stepIndex = 2;
+      stepIndex = 1;
       heading = 'Restaurant Accepted';
       subtext = 'Chef received and accepted your order';
     } else if (status === 'PREPARING') {
-      stepIndex = 3;
-      heading = 'Preparing your Order';
+      stepIndex = 1;
+      heading = 'Preparing Food';
       subtext = 'Chefs are cooking and packaging fresh';
-    } else if (status === 'READY_FOR_PICKUP') {
+    } else if (status === 'RIDER_ASSIGNED' || status === 'RIDER_HEADING_TO_STORE') {
+      stepIndex = 1;
+      heading = 'Rider on the way to the store';
+      subtext = 'Assigned rider is heading to the restaurant';
+    } else if (status === 'READY_FOR_PICKUP' || status === 'RIDER_AT_STORE') {
+      stepIndex = 2;
+      heading = 'Rider at the store';
+      subtext = 'Rider has arrived at the store collecting your meal';
+    } else if (status === 'PICKED_UP' || status === 'OUT_FOR_DELIVERY') {
       stepIndex = 3;
-      heading = 'Ready for Pickup';
-      subtext = 'Waiting for dispatch pickup';
-    } else if (['RIDER_ASSIGNED', 'RIDER_HEADING_TO_STORE', 'RIDER_AT_STORE', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY'].includes(status)) {
+      heading = 'Rider on the way to your location';
+      subtext = 'Your meal is packaged and en route to your location';
+    } else if (status === 'RIDER_NEARBY') {
       stepIndex = 4;
-      heading = 'Order in transit';
-      subtext = 'Your Order Is On The Way';
+      heading = 'Rider at your location';
+      subtext = 'Rider has arrived! Share your 4-digit PIN to collect';
     } else if (status === 'DELIVERED') {
       stepIndex = 5;
-      heading = 'Order Completed';
+      heading = 'Order successful';
       subtext = 'Delivered and verified with security PIN';
     }
 
@@ -1707,57 +1738,95 @@ const CustomerController = {
   // Order History & Reviews
   // -------------------------------------------------------------
   openOrderHistory() {
+    this.setActiveCustomerTab('orders');
     const modal = document.getElementById('order-history-modal');
     if (!modal) return;
     modal.classList.add('open');
 
-    try {
+    const renderList = (orders) => {
       const container = document.getElementById('order-history-list');
-      const orders = window.chowStore?.state?.orders || [];
-      if (container) {
-        if (orders.length === 0) {
-          container.innerHTML = `
-            <div style="text-align: center; padding: 40px;">
-              <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
-              <p style="font-weight: 700;">You haven't placed an order yet.</p>
-              <button class="cta-primary-btn" style="margin-top: 12px;" onclick="document.getElementById('order-history-modal').classList.remove('open')">Find Food</button>
+      if (!container) return;
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 2.5rem; margin-bottom: 8px;">📦</div>
+            <p style="font-weight: 700; color: #1E293B;">You haven't placed an order yet.</p>
+            <p style="font-size: 0.85rem; color: #64748B; margin-top: 4px;">Hungry? Discover dishes from popular campus kitchens.</p>
+            <button class="cta-primary-btn" style="margin-top: 14px;" onclick="CustomerController.closeOrderHistory()">Find Food</button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = orders.map(order => `
+          <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <div>
+                <strong style="font-size: 1rem; color: #0F172A;">${order.storeName || 'Restaurant'}</strong>
+                <div style="font-size: 0.78rem; color: #64748B;">#${order.id} • ${new Date(order.createdAt || Date.now()).toLocaleDateString()}</div>
+              </div>
+              <span class="table-status-tag" style="background: ${order.status === 'DELIVERED' ? '#DCFCE7' : '#FEF3C7'}; color: ${order.status === 'DELIVERED' ? '#15803D' : '#B45309'}; font-weight: 800;">
+                ${(typeof ORDER_STAGES !== 'undefined' && ORDER_STAGES[order.status]?.label) || order.status}
+              </span>
             </div>
-          `;
-        } else {
-          container.innerHTML = orders.map(order => `
-            <div style="background: var(--c-bg-subtle); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div>
-                  <strong style="font-size: 1rem;">${order.storeName || 'Restaurant'}</strong>
-                  <div style="font-size: 0.78rem; color: var(--c-text-muted);">#${order.id} • ${new Date(order.createdAt || Date.now()).toLocaleDateString()}</div>
-                </div>
-                <span class="table-status-tag" style="background: ${order.status === 'DELIVERED' ? 'var(--c-success-bg)' : 'var(--c-warning-bg)'}; color: ${order.status === 'DELIVERED' ? '#065F46' : '#92400E'};">
-                  ${(typeof ORDER_STAGES !== 'undefined' && ORDER_STAGES[order.status]?.label) || order.status}
-                </span>
-              </div>
 
-              <div style="font-size: 0.85rem; margin-bottom: 10px;">
-                ${Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : ''}
-              </div>
+            <div style="font-size: 0.85rem; color: #334155; margin-bottom: 10px;">
+              ${Array.isArray(order.items) ? order.items.map(i => `${i.qty}x ${i.name}`).join(', ') : ''}
+            </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--c-border); padding-top: 8px;">
-                <strong style="font-size: 0.95rem; color: var(--c-primary);">${safeFormatNaira(order.total || 0)}</strong>
-                <div style="display: flex; gap: 8px;">
-                  ${order.status === 'DELIVERED' ? `
-                    <button class="action-btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="CustomerController.openReviewModal('${order.id}')">Rate Order</button>
-                    <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.reorder('${order.id}')">Reorder</button>
-                  ` : `
-                    <button class="action-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;" onclick="CustomerController.openOrderTracking('${order.id}'); document.getElementById('order-history-modal').classList.remove('open');">Track Live</button>
-                  `}
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #E2E8F0; padding-top: 10px;">
+              <strong style="font-size: 0.95rem; color: var(--c-primary, #008751);">${safeFormatNaira(order.total || 0)}</strong>
+              <div style="display: flex; gap: 8px;">
+                ${order.status === 'DELIVERED' ? `
+                  <button class="action-btn-secondary" style="padding: 5px 12px; font-size: 0.75rem; border-radius: 8px;" onclick="CustomerController.openReviewModal('${order.id}')">Rate Order</button>
+                  <button class="action-btn-primary" style="padding: 5px 14px; font-size: 0.75rem; border-radius: 8px;" onclick="CustomerController.reorder('${order.id}')">Reorder</button>
+                ` : `
+                  <button class="action-btn-primary" style="padding: 5px 14px; font-size: 0.75rem; border-radius: 8px;" onclick="CustomerController.openOrderTracking('${order.id}'); CustomerController.closeOrderHistory();">Track Live ➔</button>
+                `}
               </div>
             </div>
-          `).join('');
-        }
+          </div>
+        `).join('');
       }
+    };
+
+    try {
+      const localOrders = window.chowStore?.state?.orders || [];
+      renderList(localOrders);
+
+      // Reconcile with real database orders
+      fetch('/api/orders', { credentials: 'include' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && Array.isArray(data.orders)) {
+            const serverOrders = data.orders;
+            if (serverOrders.length > 0) {
+              const mergedMap = new Map();
+              // Server orders are authoritative
+              serverOrders.forEach(o => mergedMap.set(o.id, o));
+              // Keep any local unpersisted orders if any
+              localOrders.forEach(o => {
+                if (!mergedMap.has(o.id)) mergedMap.set(o.id, o);
+              });
+              const mergedList = Array.from(mergedMap.values());
+              if (window.chowStore && window.chowStore.state) {
+                window.chowStore.state.orders = mergedList;
+                window.chowStore.save();
+              }
+              renderList(mergedList);
+            } else if (localOrders.length === 0) {
+              renderList([]);
+            }
+          }
+        })
+        .catch(() => {});
     } catch (e) {
       console.warn('[customer] error updating order history list:', e);
     }
+  },
+
+  closeOrderHistory() {
+    const modal = document.getElementById('order-history-modal');
+    if (modal) modal.classList.remove('open');
+    this.setActiveCustomerTab('discover');
   },
 
 

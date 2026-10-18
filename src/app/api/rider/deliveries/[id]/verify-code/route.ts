@@ -11,18 +11,20 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireRider(request, true);
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: auth.error, message: auth.message },
-      { status: auth.status }
-    );
-  }
+  try {
+    const auth = await requireRider(request, true);
+    if (!auth.ok) {
+      return NextResponse.json(
+        { error: auth.error, message: auth.message },
+        { status: auth.status }
+      );
+    }
 
-  const { rider, wallet } = auth;
-  const { id: orderId } = await params;
-  const body = await request.json().catch(() => ({}));
-  const enteredPin = String(body.pin ?? body.code ?? "").trim();
+    const { rider, wallet } = auth;
+    const resolvedParams = await Promise.resolve(params);
+    const orderId = String(resolvedParams.id);
+    const body = await request.json().catch(() => ({}));
+    const enteredPin = String(body.pin ?? body.code ?? "").trim();
 
   if (!enteredPin || enteredPin.length !== 4) {
     return NextResponse.json(
@@ -133,14 +135,19 @@ export async function POST(
     })
     .where(eq(riders.id, rider.id));
 
-  return NextResponse.json({
-    success: true,
-    message: `Delivery successfully confirmed! ₦${riderEarnings.toLocaleString()} has been credited to your wallet.`,
-    earnedAmount: riderEarnings,
-    pointsAwarded: 0.7,
-    wallet: {
-      available: updatedWallet?.available ?? wallet.available + riderEarnings,
-      totalEarned: updatedWallet?.totalEarned ?? wallet.totalEarned + riderEarnings,
-    },
-  });
+    return NextResponse.json({
+      success: true,
+      status: "DELIVERED",
+      message: `Delivery successfully confirmed! ₦${riderEarnings.toLocaleString()} has been credited to your wallet.`,
+      earnedAmount: riderEarnings,
+      pointsAwarded: 0.7,
+      wallet: {
+        available: updatedWallet?.available ?? wallet.available + riderEarnings,
+        totalEarned: updatedWallet?.totalEarned ?? wallet.totalEarned + riderEarnings,
+      },
+    });
+  } catch (err: any) {
+    console.error("[rider-verify-code-error]:", err);
+    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
+  }
 }
