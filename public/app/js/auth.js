@@ -953,7 +953,8 @@ const Chow45Auth = {
    */
   showPasswordStep(role, email) {
     this.currentStep = 'password';
-    this.pendingRole = role === 'VENDOR' ? 'VENDOR' : 'USER';
+    const cleanRole = String(role || 'USER').toUpperCase();
+    this.pendingRole = cleanRole === 'VENDOR' ? 'VENDOR' : (cleanRole === 'RIDER' ? 'RIDER' : 'USER');
     this.clearAlerts();
 
     const s1 = document.getElementById('auth-step-1');
@@ -973,7 +974,11 @@ const Chow45Auth = {
     if (sc) sc.style.display = 'none';
     if (sv) sv.style.display = 'none';
     if (backBtn) backBtn.style.display = 'inline-flex';
-    if (tag) tag.textContent = this.pendingRole === 'VENDOR' ? 'Vendor Sign In' : 'Sign In';
+    if (tag) {
+      if (this.pendingRole === 'VENDOR') tag.textContent = 'Vendor Sign In';
+      else if (this.pendingRole === 'RIDER') tag.textContent = 'Rider Sign In';
+      else tag.textContent = 'Sign In';
+    }
 
     if (emailField) emailField.value = email || '';
     if (emailDisplay) emailDisplay.textContent = email || '';
@@ -1002,12 +1007,18 @@ const Chow45Auth = {
     }
 
     if (heading) {
-      heading.textContent = this.pendingRole === 'VENDOR' ? 'Welcome back, Vendor' : 'Welcome back';
+      if (this.pendingRole === 'VENDOR') heading.textContent = 'Welcome back, Vendor';
+      else if (this.pendingRole === 'RIDER') heading.textContent = 'Welcome back, Rider';
+      else heading.textContent = 'Welcome back';
     }
     if (subheading) {
-      subheading.textContent = this.pendingRole === 'VENDOR'
-        ? 'Enter your password to reach your restaurant dashboard.'
-        : 'Enter your password to sign in.';
+      if (this.pendingRole === 'VENDOR') {
+        subheading.textContent = 'Enter your password to reach your restaurant dashboard.';
+      } else if (this.pendingRole === 'RIDER') {
+        subheading.textContent = 'Enter your password to reach your rider delivery portal.';
+      } else {
+        subheading.textContent = 'Enter your password to sign in.';
+      }
     }
 
     setTimeout(() => {
@@ -1035,8 +1046,13 @@ const Chow45Auth = {
       return;
     }
 
-    const role = this.pendingRole === 'VENDOR' ? 'VENDOR' : 'USER';
-    const endpoint = role === 'VENDOR' ? '/api/auth/vendor/sign-in/email' : '/api/auth/user/sign-in/email';
+    const role = (this.pendingRole || 'USER').toUpperCase();
+    let endpoint = '/api/auth/user/sign-in/email';
+    if (role === 'VENDOR') {
+      endpoint = '/api/auth/vendor/sign-in/email';
+    } else if (role === 'RIDER') {
+      endpoint = '/api/auth/rider/sign-in/email';
+    }
 
     if (btn) {
       btn.disabled = true;
@@ -1078,11 +1094,15 @@ const Chow45Auth = {
         if (body?.user?.name) name = body.user.name;
       } catch { /* fall back to the email local-part */ }
 
+      let targetRole = 'customer';
+      if (role === 'VENDOR') targetRole = 'vendor';
+      else if (role === 'RIDER') targetRole = 'rider';
+
       this.completeLogin({
         id: resUser?.id,
         name,
         email,
-        role: role === 'VENDOR' ? 'vendor' : 'customer'
+        role: targetRole
       });
 
       // If logging in as vendor, prime store profile immediately
@@ -1119,7 +1139,13 @@ const Chow45Auth = {
         window.chowApp.toast(`Welcome back, ${name.split(' ')[0]}!`, 'success');
       }
 
-      window.location.href = role === 'VENDOR' ? '/vendor' : '/app';
+      if (role === 'VENDOR') {
+        window.location.href = '/vendor';
+      } else if (role === 'RIDER') {
+        window.location.href = '/rider';
+      } else {
+        window.location.href = '/app';
+      }
     } catch {
       this.showAlert('password', 'Network error. Please check your connection and try again.', { inlineOnly: true });
     } finally {

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema/users";
 import { vendors } from "@/db/schema/vendors";
+import { riders } from "@/db/schema/riders";
 
 /**
  * Looks up an email address so the sign-in flow can decide whether to ask for a
@@ -14,6 +15,7 @@ import { vendors } from "@/db/schema/vendors";
  *   { exists: false }                        -> new account, start onboarding / registration
  *   { exists: true, role: "USER" }           -> existing user account, ask for password
  *   { exists: true, role: "VENDOR" }         -> existing vendor account, ask for password
+ *   { exists: true, role: "RIDER" }          -> existing rider account, ask for password
  */
 
 const WINDOW_MS = 60_000;
@@ -64,13 +66,13 @@ export async function POST(request: Request) {
 
     // 1. Check users table
     const userMatches = await db
-        .select({ id: users.id, role: users.role })
+        .select({ id: users.id, role: users.role, name: users.name })
         .from(users)
         .where(sql`LOWER(${users.email}) = ${normalised}`)
         .limit(1);
 
     if (userMatches.length === 0) {
-        // Also check if vendors table has a record with contactEmail that is linked to a user
+        // Check if vendors table has a record with contactEmail that is linked to a user
         const vendorMatches = await db
             .select({ id: vendors.id, userId: vendors.userId })
             .from(vendors)
@@ -88,21 +90,56 @@ export async function POST(request: Request) {
     }
 
     const user = userMatches[0];
-    let isVendor = user.role?.toUpperCase() === "VENDOR";
+    const isAdmin = String(user.role || "").toUpperCase() === "ADMIN";
 
-    if (!isVendor) {
-        const linked = await db
-            .select({ id: vendors.id })
-            .from(vendors)
-            .where(eq(vendors.userId, user.id))
-            .limit(1);
-        if (linked.length > 0) {
-            isVendor = true;
+    // 2. Check vendor profile: Must have actual vendor row
+    const vendorMatches = await db
+        .select({ id: vendors.id })
+        .from(vendors)
+        .where(
+            or(
+                eq(vendors.userId, user.id),
+                sql`LOWER(${vendors.contactEmail}) = ${normalised}`
+            )
+        )
+        .limit(1);
+
+    const isVendor = vendorMatches.length > 0;
+
+    // 3. Check rider profile: Must have actual rider row
+    const riderMatches = await db
+        .select({ id: riders.id })
+        .from(riders)
+        .where(eq(riders.userId, user.id))
+        .limit(1);
+
+    const isRider = riderMatches.length > 0 || String(user.role || "").toUpperCase() === "RIDER";
+
+    // 4. Resolve accurate canonical role
+    let canonicalRole = "USER";
+    if (isAdmin) {
+        canonicalRole = "ADMIN";
+    } else if (isVendor) {
+        canonicalRole = "VENDOR";
+    } else if (isRider) {
+        canonicalRole = "RIDER";
+    }
+
+    // 5. Self-heal database user.role if mismatched
+    if (String(user.role || "").toUpperCase() !== canonicalRole) {
+        try {
+            await db
+                .update(users)
+                .set({ role: canonicalRole, updatedAt: new Date() })
+                .where(eq(users.id, user.id));
+        } catch (e) {
+            console.warn("[check-email] Failed to sync user role in db:", e);
         }
     }
 
     return NextResponse.json({
         exists: true,
-        role: isVendor ? "VENDOR" : "USER",
+        role: canonicalRole,
+        name: user.name,
     });
 }
