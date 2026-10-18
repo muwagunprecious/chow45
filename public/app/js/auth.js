@@ -34,7 +34,9 @@ const Chow45Auth = {
 
   isVendorUser() {
     const user = this.getUser();
-    return !!(user && user.isLoggedIn && (String(user.role).toLowerCase() === 'vendor' || !!user.storeId || !!user.vendorId));
+    if (!user || !user.isLoggedIn) return false;
+    const role = String(user.role || '').toLowerCase();
+    return role === 'vendor' || role === 'admin' || !!user.storeId || !!user.vendorId;
   },
 
   async loginWithGoogle(intent = null) {
@@ -150,6 +152,22 @@ const Chow45Auth = {
   handleUrlParams() {
     try {
       const params = new URLSearchParams(window.location.search);
+      if (params.get('notice') === 'not_a_vendor') {
+        const msg = 'You are signed in as a customer. Please sign in with a vendor account to manage a store.';
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast(msg, 'warning');
+        } else {
+          setTimeout(() => {
+            if (window.chowApp && window.chowApp.toast) {
+              window.chowApp.toast(msg, 'warning');
+            }
+          }, 350);
+        }
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        return;
+      }
+
       if (params.get('signed_out') === '1') {
         this.clearLocalSessionIfUnauthenticated();
         if (window.chowApp && window.chowApp.toast) {
@@ -1570,6 +1588,9 @@ const Chow45Auth = {
    * placeholder, so the vendor never mistakes sample data for their own.
    */
   async loadVendorProfile() {
+    if (this.isLoggedIn() && !this.isVendorUser()) {
+      return;
+    }
     if (window.__chow45VendorProfileLoading) return;
     window.__chow45VendorProfileLoading = true;
 

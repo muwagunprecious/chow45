@@ -300,6 +300,20 @@ export function MarketplaceView({
 
           // Apply requested role
           if (initialRole) {
+            if (
+              initialRole === 'vendor' &&
+              typeof window !== 'undefined' &&
+              window.Chow45Auth &&
+              typeof window.Chow45Auth.isLoggedIn === 'function' &&
+              window.Chow45Auth.isLoggedIn() &&
+              typeof window.Chow45Auth.isVendorUser === 'function' &&
+              !window.Chow45Auth.isVendorUser()
+            ) {
+              console.warn('[marketplace] Logged-in non-vendor attempted to switch to vendor role. Redirecting.');
+              window.location.replace('/app?notice=not_a_vendor');
+              return;
+            }
+
             window.Chow45App.switchRole(initialRole);
             if (window.Chow45App.updateRoleUI) {
               window.Chow45App.updateRoleUI(initialRole);

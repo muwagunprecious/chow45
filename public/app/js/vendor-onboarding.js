@@ -33,7 +33,12 @@ const VendorOnboarding = {
     // Auth restores the session before this runs, so a returning vendor is
     // already known here and must not be shown the wizard.
     if (window.Chow45Auth && window.Chow45Auth.isLoggedIn()) {
-      this.dismiss();
+      if (window.Chow45Auth.isVendorUser()) {
+        this.dismiss();
+        return;
+      }
+      // Customer or non-vendor logged in: redirect out to customer app
+      window.location.replace('/app?notice=not_a_vendor');
       return;
     }
 

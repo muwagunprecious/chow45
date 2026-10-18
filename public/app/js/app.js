@@ -32,6 +32,17 @@ const Chow45App = {
     let initialRole = urlParams.get('role');
 
     if (pathname.startsWith('/vendor')) {
+      if (
+        typeof Chow45Auth !== 'undefined' &&
+        typeof Chow45Auth.isLoggedIn === 'function' &&
+        Chow45Auth.isLoggedIn() &&
+        typeof Chow45Auth.isVendorUser === 'function' &&
+        !Chow45Auth.isVendorUser()
+      ) {
+        console.warn('[chow45] Logged-in non-vendor attempted to access /vendor. Redirecting to /app.');
+        window.location.replace('/app?notice=not_a_vendor');
+        return;
+      }
       initialRole = 'vendor';
     } else if (pathname === '/app' || pathname === '/') {
       // On marketplace route, if no ?role= is provided, ensure customer role
@@ -44,10 +55,36 @@ const Chow45App = {
       }
     }
 
-    const isVendorContext = pathname.startsWith('/vendor') ||
+    if (
+      initialRole === 'vendor' &&
+      typeof Chow45Auth !== 'undefined' &&
+      typeof Chow45Auth.isLoggedIn === 'function' &&
+      Chow45Auth.isLoggedIn() &&
+      typeof Chow45Auth.isVendorUser === 'function' &&
+      !Chow45Auth.isVendorUser()
+    ) {
+      console.warn('[chow45] Logged-in non-vendor attempted to switch to vendor role via query param.');
+      initialRole = 'customer';
+      if (window.chowStore && window.chowStore.state) {
+        window.chowStore.state.currentRole = 'customer';
+        window.chowStore.save();
+      }
+      window.location.replace('/app?notice=not_a_vendor');
+      return;
+    }
+
+    const isNonVendorUser = typeof Chow45Auth !== 'undefined' &&
+      typeof Chow45Auth.isLoggedIn === 'function' &&
+      Chow45Auth.isLoggedIn() &&
+      typeof Chow45Auth.isVendorUser === 'function' &&
+      !Chow45Auth.isVendorUser();
+
+    const isVendorContext = !isNonVendorUser && (
+      pathname.startsWith('/vendor') ||
       initialRole === 'vendor' ||
       (pathname !== '/app' && window.chowStore?.state?.currentRole === 'vendor') ||
-      sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true';
+      sessionStorage.getItem('chow45_vendor_trigger_setup') === 'true'
+    );
 
     // Pull the vendor's real profile from the server whenever in vendor context
     if (isVendorContext && typeof Chow45Auth !== 'undefined') {
@@ -61,6 +98,17 @@ const Chow45App = {
     this.updateLocationUI(window.chowStore.state.selectedLocation);
 
     if (initialRole && ['customer', 'vendor', 'rider', 'admin'].includes(initialRole)) {
+      if (
+        initialRole === 'vendor' &&
+        typeof Chow45Auth !== 'undefined' &&
+        typeof Chow45Auth.isLoggedIn === 'function' &&
+        Chow45Auth.isLoggedIn() &&
+        typeof Chow45Auth.isVendorUser === 'function' &&
+        !Chow45Auth.isVendorUser()
+      ) {
+        window.location.href = '/app?notice=not_a_vendor';
+        return;
+      }
       this.switchRole(initialRole);
     } else {
       this.updateRoleUI(window.chowStore.state.currentRole || 'customer');
@@ -203,6 +251,19 @@ const Chow45App = {
   },
 
   switchRole(roleName) {
+    if (roleName === 'vendor') {
+      if (
+        typeof Chow45Auth !== 'undefined' &&
+        typeof Chow45Auth.isLoggedIn === 'function' &&
+        Chow45Auth.isLoggedIn() &&
+        typeof Chow45Auth.isVendorUser === 'function' &&
+        !Chow45Auth.isVendorUser()
+      ) {
+        console.warn('[chow45] Logged-in non-vendor attempted to switch to vendor role. Redirecting.');
+        window.location.href = '/app?notice=not_a_vendor';
+        return;
+      }
+    }
     if (window.chowStore && window.chowStore.setRole) {
       window.chowStore.setRole(roleName);
     }

@@ -26,6 +26,11 @@ const VendorController = {
   placeholderImg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
 
   isVendorContext() {
+    if (typeof window !== 'undefined' && window.Chow45Auth && typeof window.Chow45Auth.isLoggedIn === 'function' && window.Chow45Auth.isLoggedIn()) {
+      if (typeof window.Chow45Auth.isVendorUser === 'function' && !window.Chow45Auth.isVendorUser()) {
+        return false;
+      }
+    }
     const isVendorPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/vendor');
     const isVendorRole = window.chowStore?.state?.currentRole === 'vendor';
     const profileRole = window.chowStore?.state?.userProfile?.role;

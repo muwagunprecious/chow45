@@ -180,6 +180,17 @@
     <script>
       (function() {
         if (typeof window !== 'undefined') {
+          try {
+            var raw = localStorage.getItem('chow45_auth_session_v1');
+            if (raw) {
+              var sess = JSON.parse(raw);
+              if (sess && sess.user && sess.user.isLoggedIn) {
+                var r = (sess.user.role || '').toLowerCase();
+                var isVend = r === 'vendor' || r === 'admin' || !!sess.user.storeId || !!sess.user.vendorId;
+                if (!isVend) return;
+              }
+            }
+          } catch(e) {}
           var isVendorPath = window.location.pathname.startsWith('/vendor') || window.location.search.includes('role=vendor');
           if (isVendorPath) {
             document.documentElement.classList.add('on-vendor-path');
