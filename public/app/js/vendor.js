@@ -20,6 +20,8 @@ const VendorController = {
     pickupLocation: null // { latitude, longitude, address, formattedAddress }
   },
   notifiedOrderIds: new Set(),
+  _orderPollTimer: null,
+  _isSyncingOrders: false,
 
   placeholderImg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
 
@@ -51,6 +53,15 @@ const VendorController = {
     window.addEventListener('storage', () => {
       if (this.isVendorContext()) {
         this.render();
+      }
+    });
+
+    if (this.isVendorContext()) {
+      this.startOrderPolling();
+    }
+    window.addEventListener('focus', () => {
+      if (this.isVendorContext()) {
+        this.syncOrdersFromServer();
       }
     });
 
@@ -738,9 +749,12 @@ const VendorController = {
     this.renderMenu(store);
     this.renderDraftsSection();
     this.checkForNewOrders(store);
+    this.renderLiveOrderAlert();
 
-    // Sync menu items from database so newly uploaded food appears immediately
+    // Authoritative sync from PostgreSQL database
     this.syncMenuFromServer();
+    this.syncOrdersFromServer();
+    this.startOrderPolling();
 
     if (ob.status === 'pending' && ob.applicationId) {
       this.startStatusPolling();
@@ -1072,18 +1086,176 @@ const VendorController = {
   },
 
   // ---------------------------------------------------------------
-  // Live order monitoring
+  // Live order monitoring & Real-Time Server Sync
   // ---------------------------------------------------------------
   _orderBuckets(storeOrders) {
+    const list = Array.isArray(storeOrders) ? storeOrders : [];
     return {
-      new: storeOrders.filter(o => o.status === 'PAID'),
-      preparing: storeOrders.filter(o => o.status === 'RESTAURANT_ACCEPTED' || o.status === 'PREPARING'),
-      complete: storeOrders.filter(o => o.status === 'READY_FOR_PICKUP' || o.status === 'RIDER_ASSIGNED' || o.status === 'RIDER_HEADING_TO_STORE' || o.status === 'RIDER_AT_STORE' || o.status === 'PICKED_UP' || o.status === 'OUT_FOR_DELIVERY' || o.status === 'RIDER_NEARBY' || o.status === 'DELIVERED')
+      new: list.filter(o => o.status === 'PAID'),
+      preparing: list.filter(o => o.status === 'RESTAURANT_ACCEPTED' || o.status === 'PREPARING'),
+      complete: list.filter(o => o.status === 'READY_FOR_PICKUP' || o.status === 'RIDER_ASSIGNED' || o.status === 'RIDER_HEADING_TO_STORE' || o.status === 'RIDER_AT_STORE' || o.status === 'PICKED_UP' || o.status === 'OUT_FOR_DELIVERY' || o.status === 'RIDER_NEARBY' || o.status === 'DELIVERED')
     };
   },
 
+  startOrderPolling() {
+    if (this._orderPollTimer) return;
+    this.syncOrdersFromServer();
+    this._orderPollTimer = setInterval(() => {
+      if (this.isVendorContext()) {
+        this.syncOrdersFromServer();
+      } else {
+        this.stopOrderPolling();
+      }
+    }, 5000);
+  },
+
+  stopOrderPolling() {
+    if (this._orderPollTimer) {
+      clearInterval(this._orderPollTimer);
+      this._orderPollTimer = null;
+    }
+  },
+
+  async syncOrdersFromServer() {
+    if (!this.isVendorContext()) return;
+    if (this._isSyncingOrders) return;
+    const store = this.getStore();
+    if (!store) return;
+
+    this._isSyncingOrders = true;
+    try {
+      const params = new URLSearchParams();
+      if (store.id) params.set('storeId', store.id);
+      if (store.numericId) params.set('vendorId', String(store.numericId));
+      if (store.email || store.contactEmail) params.set('email', store.email || store.contactEmail);
+
+      const res = await fetch(`/api/vendor/orders?${params.toString()}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          ...(store.email ? { 'x-vendor-email': store.email } : {})
+        }
+      });
+
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && Array.isArray(data.orders)) {
+        const serverOrders = data.orders;
+
+        // Reconcile window.chowStore.state.orders
+        if (window.chowStore && window.chowStore.state) {
+          const currentStoreId = store.id;
+          const otherOrders = (window.chowStore.state.orders || []).filter(
+            o => o.storeId !== currentStoreId && !serverOrders.some(so => so.id === o.id)
+          );
+          window.chowStore.state.orders = [...serverOrders, ...otherOrders];
+          if (typeof window.chowStore.save === 'function') {
+            window.chowStore.save();
+          }
+        }
+
+        // Check for incoming new orders
+        const buckets = this._orderBuckets(serverOrders);
+        let newlyArrived = 0;
+        let sampleNewOrder = null;
+
+        buckets.new.forEach(o => {
+          if (!this.notifiedOrderIds.has(o.id)) {
+            this.notifiedOrderIds.add(o.id);
+            newlyArrived++;
+            sampleNewOrder = o;
+          }
+        });
+
+        if (newlyArrived > 0 && sampleNewOrder) {
+          this._playNewOrderChime();
+          if (window.chowApp && window.chowApp.toast) {
+            const customerName = sampleNewOrder.customerName || 'Customer';
+            const priceStr = sampleNewOrder.subtotal ? ` (₦${sampleNewOrder.subtotal})` : '';
+            window.chowApp.toast(`🔔 New Order #${sampleNewOrder.id} from ${customerName}${priceStr}!`, 'success');
+          }
+        }
+
+        // Clean up notifiedOrderIds for orders that left PAID queue
+        [...this.notifiedOrderIds].forEach(id => {
+          if (!buckets.new.some(o => o.id === id)) this.notifiedOrderIds.delete(id);
+        });
+
+        this.renderKitchenOrders(store);
+        this.renderLiveOrderAlert(buckets);
+      }
+    } catch (err) {
+      console.warn('[vendor] error syncing orders from server:', err);
+    } finally {
+      this._isSyncingOrders = false;
+    }
+  },
+
+  renderLiveOrderAlert(buckets) {
+    const alertEl = document.getElementById('vnd-live-order-alert');
+    if (!alertEl) return;
+
+    if (!buckets) {
+      const store = this.getStore();
+      const storeOrders = store ? (window.chowStore?.state?.orders || []).filter(o => o.storeId === store.id) : [];
+      buckets = this._orderBuckets(storeOrders);
+    }
+
+    const newCount = buckets?.new ? buckets.new.length : 0;
+    const prepCount = buckets?.preparing ? buckets.preparing.length : 0;
+    const totalActive = newCount + prepCount;
+
+    // Update active order badges across all navigations & buttons
+    document.querySelectorAll('.vendor-orders-badge-count').forEach(badge => {
+      badge.innerText = totalActive;
+      badge.style.display = totalActive > 0 ? 'inline-flex' : 'none';
+    });
+
+    if (newCount > 0) {
+      alertEl.style.display = 'block';
+      alertEl.style.background = 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)';
+      alertEl.style.borderColor = '#FDA4AF';
+      const titleEl = document.getElementById('vnd-live-alert-title');
+      const descEl = document.getElementById('vnd-live-alert-desc');
+      const btnEl = document.getElementById('vnd-live-alert-btn');
+      if (titleEl) {
+        titleEl.textContent = `🔔 ${newCount} New Order${newCount > 1 ? 's' : ''} Received!`;
+        titleEl.style.color = '#9F1239';
+      }
+      if (descEl) {
+        descEl.textContent = `Customer is waiting for kitchen acceptance. Tap to view and accept.`;
+        descEl.style.color = '#BE123C';
+      }
+      if (btnEl) {
+        btnEl.textContent = `View & Accept Order ➔`;
+        btnEl.style.background = '#E11D48';
+      }
+    } else if (prepCount > 0) {
+      alertEl.style.display = 'block';
+      alertEl.style.background = 'linear-gradient(135deg, #FEFCE8 0%, #FEF9C3 100%)';
+      alertEl.style.borderColor = '#FDE047';
+      const titleEl = document.getElementById('vnd-live-alert-title');
+      const descEl = document.getElementById('vnd-live-alert-desc');
+      const btnEl = document.getElementById('vnd-live-alert-btn');
+      if (titleEl) {
+        titleEl.textContent = `🍳 ${prepCount} Active Order${prepCount > 1 ? 's' : ''} in Kitchen`;
+        titleEl.style.color = '#854D0E';
+      }
+      if (descEl) {
+        descEl.textContent = `Package the meals and mark as "Food Ready for Pickup".`;
+        descEl.style.color = '#A16207';
+      }
+      if (btnEl) {
+        btnEl.textContent = `View Kitchen Pipeline ➔`;
+        btnEl.style.background = '#CA8A04';
+      }
+    } else {
+      alertEl.style.display = 'none';
+    }
+  },
+
   checkForNewOrders(store) {
-    const buckets = this._orderBuckets(window.chowStore.state.orders.filter(o => o.storeId === store.id));
+    const buckets = this._orderBuckets(window.chowStore?.state?.orders?.filter(o => o.storeId === store.id) || []);
     let rang = false;
     buckets.new.forEach(o => {
       if (!this.notifiedOrderIds.has(o.id)) {
@@ -1093,7 +1265,9 @@ const VendorController = {
     });
     if (rang) {
       this._playNewOrderChime();
-      window.chowApp.toast('🔔 New order received!', 'success');
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('🔔 New order received!', 'success');
+      }
     }
     // Forget ids for orders that left the PAID queue.
     [...this.notifiedOrderIds].forEach(id => {
@@ -1129,13 +1303,15 @@ const VendorController = {
     this.activeTab = tab;
     const tabs = document.querySelectorAll('.vnd-tab');
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    this.render();
+    const store = this.getStore();
+    if (store) this.renderKitchenOrders(store);
   },
 
   renderKitchenOrders(store) {
     const container = document.getElementById('vendor-orders-list');
     if (!container) return;
-    const buckets = this._orderBuckets(window.chowStore.state.orders.filter(o => o.storeId === store.id));
+    const storeOrders = window.chowStore?.state?.orders?.filter(o => o.storeId === store.id) || [];
+    const buckets = this._orderBuckets(storeOrders);
 
     const newCount = document.getElementById('vendor-count-new');
     if (newCount) newCount.innerText = buckets.new.length;
@@ -1143,11 +1319,11 @@ const VendorController = {
     if (prepCount) prepCount.innerText = buckets.preparing.length;
 
     // Orders the vendor still has to act on, surfaced on the mobile
-    // "Active orders" tab.
+    // "Active orders" tab & top header buttons
     const active = buckets.new.length + buckets.preparing.length;
     document.querySelectorAll('.vendor-orders-badge-count').forEach(badge => {
       badge.innerText = active;
-      badge.style.display = active > 0 ? '' : 'none';
+      badge.style.display = active > 0 ? 'inline-flex' : 'none';
     });
 
     const display = buckets[this.activeTab] || [];
@@ -1243,14 +1419,64 @@ const VendorController = {
     return due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   },
 
-  advanceOrder(orderId, newStatus) {
+  async advanceOrder(orderId, newStatus) {
+    // 1. Optimistic local update
     window.chowStore.advanceOrderStatus(orderId, newStatus);
-    window.chowApp.toast(`Order #${orderId} · ${ORDER_STAGES[newStatus] ? ORDER_STAGES[newStatus].label : newStatus}`, 'success');
+    const store = this.getStore();
+    if (store) this.renderKitchenOrders(store);
+    this.renderLiveOrderAlert();
+
+    const label = ORDER_STAGES[newStatus] ? ORDER_STAGES[newStatus].label : newStatus;
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast(`Order #${orderId} · ${label}`, 'success');
+    }
+
+    // 2. Persist to server API
+    try {
+      const store = this.getStore();
+      await fetch('/api/vendor/orders/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderId,
+          status: newStatus,
+          storeId: store?.id,
+          vendorId: store?.numericId,
+        }),
+      });
+      this.syncOrdersFromServer();
+    } catch (e) {
+      console.warn('[vendor] Failed to update order status on server:', e);
+    }
   },
 
-  rejectOrder(orderId) {
+  async rejectOrder(orderId) {
     window.chowStore.advanceOrderStatus(orderId, 'REJECTED');
-    window.chowApp.toast(`Order #${orderId} rejected by the restaurant`, 'warning');
+    const store = this.getStore();
+    if (store) this.renderKitchenOrders(store);
+    this.renderLiveOrderAlert();
+    if (window.chowApp && window.chowApp.toast) {
+      window.chowApp.toast(`Order #${orderId} rejected by the restaurant`, 'warning');
+    }
+
+    try {
+      const store = this.getStore();
+      await fetch('/api/vendor/orders/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderId,
+          status: 'REJECTED',
+          storeId: store?.id,
+          vendorId: store?.numericId,
+        }),
+      });
+      this.syncOrdersFromServer();
+    } catch (e) {
+      console.warn('[vendor] Failed to persist rejection on server:', e);
+    }
   },
 
   // ---------------------------------------------------------------
@@ -1271,6 +1497,11 @@ const VendorController = {
     });
     if (tabName === 'food') {
       this.renderMenu(this.getStore());
+    }
+    if (tabName === 'orders') {
+      const store = this.getStore();
+      if (store) this.renderKitchenOrders(store);
+      this.syncOrdersFromServer();
     }
     if (tabName === 'store') {
       this.renderStoreTab();

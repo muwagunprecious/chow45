@@ -152,14 +152,23 @@
           </button>
 
 
-          <button type="button" class="cart-pill-btn desktop-only-btn" onclick="event.preventDefault(); CustomerController.openOrderHistory()" title="My Orders" style="padding: 7px 12px;">
+          <!-- Customer Orders Button -->
+          <button type="button" class="cart-pill-btn desktop-only-btn" data-nav-for="customer" onclick="event.preventDefault(); CustomerController.openOrderHistory()" title="My Orders" style="padding: 7px 12px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span class="desktop-only-text" style="font-size: 0.8rem;">Orders</span>
           </button>
 
-          <button type="button" class="cart-pill-btn" onclick="event.preventDefault(); CustomerController.openCart()" aria-label="View Shopping Cart">
+          <!-- Customer Cart Button -->
+          <button type="button" class="cart-pill-btn" data-nav-for="customer" onclick="event.preventDefault(); CustomerController.openCart()" aria-label="View Shopping Cart">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span class="cart-badge-count cart-count-badge" style="display: none;">0</span>
+          </button>
+
+          <!-- Vendor Active Orders Button (Visible on /vendor) -->
+          <button type="button" class="cart-pill-btn vendor-nav-orders-pill" data-nav-for="vendor" onclick="event.preventDefault(); VendorController.switchSubTab('orders')" title="Vendor Active Orders" style="padding: 7px 14px; background: #E8F6F0; border-color: #A7F3D0; color: #008751;" hidden>
+            <span aria-hidden="true">🍳</span>
+            <span style="font-size: 0.82rem; font-weight: 700;">Active Orders</span>
+            <span class="vendor-orders-badge-count tab-badge" style="display: none; background: #E11D48; color: #FFF; font-size: 0.72rem; padding: 1px 6px; border-radius: 999px;">0</span>
           </button>
 
           <a href="/" class="landing-link-btn" title="Waitlist Page">Waitlist</a>
@@ -181,6 +190,13 @@
     <style>
       html.on-vendor-path #view-customer { display: none !important; }
       html.on-vendor-path #view-vendor { display: block !important; }
+      html.on-vendor-path [data-nav-for="customer"] { display: none !important; }
+      html.on-vendor-path .vendor-nav-orders-pill { display: inline-flex !important; }
+      html.on-vendor-path nav.bottom-nav[data-nav-for="vendor"] { display: flex !important; }
+      @media (min-width: 769px) {
+        html.on-vendor-path nav.vendor-topnav[data-nav-for="vendor"] { display: flex !important; }
+        html.on-vendor-path nav.bottom-nav[data-nav-for="vendor"] { display: none !important; }
+      }
     </style>
 
     <!-- =========================================================
@@ -488,6 +504,19 @@
           <!-- ── Main Vendor Dashboard ────────────────────────────── -->
           <div id="vendor-main-dashboard">
 
+            <!-- Live Active Order Notification Banner (Audio + Visual Alert) -->
+            <div id="vnd-live-order-alert" class="vnd-live-alert-banner" style="display: none; margin: 12px 0 18px; padding: 16px 20px; border-radius: 14px; border: 1.5px solid #FDA4AF; background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%); box-shadow: 0 4px 14px rgba(225, 29, 72, 0.15);">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <div>
+                  <h4 id="vnd-live-alert-title" style="margin: 0 0 4px; font-size: 1.05rem; font-weight: 800; color: #9F1239; font-family: var(--font-display);">🔔 New Order Received!</h4>
+                  <p id="vnd-live-alert-desc" style="margin: 0; font-size: 0.88rem; color: #BE123C; font-weight: 500;">Customer is waiting for kitchen acceptance. Tap to view and accept.</p>
+                </div>
+                <button type="button" id="vnd-live-alert-btn" onclick="VendorController.switchSubTab('orders')" style="padding: 10px 18px; border-radius: 999px; background: #E11D48; color: #FFF; font-weight: 800; font-size: 0.9rem; border: none; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3);">
+                  View &amp; Accept Order ➔
+                </button>
+              </div>
+            </div>
+
             <!-- Desktop has no bottom bar, so the same four destinations are
                  offered here instead of the old five-tab subnav. -->
             <nav class="vendor-topnav" data-nav-for="vendor" aria-label="Vendor Sections" hidden>
@@ -510,14 +539,22 @@
             </nav>
 
             <!-- SUB-TAB 1: FOOD (Primary & Star Screen - Points 1 & 2) -->
-            <div id="vnd-tab-pane-food" class="vnd-tab-pane active">              <div class="vnd-food-header">
+            <div id="vnd-tab-pane-food" class="vnd-tab-pane active">
+              <div class="vnd-food-header">
                 <div>
                   <h1 class="vnd-food-title">My Food</h1>
                   <p class="vnd-food-subtitle">Add and manage the food you sell.</p>
                 </div>
-                <button class="vnd-btn-add-food-star" onclick="VendorController.openAddFoodFlow()">
-                  <span class="plus-sign">＋</span> Add Food
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <button type="button" class="vnd-btn-active-orders" onclick="VendorController.switchSubTab('orders')" title="View Active Orders" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; background: #008751; color: #FFF; font-weight: 700; font-size: 0.88rem; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 135, 81, 0.25);">
+                    <span aria-hidden="true">🍳</span>
+                    <span>Active Orders</span>
+                    <span class="vendor-orders-badge-count" style="display: none; background: #FFF; color: #008751; font-size: 0.72rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; margin-left: 2px;">0</span>
+                  </button>
+                  <button class="vnd-btn-add-food-star" onclick="VendorController.openAddFoodFlow()">
+                    <span class="plus-sign">＋</span> Add Food
+                  </button>
+                </div>
               </div>
 
               <!-- Category filter chips (Point 29) -->
@@ -571,9 +608,14 @@
             <!-- SUB-TAB 2: ORDERS -->
             <div id="vnd-tab-pane-orders" class="vnd-tab-pane">
               <div class="vnd-card">
-                <div class="vnd-card-head">
-                  <h3>Kitchen Pipeline</h3>
-                  <span class="vnd-live">● Live Orders</span>
+                <div class="vnd-card-head" style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="margin: 0;">Kitchen Pipeline</h3>
+                    <span class="vnd-live">● Live Orders</span>
+                  </div>
+                  <button type="button" class="vnd-btn vnd-btn-secondary" onclick="VendorController.syncOrdersFromServer(true)" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                    🔄 Refresh
+                  </button>
                 </div>
                 <div class="vendor-tabs vnd-tabs">
                   <button class="vendor-tab-btn vnd-tab active" data-tab="new" onclick="VendorController.setTab('new')">
