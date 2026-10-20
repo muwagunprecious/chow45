@@ -190,7 +190,7 @@ p, .p {
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
-  box-shadow: 0 4px 12px rgba(230, 78, 14, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 135, 81, 0.2);
   transition: transform var(--transition-snappy);
 }
 .brand-badge:hover {
@@ -199,14 +199,14 @@ p, .p {
 .brand-chat-icon {
   display: flex;
   align-items: center;
-  color: #FFEADB;
+  color: #E8F7EE;
 }
 .brand-title {
   color: #FFFFFF;
   font-weight: 800;
 }
 .brand-accent {
-  color: #FFEADB;
+  color: #E8F7EE;
 }
 .brand-badge .badge-tag {
   background: rgba(255, 255, 255, 0.25);
@@ -280,7 +280,7 @@ p, .p {
 .role-btn.active {
   background: var(--c-primary);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(230, 78, 14, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 135, 81, 0.25);
 }
 
 /* Right Nav Actions */
@@ -308,13 +308,13 @@ p, .p {
 }
 .nav-auth-pill:hover {
   border-color: var(--c-primary);
-  background: #FFF7ED;
+  background: #E8F7EE;
   color: var(--c-primary);
   transform: translateY(-1px);
 }
 .nav-auth-pill.logged-in {
-  background: #FFF7ED;
-  border-color: rgba(230, 78, 14, 0.25);
+  background: #E8F7EE;
+  border-color: rgba(0, 135, 81, 0.25);
   color: var(--c-primary);
 }
 .nav-auth-pill .nav-auth-icon {

@@ -26,14 +26,14 @@
   color-scheme: light;
 
   /* Brand Colors */
-  --c-primary: #e64e0e;
-  --c-primary-hover: #c2410c;
-  --c-primary-light: #f97316;
-  --c-primary-dark: #c2410c;
-  --c-primary-surface: #fef2ec;    /* Warm peach/cream tint */
-  --c-accent: #e64e0e;
-  --c-accent-hover: #c2410c;
-  --c-accent-soft: #fef2ec;
+  --c-primary: #008751;
+  --c-primary-hover: #006b40;
+  --c-primary-light: #10b981;
+  --c-primary-dark: #064e3b;
+  --c-primary-surface: #e8f7ee;    /* Mint cream tint */
+  --c-accent: #008751;
+  --c-accent-hover: #006b40;
+  --c-accent-soft: #e8f7ee;
   --c-yellow: #f59e0b;
   --c-yellow-soft: #fffbeb;
 
@@ -53,17 +53,17 @@
   --c-border: #ede7e0;             /* Soft warm border */
   --c-border-subtle: #ede7e0;
   --c-border-secondary-btn: #ede7e0;
-  --c-border-active: #e64e0e;
+  --c-border-active: #008751;
 
   /* Status Colors */
-  --c-success: #1f9d55;
-  --c-success-bg: #edfdf4;
+  --c-success: #008751;
+  --c-success-bg: #e8f7ee;
   --c-warning: #f59e0b;
   --c-warning-bg: #fffbeb;
-  --c-error: #c2410c;
-  --c-error-bg: #fff1ec;
-  --c-info: #e64e0e;
-  --c-info-bg: #fef2ec;
+  --c-error: #dc2626;
+  --c-error-bg: #fef2f2;
+  --c-info: #008751;
+  --c-info-bg: #e8f7ee;
 
   /* Secondary accent */
   --c-secondary: #6f625c;
@@ -143,7 +143,7 @@
   min-width: 97px !important;
   min-height: 36px !important;
   text-decoration: none !important;
-  box-shadow: 0 2px 6px rgba(230, 78, 14, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0, 135, 81, 0.25) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;

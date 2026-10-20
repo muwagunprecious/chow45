@@ -9,10 +9,10 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  --color-brand-orange: #e64e0e;
-  --color-brand-orange-dark: #c2410c;
-  --color-brand-orange-light: #fef2ec;
-  --color-brand-green: #1f9d55;
+  --color-brand-primary: #008751;
+  --color-brand-green-dark: #006b40;
+  --color-brand-green-light: #e8f7ee;
+  --color-brand-green: #008751;
   --color-brand-yellow: #f59e0b;
   --color-brand-cream: #fcfaf7;
   --color-brand-surface: #ffffff;
