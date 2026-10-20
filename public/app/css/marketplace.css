@@ -6,31 +6,49 @@
 /* -------------------------------------------------------------
    Hero Greeting & Floating Search Pill
    ------------------------------------------------------------- */
+/* -------------------------------------------------------------
+   Two-Column Editorial Merchandising Hero Region
+   ------------------------------------------------------------- */
+.hero-merchandising-grid {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: var(--space-20);
+  margin-bottom: var(--space-32);
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .hero-merchandising-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+}
+
 .marketplace-hero {
   position: relative;
-  border-radius: var(--radius-xl);
-  background-color: var(--c-accent);
+  border-radius: var(--radius-lg);
+  background-color: #231512;
   background-image: url('/app/hero-food-bg.jpg');
   background-size: cover;
   background-position: right center;
   background-repeat: no-repeat;
-  min-height: 300px;
+  min-height: 290px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   color: var(--c-text-inverse);
-  padding: 44px 40px;
-  margin-bottom: var(--space-32);
+  padding: 36px 32px;
+  margin-bottom: 0;
   overflow: hidden;
-  box-shadow: 0 16px 48px -8px rgba(12, 81, 63, 0.28);
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+  border: 1px solid var(--c-border);
 }
 
 .marketplace-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(12, 81, 63, 0.85) 0%, rgba(12, 81, 63, 0.45) 60%, transparent 100%);
+  background: linear-gradient(135deg, rgba(35, 21, 18, 0.90) 0%, rgba(35, 21, 18, 0.68) 55%, rgba(230, 78, 14, 0.3) 100%);
   border-radius: inherit;
   z-index: 1;
 }
@@ -38,21 +56,20 @@
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 600px;
+  max-width: 580px;
 }
 
 .hero-headline {
   font-family: var(--font-display);
-  font-size: clamp(1.9rem, 4.5vw, 46px);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -1.5px;
+  font-size: clamp(1.8rem, 3.8vw, 32px);
+  font-weight: 700;
+  line-height: 38px;
+  letter-spacing: 0px;
   margin-bottom: var(--space-12);
-  max-width: 650px;
   color: #ffffff;
 }
 .hero-headline span {
-  color: var(--c-yellow);
+  color: #ff844b;
 }
 
 .hero-subtitle {
@@ -60,9 +77,9 @@
   font-size: 15px;
   font-weight: 400;
   line-height: 24px;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: var(--space-24);
-  max-width: 520px;
+  color: rgba(255, 255, 255, 0.88);
+  margin-bottom: var(--space-20);
+  max-width: 480px;
 }
 
 /* Floating Search Bar */
@@ -70,15 +87,15 @@
   display: flex;
   align-items: center;
   background: #FFFFFF;
-  border: 2px solid rgba(12, 81, 63, 0.15);
-  border-radius: var(--radius-pill);
-  padding: 6px 8px 6px 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  max-width: 560px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px 6px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-width: 520px;
   gap: var(--space-12);
 }
 .search-pill-container svg {
-  color: var(--c-accent);
+  color: var(--c-primary);
   flex-shrink: 0;
 }
 .search-pill-input {
@@ -97,16 +114,95 @@
   background: var(--c-primary);
   color: #ffffff;
   border: none;
-  padding: 10px 22px;
-  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
-  font-weight: 700;
-  font-family: var(--font-display);
+  font-weight: 800;
+  font-family: var(--font-body);
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(12, 81, 63, 0.25);
+  box-shadow: 0 2px 8px rgba(230, 78, 14, 0.25);
   transition: all var(--transition-snappy);
 }
 .search-pill-btn:hover {
+  background: var(--c-primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Hero Right Promotional Merchandising Card */
+.hero-promo-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+  min-height: 290px;
+}
+.hero-promo-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(230, 78, 14, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(230, 78, 14, 0.1);
+  color: var(--c-primary);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  width: fit-content;
+  margin-bottom: var(--space-12);
+}
+.hero-promo-title {
+  font-family: var(--font-body);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 27px;
+  letter-spacing: -0.375px;
+  color: var(--c-text-primary);
+  margin-bottom: var(--space-8);
+}
+.hero-promo-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--c-text-secondary);
+  margin-bottom: var(--space-20);
+}
+.promo-action-btn {
+  background: var(--c-primary);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  transition: all var(--transition-snappy);
+  box-shadow: 0 2px 8px rgba(230, 78, 14, 0.25);
+}
+.promo-action-btn:hover {
   background: var(--c-primary-hover);
   transform: translateY(-1px);
 }
@@ -121,14 +217,15 @@
   margin-bottom: var(--space-16);
 }
 .section-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-body);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 27px;
+  letter-spacing: -0.375px;
   color: var(--c-text-primary);
 }
 .section-link {
-  font-size: 0.82rem;
+  font-size: 12px;
   font-weight: 700;
   color: var(--c-primary);
   text-decoration: none;
@@ -151,7 +248,7 @@
 .category-card {
   flex: 0 0 108px;
   background: var(--c-bg-surface);
-  border: 1.5px solid var(--c-border);
+  border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
   padding: 14px 8px;
   display: flex;
@@ -159,19 +256,19 @@
   align-items: center;
   text-align: center;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
   transition: all var(--transition-snappy);
   user-select: none;
 }
 .category-card:hover {
   border-color: var(--c-primary);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 .category-card.active {
   border-color: var(--c-primary);
-  background: var(--c-primary-surface);
-  box-shadow: 0 4px 12px rgba(12, 81, 63, 0.15);
+  background: rgba(230, 78, 14, 0.06);
+  box-shadow: 0 4px 12px rgba(230, 78, 14, 0.15);
 }
 .category-img {
   width: 52px;
@@ -231,19 +328,19 @@
 
 .store-card {
   background: var(--c-bg-surface);
-  border: 1.5px solid var(--c-border);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-xs);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
   transition: all var(--transition-snappy);
   cursor: pointer;
   display: flex;
   flex-direction: column;
 }
 .store-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--c-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--c-primary);
 }
 
 .store-thumb-wrap {
@@ -855,15 +952,15 @@
    ------------------------------------------------------------- */
 .filter-chip {
   background: #FFFFFF;
-  border: 1.5px solid var(--c-border);
+  border: 1px solid var(--c-border);
   padding: 8px 16px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--c-text-secondary);
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
   transition: all var(--transition-snappy);
 }
 .filter-chip:hover {
@@ -875,7 +972,7 @@
   background: var(--c-primary);
   color: white;
   border-color: var(--c-primary);
-  box-shadow: 0 4px 12px rgba(12, 81, 63, 0.3);
+  box-shadow: 0 2px 8px rgba(230, 78, 14, 0.25);
 }
 
 /* -------------------------------------------------------------
@@ -890,19 +987,19 @@
 
 .food-card {
   background: var(--c-bg-surface);
-  border: 1.5px solid var(--c-border);
-  border-radius: var(--radius-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-xs);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
   transition: all var(--transition-snappy);
   cursor: pointer;
   display: flex;
   flex-direction: column;
 }
 .food-card:hover {
-  border-color: var(--c-accent);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--c-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .food-card-thumb-wrap {
@@ -1004,19 +1101,19 @@
   border: none;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 2px 6px rgba(230, 78, 14, 0.2);
   transition: all var(--transition-snappy);
 }
 .food-add-plus-btn:hover {
-  background: var(--c-primary-light);
-  transform: scale(1.12);
+  background: var(--c-primary-hover);
+  transform: scale(1.08);
 }
 
 @media (max-width: 380px) {
@@ -1194,3 +1291,45 @@
     min-height: 44px;
   }
 }
+
+/* -------------------------------------------------------------
+   Support / Help Floating Affordance (ilueats design system)
+   ------------------------------------------------------------- */
+.support-floating-affordance {
+  position: fixed;
+  bottom: 84px;
+  right: 20px;
+  z-index: 99;
+  background: var(--c-bg-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  transition: all var(--transition-snappy);
+}
+.support-floating-affordance:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 78, 14, 0.15);
+}
+.support-floating-affordance .support-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(230, 78, 14, 0.1);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+

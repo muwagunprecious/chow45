@@ -10,7 +10,7 @@
   <!-- Typography & Font Fallbacks -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet" />
 
   <!-- Google Maps Platform JavaScript API -->
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly"></script>
@@ -220,17 +220,32 @@
       <section id="view-customer" class="role-view active">
         <!-- 1A: Home Discovery Section -->
         <div id="customer-home-section">
-          <!-- Hero Search Experience (Point 4) -->
-          <div class="marketplace-hero" style="background-color: #008751; background-image: url('/app/hero-food-bg.jpg'); background-size: cover; background-position: right center; background-repeat: no-repeat; min-height: 280px;">
-            <div class="hero-content">
-              <h1 class="hero-headline">What are you craving today?</h1>
-              <p class="hero-subtitle">Simple food discovery and fast delivery across Idimu, Egbeda, Ikeja, Lagos and OOU Sagamu.</p>
+          <!-- Editorial Merchandising Hero Region (Two-Column) -->
+          <div class="hero-merchandising-grid">
+            <!-- Left: Featured Search Hero Card -->
+            <div class="marketplace-hero">
+              <div class="hero-content">
+                <h1 class="hero-headline">What are you craving today?</h1>
+                <p class="hero-subtitle">Simple food discovery and fast delivery across Idimu, Egbeda, Ikeja, Lagos and OOU Sagamu.</p>
 
-              <div class="search-pill-container">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="market-search-input" class="search-pill-input" placeholder="What are you craving? (e.g. Jollof Rice, Suya, Amala)" />
-                <button class="search-pill-btn" onclick="document.getElementById('market-search-input').focus()">Search</button>
+                <div class="search-pill-container">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="market-search-input" class="search-pill-input" placeholder="What are you craving? (e.g. Jollof Rice, Suya, Amala)" />
+                  <button class="search-pill-btn" onclick="document.getElementById('market-search-input').focus()">Search</button>
+                </div>
               </div>
+            </div>
+
+            <!-- Right: Promotional Merchandising Card -->
+            <div class="hero-promo-card">
+              <div>
+                <span class="promo-badge">⚡ FLASH SPECIAL</span>
+                <h3 class="hero-promo-title">Express Delivery Under 25 mins</h3>
+                <p class="hero-promo-desc">Hot, fresh meals straight from the best local kitchens right to your door with zero delays.</p>
+              </div>
+              <button class="promo-action-btn" onclick="CustomerController.setFilter('fast'); document.getElementById('discovery-sections-container').scrollIntoView({ behavior: 'smooth' });">
+                Order Fast Food →
+              </button>
             </div>
           </div>
 
@@ -1114,6 +1129,13 @@
         <span>Profile</span>
       </button>
     </nav>
+
+    <!-- Floating Support Affordance (ilueats design system) -->
+    <button type="button" class="support-floating-affordance" onclick="window.chowApp && window.chowApp.toast ? window.chowApp.toast('Contacting Chow45 Support at support@chow45.com', 'info') : alert('Support: support@chow45.com')" title="Help & Support" aria-label="Support and Help">
+      <span class="support-icon">💬</span>
+      <span>Support</span>
+    </button>
+
 
 
     <!-- Vendors manage a menu, not a storefront, so they get their own bar. -->

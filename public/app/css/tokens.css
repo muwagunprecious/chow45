@@ -1,77 +1,86 @@
 /* ==========================================================================
-   CHOW45 DESIGN SYSTEM TOKENS
-   Theme: Light
-   Accent: #0c513f
-   Canvas: #ffffff
-   Text: #000000
-   Primary Button: #038b5c
-   Cards: #ffffff with 1px solid #e5e7eb, 8px border-radius, no shadow
+   ILUEATS DESIGN SYSTEM TOKENS
+   Theme: Warm Editorial Commerce
+   Primary: #e64e0e
+   Secondary: #6f625c
+   Tertiary: #ede7e0
+   Background: #fcfaf7
+   Surface: #ffffff
+   On-surface: #231512
+   Muted: #8e7f77
+   Border: #ede7e0
+   Success: #1f9d55
+   Warning: #f59e0b
+   Error: #c2410c
+   Typography: Bricolage Grotesque (display), Plus Jakarta Sans (body/labels)
+   Radii: 5px (sm buttons), 16px (lg cards), 9999px (full pills)
    ========================================================================== */
 
 /* -------------------------------------------------------------
-   Font Definitions: Plus Jakarta Sans via Google Fonts
+   Font Definitions: Bricolage Grotesque & Plus Jakarta Sans
    ------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* Mode */
   color-scheme: light;
 
-  /* Heyfood Brand Colors */
-  --c-accent: #00a205;             /* Vivid Brand Green */
-  --c-primary: #00a205;            /* Primary brand green */
-  --c-primary-hover: #008704;
-  --c-primary-light: #00a205;
-  --c-primary-dark: #008704;
-  --c-primary-surface: #e6f6e6;    /* Mint Tint */
-  --c-accent-hover: #008704;
-  --c-accent-soft: #e6f6e6;
-  --c-yellow: #00a205;
-  --c-yellow-soft: #e6f6e6;
+  /* Brand Colors */
+  --c-primary: #e64e0e;
+  --c-primary-hover: #c2410c;
+  --c-primary-light: #f97316;
+  --c-primary-dark: #c2410c;
+  --c-primary-surface: #fef2ec;    /* Warm peach/cream tint */
+  --c-accent: #e64e0e;
+  --c-accent-hover: #c2410c;
+  --c-accent-soft: #fef2ec;
+  --c-yellow: #f59e0b;
+  --c-yellow-soft: #fffbeb;
 
   /* Surfaces & Backgrounds */
-  --c-bg-canvas: #fafafa;          /* Bright clean background */
+  --c-bg-canvas: #fcfaf7;          /* Soft warm cream background */
   --c-bg-surface: #ffffff;         /* Crisp White Cards */
-  --c-bg-subtle: #fafafa;
-  --c-bg-glass: rgba(255, 255, 255, 0.95);
+  --c-bg-subtle: #f7f3ee;
+  --c-bg-glass: rgba(252, 250, 247, 0.95);
 
   /* Typography Colors */
-  --c-text-primary: #000000;       /* Dominant black text */
-  --c-text-secondary: #374151;     /* Neutral secondary */
-  --c-text-muted: #6b7280;         /* Subtle gray descriptor text */
+  --c-text-primary: #231512;       /* On-surface dark rich brown/charcoal */
+  --c-text-secondary: #6f625c;     /* Neutral secondary brown-gray */
+  --c-text-muted: #8e7f77;         /* Subtle descriptors / timestamps */
   --c-text-inverse: #ffffff;       /* Pure white on dark surfaces */
 
   /* Borders & Dividers */
-  --c-border: #e5e7eb;             /* Neutral 100 border */
-  --c-border-subtle: #e5e7eb;
-  --c-border-secondary-btn: #e5e7eb;
-  --c-border-active: #000000;
+  --c-border: #ede7e0;             /* Soft warm border */
+  --c-border-subtle: #ede7e0;
+  --c-border-secondary-btn: #ede7e0;
+  --c-border-active: #e64e0e;
 
   /* Status Colors */
-  --c-success: #00a205;
-  --c-success-bg: #e6f6e6;
+  --c-success: #1f9d55;
+  --c-success-bg: #edfdf4;
   --c-warning: #f59e0b;
-  --c-warning-bg: #fef3c7;
-  --c-error: #d92d20;
-  --c-error-bg: #fef2f2;
-  --c-info: #00a205;
-  --c-info-bg: #e6f6e6;
+  --c-warning-bg: #fffbeb;
+  --c-error: #c2410c;
+  --c-error-bg: #fff1ec;
+  --c-info: #e64e0e;
+  --c-info-bg: #fef2ec;
 
   /* Secondary accent */
-  --c-secondary: #000000;          /* Secondary is black */
-  --c-secondary-soft: #f3f4f6;
+  --c-secondary: #6f625c;
+  --c-secondary-soft: #ede7e0;
+  --c-tertiary: #ede7e0;
 
   /* Typography Families & Fallbacks */
-  --font-family-fallbacks: "OS_Semi_Bold", "OS_Bold", "OS_Regular", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-display: 'Plus Jakarta Display', var(--font-family-fallbacks);
+  --font-family-fallbacks: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: 'Bricolage Grotesque', var(--font-family-fallbacks);
   --font-body: 'Plus Jakarta Sans', var(--font-family-fallbacks);
 
   /* Element Spacing Scale */
-  --space-xs: 8px;
-  --space-sm: 16px;
-  --space-md: 28px;
-  --space-lg: 70px;
-  --space-xl: 112px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 40px;
 
   /* Utility Spacing aliases */
   --space-2: 2px;
@@ -87,22 +96,25 @@
   --space-48: 48px;
   --space-64: 64px;
 
-  /* Shadows - Minimal / Flat per Heyfood spec */
+  /* Shadows - Subtle soft shadow per specification */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  --shadow-sm: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+  --shadow-card: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+  --shadow-md: 0 4px 12px rgba(35, 21, 18, 0.06);
+  --shadow-lg: 0 10px 24px -3px rgba(35, 21, 18, 0.08);
+  --shadow-xl: 0 20px 32px -5px rgba(35, 21, 18, 0.1);
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow-floating: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-floating: 0 12px 36px rgba(35, 21, 18, 0.12);
 
-  /* Border Radii: Heyfood pill CTAs + 8px/16px cards */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-card: 8px;
-  --radius-lg: 32px;
-  --radius-xl: 65.52px;
+  /* Border Radii: 5px sm buttons + 16px cards + 9999px pills */
+  --radius-none: 0px;
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-card: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
   --radius-pill: 9999px;
 
   /* Layout Consts */
@@ -116,74 +128,81 @@
 }
 
 /* -------------------------------------------------------------
-   Heyfood Design System Component Classes
+   Component Classes: Button Primary, Button Secondary, Card
    ------------------------------------------------------------- */
-.btn-primary, .button-primary {
-  background-color: #000000 !important;
+.btn-primary, .button-primary, .action-btn-primary {
+  background-color: var(--c-primary) !important;
   color: #ffffff !important;
-  border: none !important;
-  border-radius: 65.52px !important;
-  padding: 9.828px 27.846px !important;
-  font-size: 16.38px !important;
-  font-weight: 500 !important;
-  min-width: 64px !important;
-  min-height: 48px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-sm) !important; /* 5px */
+  padding: 10px 16px !important;
+  font-family: var(--font-body) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  min-width: 97px !important;
+  min-height: 36px !important;
   text-decoration: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 2px 6px rgba(230, 78, 14, 0.25) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  transition: opacity 0.2s ease, transform 0.15s ease !important;
+  transition: opacity 0.2s ease, transform 0.15s ease, background-color 0.2s ease !important;
 }
-.btn-primary:hover, .button-primary:hover {
-  opacity: 0.88 !important;
+.btn-primary:hover, .button-primary:hover, .action-btn-primary:hover {
+  background-color: var(--c-primary-hover) !important;
+  opacity: 0.95 !important;
   transform: translateY(-1px) !important;
 }
 
-.btn-secondary, .button-secondary {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 65.52px !important;
-  padding: 9.828px 27.846px !important;
-  font-size: 16.38px !important;
-  font-weight: 500 !important;
-  min-width: 64px !important;
-  min-height: 48px !important;
+.btn-secondary, .button-secondary, .action-btn-secondary {
+  background-color: transparent !important;
+  color: var(--c-secondary) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--radius-sm) !important; /* 5px */
+  padding: 10px 16px !important;
+  font-family: var(--font-body) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  min-width: 97px !important;
+  min-height: 36px !important;
   text-decoration: none !important;
   box-shadow: none !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  transition: background-color 0.2s ease, border-color 0.2s ease !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
 }
-.btn-secondary:hover, .button-secondary:hover {
-  background-color: #f9fafb !important;
-  border-color: #d1d5db !important;
+.btn-secondary:hover, .button-secondary:hover, .action-btn-secondary:hover {
+  background-color: var(--c-bg-subtle) !important;
+  border-color: #cbd5e1 !important;
+  color: var(--c-text-primary) !important;
 }
 
 .btn-link {
   background: transparent !important;
-  color: #00a205 !important;
+  color: var(--c-text-primary) !important;
   border: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
-  font-size: 15.4px !important;
-  font-weight: 500 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
   text-decoration: none !important;
   cursor: pointer !important;
 }
 .btn-link:hover {
+  color: var(--c-primary) !important;
   text-decoration: underline !important;
 }
 
-.card-heyfood {
-  background-color: #ffffff !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 8px !important;
-  padding: 16px !important;
-  box-shadow: none !important;
-  color: #000000 !important;
+.card-ilueats, .card-heyfood {
+  background-color: var(--c-bg-surface) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--radius-lg) !important; /* 16px */
+  padding: var(--space-lg) !important; /* 16px */
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px !important;
+  color: var(--c-text-primary) !important;
 }
