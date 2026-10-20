@@ -976,20 +976,50 @@ class GoogleMapsService {
   // DELIVERY QUOTE
   // -------------------------------------------------------------
   async getDeliveryQuote(store, deliveryLocation, opts = {}) {
-    const origin = { lng: store.lng || store.longitude, lat: store.lat || store.latitude };
-    const dest = {
-      lng: deliveryLocation.longitude ?? deliveryLocation.lng,
-      lat: deliveryLocation.latitude ?? deliveryLocation.lat
-    };
+    // 1. Resolve store origin coordinates with campus fallbacks
+    let originLat = store ? (store.lat ?? store.latitude) : null;
+    let originLng = store ? (store.lng ?? store.longitude) : null;
+    if (originLat == null || originLng == null || (Number(originLat) === 0 && Number(originLng) === 0)) {
+      const addr = ((store?.address || '') + ' ' + (store?.name || '')).toLowerCase();
+      if (addr.includes('oou') || addr.includes('ago-iwoye') || addr.includes('ago iwoye')) {
+        originLat = 6.9320; originLng = 3.9180;
+      } else if (addr.includes('babcock') || addr.includes('ilishan')) {
+        originLat = 6.8900; originLng = 3.7200;
+      } else if (addr.includes('ibogun')) {
+        originLat = 6.9050; originLng = 3.1600;
+      } else {
+        originLat = 6.8400; originLng = 3.6500; // Sagamu OSUTH default
+      }
+    }
+
+    // 2. Resolve dropoff coordinates with campus fallbacks
+    let destLat = deliveryLocation ? (deliveryLocation.latitude ?? deliveryLocation.lat) : null;
+    let destLng = deliveryLocation ? (deliveryLocation.longitude ?? deliveryLocation.lng) : null;
+    if (destLat == null || destLng == null || (Number(destLat) === 0 && Number(destLng) === 0)) {
+      const name = ((deliveryLocation?.name || '') + ' ' + (deliveryLocation?.formattedAddress || '')).toLowerCase();
+      if (name.includes('oou') || name.includes('ago-iwoye') || name.includes('ago iwoye')) {
+        destLat = 6.9320; destLng = 3.9180;
+      } else if (name.includes('babcock') || name.includes('ilishan')) {
+        destLat = 6.8900; destLng = 3.7200;
+      } else if (name.includes('ibogun')) {
+        destLat = 6.9050; destLng = 3.1600;
+      } else {
+        destLat = 6.8482; destLng = 3.6545; // Sagamu Campus dropoff default
+      }
+    }
+
+    const origin = { lat: Number(originLat), lng: Number(originLng) };
+    const dest = { lat: Number(destLat), lng: Number(destLng) };
 
     const clientRoute = await this.getDirections(origin, dest);
+    const haversineDist = typeof haversineDistanceMeters === 'function' ? haversineDistanceMeters(origin, dest) : 2500;
     const fallbackRoute = clientRoute || {
-      distanceMeters: typeof haversineDistanceMeters === 'function' ? haversineDistanceMeters(origin, dest) : 2500,
-      durationSeconds: 300,
+      distanceMeters: haversineDist,
+      durationSeconds: Math.round((haversineDist / 500) * 60),
       geometry: null
     };
 
-    const config = opts.config || {};
+    const config = opts.config || (typeof safeDeliveryConfig === 'function' ? safeDeliveryConfig() : {});
     const zone = typeof getServiceAvailability === 'function' ? getServiceAvailability(dest).zone : null;
 
     try {
@@ -1004,14 +1034,25 @@ class GoogleMapsService {
       });
       if (apiRoute.ok) {
         const server = await apiRoute.json();
+        const dist = server.distanceMeters ?? fallbackRoute.distanceMeters;
+        const dur = server.durationSeconds ?? fallbackRoute.durationSeconds;
         if (typeof buildDeliveryQuote === 'function') {
           return buildDeliveryQuote(
-            server.distanceMeters ?? fallbackRoute.distanceMeters,
-            server.durationSeconds ?? fallbackRoute.durationSeconds,
+            dist,
+            dur,
             zone,
             config
           );
         }
+        const srvFee = server.deliveryFee || Math.max(200, Math.ceil((dist / 1000) * 200));
+        return {
+          distanceMeters: dist,
+          durationSeconds: dur,
+          deliveryFee: srvFee,
+          deliveryFeeLabel: typeof formatNaira === 'function' ? formatNaira(srvFee) : `₦${srvFee.toLocaleString()}`,
+          distanceLabel: `${(dist / 1000).toFixed(1)} km`,
+          durationLabel: `${Math.ceil(dur / 60)} mins`
+        };
       }
     } catch (err) {
       console.warn('Delivery quote API unavailable, using client calculations.', err);
@@ -1021,10 +1062,17 @@ class GoogleMapsService {
       return buildDeliveryQuote(fallbackRoute.distanceMeters, fallbackRoute.durationSeconds, zone, config);
     }
 
+    const calculatedFee = typeof calculateDeliveryFee === 'function'
+      ? calculateDeliveryFee(fallbackRoute.distanceMeters, config)
+      : Math.max(200, Math.ceil((fallbackRoute.distanceMeters / 1000) * 200));
+
     return {
       distanceMeters: fallbackRoute.distanceMeters,
       durationSeconds: fallbackRoute.durationSeconds,
-      deliveryFee: 500
+      deliveryFee: calculatedFee,
+      deliveryFeeLabel: typeof formatNaira === 'function' ? formatNaira(calculatedFee) : `₦${calculatedFee.toLocaleString()}`,
+      distanceLabel: `${(fallbackRoute.distanceMeters / 1000).toFixed(1)} km`,
+      durationLabel: `${Math.ceil(fallbackRoute.durationSeconds / 60)} mins`
     };
   }
 

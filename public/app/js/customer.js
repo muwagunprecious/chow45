@@ -1189,7 +1189,12 @@ const CustomerController = {
 
       // Delivery destination preview
       const addrInput = document.getElementById('checkout-address-input');
-      if (addrInput) addrInput.value = selectedLocation?.name || '';
+      if (addrInput && !addrInput.value) {
+        const candidate = selectedLocation?.formattedAddress || selectedLocation?.name || (userProfile?.savedAddresses?.[0]?.formattedAddress || userProfile?.savedAddresses?.[0]?.address) || '';
+        if (candidate && candidate !== 'Campus' && !candidate.startsWith('Near OSUTH')) {
+          addrInput.value = candidate;
+        }
+      }
       const nameInput = document.getElementById('checkout-name-input');
       if (nameInput) nameInput.value = userProfile?.name || '';
       const phoneInput = document.getElementById('checkout-phone-input');
@@ -1250,7 +1255,7 @@ const CustomerController = {
       this.quoteCache = quote;
       const fee = quote.deliveryFee;
       const config = safeDeliveryConfig();
-      const total = window.chowStore.getCartSubtotal() + (config.serviceFee || 100) + fee;
+      const total = window.chowStore.getCartSubtotal() + (config?.serviceFee ?? 400) + fee;
 
       const delFeeEl = document.getElementById('cart-delivery-fee-val');
       if (delFeeEl) delFeeEl.innerText = safeFormatNaira(fee);
@@ -1271,6 +1276,29 @@ const CustomerController = {
         </div>`;
     } else {
       row.style.display = 'none';
+    }
+  },
+
+  onDeliveryAddressChanged(val) {
+    const errorEl = document.getElementById('checkout-address-error');
+    const input = document.getElementById('checkout-address-input');
+    const cleanVal = String(val || '').trim();
+    if (cleanVal.length > 0) {
+      if (errorEl) errorEl.style.display = 'none';
+      if (input) input.style.borderColor = '';
+    }
+    if (window.chowStore?.state) {
+      if (!window.chowStore.state.selectedLocation) {
+        window.chowStore.state.selectedLocation = {
+          name: cleanVal,
+          formattedAddress: cleanVal,
+          lat: 6.8400,
+          lng: 3.6500
+        };
+      } else {
+        window.chowStore.state.selectedLocation.name = cleanVal;
+        window.chowStore.state.selectedLocation.formattedAddress = cleanVal;
+      }
     }
   },
 
@@ -1298,9 +1326,28 @@ const CustomerController = {
     const { cart } = window.chowStore.state;
     if (cart.items.length === 0) return;
 
+    const deliveryAddressInput = document.getElementById('checkout-address-input');
+    const deliveryAddress = (deliveryAddressInput ? deliveryAddressInput.value : '').trim();
+    const errorBanner = document.getElementById('checkout-address-error');
+
+    if (!deliveryAddress) {
+      if (errorBanner) {
+        errorBanner.style.display = 'flex';
+      }
+      if (deliveryAddressInput) {
+        deliveryAddressInput.style.borderColor = '#E11D48';
+        deliveryAddressInput.focus();
+      }
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Please input your delivery address to place your order.', 'error');
+      } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
+        window.chowApp.showToast('Please input your delivery address to place your order.', 'error');
+      }
+      return;
+    }
+
     const customerName = document.getElementById('checkout-name-input').value.trim() || 'Precious M.';
     const customerPhone = document.getElementById('checkout-phone-input').value.trim() || '+234 812 450 4500';
-    const deliveryAddress = document.getElementById('checkout-address-input').value.trim();
     const deliveryNotes = document.getElementById('checkout-notes-input').value.trim();
     const paymentMethod = document.getElementById('checkout-payment-method').value;
 

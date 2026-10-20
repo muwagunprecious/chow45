@@ -667,7 +667,7 @@
                   <img id="vendor-store-avatar" class="vendor-avatar" src="" alt="Store" />
                   <div>
                     <h2 id="vendor-store-name" class="vendor-title">Your Store</h2>
-                    <div id="vendor-store-location" class="vendor-location-tag">Set your pickup/delivery address</div>
+                    <div id="vendor-store-location" class="vendor-location-tag" onclick="event.stopPropagation(); VendorController.openAddressModal()" style="cursor: pointer;" title="Click to set/update store pickup address">Set your pickup/delivery address</div>
                     <div id="vendor-store-hours" class="vendor-hours-tag">🕐 Set your operating hours</div>
                   </div>
                 </div>
@@ -1305,20 +1305,23 @@
             <!-- Delivery Details -->
             <div class="checkout-input-group">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label class="checkout-label" style="margin-bottom: 0;">DELIVER TO</label>
-                <button type="button" style="border: none; background: transparent; color: var(--c-primary); font-size: 0.78rem; font-weight: 700; cursor: pointer;" onclick="Chow45App.openLocationModal()">Change</button>
+                <label class="checkout-label" style="margin-bottom: 0;">DELIVER TO <span style="color: #e11d48;">*</span></label>
+                <button type="button" style="border: none; background: transparent; color: var(--c-primary); font-size: 0.78rem; font-weight: 700; cursor: pointer;" onclick="Chow45App.openLocationModal()">📍 Change / Map</button>
               </div>
-              <input type="text" id="checkout-address-input" class="checkout-input" value="9 Goshen Ave, Idimu, Lagos" />
+              <input type="text" id="checkout-address-input" class="checkout-input" placeholder="Enter your delivery address / street..." value="" required oninput="document.getElementById('checkout-address-error') && (document.getElementById('checkout-address-error').style.display='none'); if (CustomerController && CustomerController.onDeliveryAddressChanged) CustomerController.onDeliveryAddressChanged(this.value);" />
+              <div id="checkout-address-error" style="display: none; color: #E11D48; font-size: 0.8rem; font-weight: 700; margin-top: 5px; align-items: center; gap: 4px;">
+                <span>⚠️ Please input your delivery address to place your order.</span>
+              </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12);">
               <div class="checkout-input-group">
                 <label class="checkout-label">Recipient Name</label>
-                <input type="text" id="checkout-name-input" class="checkout-input" value="Precious M." />
+                <input type="text" id="checkout-name-input" class="checkout-input" placeholder="Your Name" value="" />
               </div>
               <div class="checkout-input-group">
                 <label class="checkout-label">Phone Number</label>
-                <input type="text" id="checkout-phone-input" class="checkout-input" value="+234 812 450 4500" />
+                <input type="text" id="checkout-phone-input" class="checkout-input" placeholder="Phone e.g. 08124504500" value="" />
               </div>
             </div>
 
@@ -2849,6 +2852,89 @@
               style="width: 100%; height: 50px; background: #00a205; color: #ffffff; border: none; border-radius: 14px; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,162,5,0.3); transition: all 0.2s ease;"
             >
               <span>Update Password & Continue ➔</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Mandatory Vendor Address Setup Modal -->
+    <div id="vendor-address-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="vnd-address-modal-title">
+      <div class="modal-sheet" style="max-width: 460px; width: 100%; border-radius: 24px; overflow: hidden; background: #ffffff; box-shadow: 0 25px 70px rgba(0,0,0,0.45); border: 1.5px solid #E2E8F0;">
+        
+        <!-- Header -->
+        <div class="modal-header" style="border-bottom: 1px solid #F1F5F9; padding: 22px 24px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; background: #FFFFFF;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 42px; height: 42px; border-radius: 12px; background: #E8F6F0; color: #00a205; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+              📍
+            </div>
+            <div>
+              <h2 id="vnd-address-modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #0F172A; font-family: var(--font-display, inherit); letter-spacing: -0.02em;">
+                Set Store Pickup Address
+              </h2>
+              <small style="color: #64748B; font-size: 0.82rem; font-weight: 500;">Required for dispatch riders & delivery calculation</small>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="VendorController.closeAddressModal()" aria-label="Close" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94A3B8; padding: 4px;">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px 24px;">
+          <p style="font-size: 0.88rem; color: #475569; margin: 0 0 16px 0; line-height: 1.45;">
+            Customers and dispatch riders need your exact kitchen address to calculate delivery distance accurately and collect ready food orders.
+          </p>
+
+          <!-- Quick GPS button -->
+          <div style="margin-bottom: 16px;">
+            <button
+              type="button"
+              id="vnd-modal-gps-btn"
+              onclick="VendorController.useLiveLocationForAddressModal()"
+              style="width: 100%; padding: 12px 14px; background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: 12px; color: #166534; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;"
+            >
+              <span>📍 Use My Current GPS Location</span>
+            </button>
+          </div>
+
+          <!-- Quick campus presets -->
+          <label style="display: block; font-size: 0.76rem; font-weight: 800; color: #64748B; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em;">
+            Quick Campus Locations
+          </label>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
+            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Sagamu Campus (OSUTH), Sagamu, Ogun State', 6.8400, 3.6500)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏥 Sagamu (OSUTH)</button>
+            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('OOU Main Campus Gate, Ago-Iwoye, Ogun State', 6.9320, 3.9180)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏫 OOU Main Campus</button>
+            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Babcock University Gate, Ilishan-Remo, Ogun State', 6.8900, 3.7200)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🎓 Babcock Gate</button>
+            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Hospital Road, Sagamu, Ogun State', 6.8420, 3.6480)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏠 Hospital Road</button>
+          </div>
+
+          <!-- Address Input -->
+          <form id="vnd-modal-address-form" onsubmit="event.preventDefault(); VendorController.submitModalAddress();">
+            <div style="margin-bottom: 16px;">
+              <label for="vnd-modal-address-input" style="display: block; font-size: 0.8rem; font-weight: 700; color: #1E293B; margin-bottom: 6px; letter-spacing: 0.02em;">
+                STORE / KITCHEN ADDRESS <span style="color: #e11d48;">*</span>
+              </label>
+              <input
+                type="text"
+                id="vnd-modal-address-input"
+                required
+                placeholder="e.g. Near OSUTH Main Gate, Hospital Road, Sagamu"
+                style="width: 100%; height: 48px; padding: 0 14px; background: #FFFFFF; color: #0F172A; border: 1.5px solid #CBD5E1; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; outline: none; transition: border-color 0.2s;"
+                onfocus="this.style.borderColor='#00a205'"
+                onblur="this.style.borderColor='#CBD5E1'"
+              />
+              <input type="hidden" id="vnd-modal-lat-input" value="" />
+              <input type="hidden" id="vnd-modal-lng-input" value="" />
+            </div>
+
+            <!-- Error Banner -->
+            <div id="vnd-modal-address-error" style="display: none; padding: 10px 14px; background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 12px; color: #991B1B; font-size: 0.84rem; font-weight: 600; margin-bottom: 16px; line-height: 1.4;"></div>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              id="vnd-modal-address-submit-btn"
+              style="width: 100%; height: 48px; background: #00a205; color: #ffffff; border: none; border-radius: 14px; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,162,5,0.3); transition: all 0.2s ease;"
+            >
+              <span>Save Pickup Address ✓</span>
             </button>
           </form>
         </div>

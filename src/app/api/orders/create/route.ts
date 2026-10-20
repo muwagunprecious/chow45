@@ -18,7 +18,13 @@ export async function POST(request: Request) {
     const storeName = String(rawOrder.storeName || "Campus Food Spot").trim();
     const customerName = String(rawOrder.customerName || "Customer").trim();
     const customerPhone = String(rawOrder.customerPhone || "").trim() || null;
-    const deliveryAddress = String(rawOrder.deliveryAddress || "Sagamu Campus (OSUTH)").trim();
+    const deliveryAddress = String(rawOrder.deliveryAddress || "").trim();
+    if (!deliveryAddress) {
+      return NextResponse.json(
+        { error: "Delivery address is required to place an order." },
+        { status: 400 }
+      );
+    }
     const deliveryNotes = rawOrder.deliveryNotes ? String(rawOrder.deliveryNotes) : null;
     const paymentMethod = String(rawOrder.paymentMethod || "Debit Card (Paystack)").trim();
     

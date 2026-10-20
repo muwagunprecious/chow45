@@ -63,6 +63,9 @@ const VendorController = {
 
     if (this.isVendorContext()) {
       this.startOrderPolling();
+      setTimeout(() => {
+        this.checkAndPromptAddress();
+      }, 1000);
     }
     window.addEventListener('focus', () => {
       if (this.isVendorContext()) {
@@ -755,6 +758,7 @@ const VendorController = {
     this.renderDraftsSection();
     this.checkForNewOrders(store);
     this.renderLiveOrderAlert();
+    this.checkAndPromptAddress(store);
 
     // Authoritative sync from PostgreSQL database
     this.syncMenuFromServer();
@@ -1894,6 +1898,16 @@ const VendorController = {
   // Step-by-Step Food Creation Flow (Points 4–26)
   // ---------------------------------------------------------------
   openAddFoodFlow(dishToEdit, draftToRestore) {
+    const store = this.getStore();
+    const storeAddr = store ? (store.address || '').trim() : '';
+    if (!storeAddr || storeAddr.toLowerCase().includes('no pickup address') || storeAddr.toLowerCase().includes('set your')) {
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Please set your store pickup address before managing food items.', 'warning');
+      }
+      this.openAddressModal(store);
+      return;
+    }
+
     if (dishToEdit) {
       this.openEditFoodFlow(dishToEdit);
       return;
@@ -3007,6 +3021,229 @@ const VendorController = {
 
     this.setRegStep(4); // Verification holding screen
     window.chowApp.toast('Application submitted for admin verification!', 'success');
+  },
+
+  // -------------------------------------------------------------
+  // Mandatory Vendor Address Setup & Modal Management
+  // -------------------------------------------------------------
+  checkAndPromptAddress(storeOrProfile) {
+    if (!this.isVendorContext()) return;
+
+    // Do not interrupt password setup modal if currently displayed
+    const setupModal = document.getElementById('vendor-first-setup-modal');
+    if (setupModal && setupModal.classList.contains('open')) return;
+
+    const store = storeOrProfile || this.getStore();
+    if (!store) return;
+
+    const addr = String(store.address || '').trim();
+    const isMissing = !addr || 
+      addr.toLowerCase() === 'no pickup address set yet' || 
+      addr.toLowerCase() === 'set your pickup/delivery address' ||
+      addr.toLowerCase().includes('no pickup address');
+
+    if (isMissing) {
+      this.openAddressModal(store);
+    }
+  },
+
+  openAddressModal(store) {
+    const modal = document.getElementById('vendor-address-modal');
+    if (!modal) return;
+    const currentStore = store || this.getStore();
+    const input = document.getElementById('vnd-modal-address-input');
+    const latInput = document.getElementById('vnd-modal-lat-input');
+    const lngInput = document.getElementById('vnd-modal-lng-input');
+    const errEl = document.getElementById('vnd-modal-address-error');
+
+    if (errEl) errEl.style.display = 'none';
+
+    if (input && currentStore && currentStore.address) {
+      const a = String(currentStore.address).trim();
+      if (!a.toLowerCase().includes('no pickup address') && !a.toLowerCase().includes('set your')) {
+        input.value = a;
+      } else {
+        input.value = '';
+      }
+    }
+    if (latInput && currentStore) latInput.value = currentStore.lat || currentStore.latitude || '';
+    if (lngInput && currentStore) lngInput.value = currentStore.lng || currentStore.longitude || '';
+
+    modal.classList.add('open');
+    if (input) setTimeout(() => input.focus(), 150);
+  },
+
+  closeAddressModal() {
+    const modal = document.getElementById('vendor-address-modal');
+    if (modal) modal.classList.remove('open');
+  },
+
+  setModalAddressPreset(name, lat, lng) {
+    const input = document.getElementById('vnd-modal-address-input');
+    const latInput = document.getElementById('vnd-modal-lat-input');
+    const lngInput = document.getElementById('vnd-modal-lng-input');
+    const errEl = document.getElementById('vnd-modal-address-error');
+
+    if (input) input.value = name;
+    if (latInput) latInput.value = lat;
+    if (lngInput) lngInput.value = lng;
+    if (errEl) errEl.style.display = 'none';
+  },
+
+  useLiveLocationForAddressModal() {
+    const btn = document.getElementById('vnd-modal-gps-btn');
+    const input = document.getElementById('vnd-modal-address-input');
+    const latInput = document.getElementById('vnd-modal-lat-input');
+    const lngInput = document.getElementById('vnd-modal-lng-input');
+    const errEl = document.getElementById('vnd-modal-address-error');
+
+    if (!navigator.geolocation) {
+      if (errEl) {
+        errEl.textContent = 'Geolocation is not supported by your browser.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) btn.innerHTML = '<span>⏳ Acquiring GPS location...</span>';
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (latInput) latInput.value = lat;
+        if (lngInput) lngInput.value = lng;
+
+        let resolvedName = `Sagamu, Ogun State (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        if (window.chowMap && typeof window.chowMap.reverseGeocode === 'function') {
+          try {
+            const place = await window.chowMap.reverseGeocode(lng, lat);
+            if (place && place.place_name) resolvedName = place.place_name;
+          } catch (e) {}
+        }
+
+        if (input) input.value = resolvedName;
+        if (errEl) errEl.style.display = 'none';
+        if (btn) btn.innerHTML = '<span>✓ Location Detected!</span>';
+        setTimeout(() => { if (btn) btn.innerHTML = origText; }, 2000);
+      },
+      (err) => {
+        console.warn('GPS error:', err);
+        if (errEl) {
+          errEl.textContent = 'Could not get your GPS location. Please type your address or select a campus preset above.';
+          errEl.style.display = 'block';
+        }
+        if (btn) btn.innerHTML = origText;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  },
+
+  async submitModalAddress() {
+    const input = document.getElementById('vnd-modal-address-input');
+    const latInput = document.getElementById('vnd-modal-lat-input');
+    const lngInput = document.getElementById('vnd-modal-lng-input');
+    const errEl = document.getElementById('vnd-modal-address-error');
+    const btn = document.getElementById('vnd-modal-address-submit-btn');
+
+    const address = (input ? input.value : '').trim();
+    if (!address) {
+      if (errEl) {
+        errEl.textContent = 'Please enter a valid store pickup address.';
+        errEl.style.display = 'block';
+      }
+      if (input) input.focus();
+      return;
+    }
+
+    let lat = latInput && latInput.value ? parseFloat(latInput.value) : null;
+    let lng = lngInput && lngInput.value ? parseFloat(lngInput.value) : null;
+
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+      const lower = address.toLowerCase();
+      if (lower.includes('oou') || lower.includes('ago-iwoye') || lower.includes('ago iwoye')) {
+        lat = 6.9320; lng = 3.9180;
+      } else if (lower.includes('babcock') || lower.includes('ilishan')) {
+        lat = 6.8900; lng = 3.7200;
+      } else if (lower.includes('ibogun')) {
+        lat = 6.9050; lng = 3.1600;
+      } else {
+        lat = 6.8400; lng = 3.6500;
+      }
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Saving Address...</span>';
+    }
+
+    try {
+      const store = this.getStore() || {};
+      const session = window.Chow45Auth ? window.Chow45Auth.getSession() : null;
+      const email = (store && (store.email || store.contactEmail)) || session?.email || '';
+
+      const payload = {
+        storeId: store.id,
+        vendorId: store.numericId,
+        businessName: store.name || 'Your Store',
+        address: address,
+        latitude: lat,
+        longitude: lng,
+        contactEmail: email
+      };
+
+      const res = await fetch('/api/vendor/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.error) {
+        if (errEl) {
+          errEl.textContent = data.error || 'Failed to save address. Please try again.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (store) {
+        store.address = address;
+        store.lat = lat;
+        store.latitude = lat;
+        store.lng = lng;
+        store.longitude = lng;
+      }
+
+      const locLabel = document.getElementById('vendor-store-location');
+      if (locLabel) locLabel.innerText = address;
+
+      if (window.chowStore?.save) {
+        window.chowStore.save();
+      }
+
+      this.closeAddressModal();
+
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Store pickup address saved successfully! 🎉', 'success');
+      } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
+        window.chowApp.showToast('Store pickup address saved successfully! 🎉', 'success');
+      }
+    } catch (e) {
+      console.error('Error saving vendor address:', e);
+      if (errEl) {
+        errEl.textContent = 'Network error saving address. Please try again.';
+        errEl.style.display = 'block';
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Save Pickup Address ✓</span>';
+      }
+    }
   }
 };
 

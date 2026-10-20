@@ -515,7 +515,7 @@ class Chow45Store {
       storeName: orderDetails.storeName,
       customerName: orderDetails.customerName || this.state.userProfile.name,
       customerPhone: orderDetails.customerPhone || this.state.userProfile.phone,
-      deliveryAddress: orderDetails.deliveryAddress || (this.state.selectedLocation ? this.state.selectedLocation.name : 'Sagamu Campus'),
+      deliveryAddress: orderDetails.deliveryAddress || (this.state.selectedLocation && this.state.selectedLocation.name !== 'Campus' ? this.state.selectedLocation.name : ''),
       deliveryNotes: orderDetails.deliveryNotes || '',
       paymentMethod: orderDetails.paymentMethod || 'Debit Card (Paystack)',
       items: JSON.parse(JSON.stringify(this.state.cart.items)),

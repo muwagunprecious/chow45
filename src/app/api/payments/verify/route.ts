@@ -38,13 +38,22 @@ export async function POST(request: Request) {
         const storeName = String(rawOrder.storeName || "Campus Food Spot").trim();
         const customerName = String(rawOrder.customerName || "Customer").trim();
         const customerPhone = String(rawOrder.customerPhone || "").trim() || null;
-        const deliveryAddress = String(rawOrder.deliveryAddress || "Sagamu Campus (OSUTH)").trim();
+        const deliveryAddress = String(rawOrder.deliveryAddress || "").trim();
+        if (!deliveryAddress) {
+          return NextResponse.json(
+            { error: "Delivery address is required to place an order." },
+            { status: 400 }
+          );
+        }
         const deliveryNotes = rawOrder.deliveryNotes ? String(rawOrder.deliveryNotes) : null;
         const paymentMethod = reference ? `Paystack (${reference})` : (String(rawOrder.paymentMethod || "Debit Card (Paystack)").trim());
 
         const subtotal = Math.round(Number(rawOrder.subtotal) || 2000);
         const serviceFee = Math.round(Number(rawOrder.serviceFee) || 400);
-        const deliveryFee = Math.max(800, Math.round(Number(rawOrder.deliveryFee) || 800));
+        const routeDistanceMeters = rawOrder.routeDistanceMeters ? Math.round(Number(rawOrder.routeDistanceMeters)) : null;
+        const deliveryFee = routeDistanceMeters
+          ? Math.max(200, Math.ceil((routeDistanceMeters / 1000) * 200))
+          : Math.max(200, Math.round(Number(rawOrder.deliveryFee) || 200));
         const total = Math.round(Number(rawOrder.total) || amount || (subtotal + serviceFee + deliveryFee));
 
         const pin = String(rawOrder.pin || Math.floor(1000 + Math.random() * 9000)).trim();

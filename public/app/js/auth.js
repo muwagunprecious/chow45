@@ -1738,7 +1738,10 @@ const Chow45Auth = {
       }
 
       // Check one-time password and location setup for tolaniakin2022@gmail.com
-      this.checkFirstTimeVendorSetup(profile, serverData);
+      const pwCheck = this.checkFirstTimeVendorSetup(profile, serverData);
+      if (!pwCheck && typeof VendorController !== 'undefined' && VendorController.checkAndPromptAddress) {
+        VendorController.checkAndPromptAddress(profile);
+      }
     } else {
       if (nameEl) nameEl.textContent = 'Your Store';
       if (locEl) locEl.textContent = 'No pickup address set yet';
@@ -2499,6 +2502,7 @@ const Chow45Auth = {
       if (typeof VendorController !== 'undefined') {
         if (VendorController.render) VendorController.render();
         if (VendorController.syncMenuFromServer) VendorController.syncMenuFromServer();
+        if (VendorController.checkAndPromptAddress) VendorController.checkAndPromptAddress();
       }
     } catch (e) {
       showError('Network error. Please check your connection and try again.');
