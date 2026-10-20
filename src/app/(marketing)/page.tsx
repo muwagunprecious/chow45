@@ -635,13 +635,12 @@ export default function MarketingPage() {
                 >
                   Order Food Now
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => openModal("customer")}
-                  className="bg-white text-black px-8 py-3.5 rounded-full text-base font-semibold hover:bg-neutral-100 transition min-h-[48px]"
+                <Link
+                  href="/vendor"
+                  className="bg-white text-black px-8 py-3.5 rounded-full text-base font-semibold hover:bg-neutral-100 transition min-h-[48px] inline-flex items-center justify-center border border-[#e5e7eb]"
                 >
-                  Join Waitlist
-                </button>
+                  Become a Vendor
+                </Link>
               </div>
             </Reveal>
           </div>
@@ -740,7 +739,7 @@ export default function MarketingPage() {
                       ? "Register your Food Store"
                       : modalRole === "rider"
                       ? "Join the Dispatch Team"
-                      : "Join the Chow45 Waitlist"}
+                      : "Order on Chow45"}
                   </h3>
                   <p className="text-sm text-[#4b5563] mt-1">
                     Fill in your details below and we&rsquo;ll get in touch right away.
