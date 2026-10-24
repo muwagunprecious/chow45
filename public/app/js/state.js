@@ -10,12 +10,12 @@ const ORDER_STAGES = {
   RESTAURANT_ACCEPTED: { key: 'RESTAURANT_ACCEPTED', label: 'Restaurant Accepted', humanText: 'Restaurant accepted your order', stepIndex: 2 },
   PREPARING: { key: 'PREPARING', label: 'Preparing Food', humanText: 'Your food is being prepared', stepIndex: 3 },
   READY_FOR_PICKUP: { key: 'READY_FOR_PICKUP', label: 'Ready for Pickup', humanText: 'Your food is packaged and waiting for the rider', stepIndex: 4 },
-  RIDER_ASSIGNED: { key: 'RIDER_ASSIGNED', label: 'Rider Assigned', humanText: 'David has accepted your delivery', stepIndex: 5 },
+  RIDER_ASSIGNED: { key: 'RIDER_ASSIGNED', label: 'Rider Assigned', humanText: 'A dispatch rider has accepted your delivery', stepIndex: 5 },
   RIDER_HEADING_TO_STORE: { key: 'RIDER_HEADING_TO_STORE', label: 'Rider Heading to Store', humanText: 'Your rider is heading to the restaurant', stepIndex: 6 },
   RIDER_AT_STORE: { key: 'RIDER_AT_STORE', label: 'Rider at Store', humanText: 'Your rider is at the restaurant', stepIndex: 7 },
   PICKED_UP: { key: 'PICKED_UP', label: 'Order Picked Up', humanText: 'Your food has been picked up', stepIndex: 8 },
   OUT_FOR_DELIVERY: { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', humanText: 'Rider is on the way to your delivery address', stepIndex: 9 },
-  RIDER_NEARBY: { key: 'RIDER_NEARBY', label: 'Rider Nearby', humanText: 'David is 8 minutes away', stepIndex: 10 },
+  RIDER_NEARBY: { key: 'RIDER_NEARBY', label: 'Rider Nearby', humanText: 'Your dispatch rider is arriving shortly', stepIndex: 10 },
   DELIVERED: { key: 'DELIVERED', label: 'Delivered', humanText: 'Your food has been delivered! Enjoy your meal.', stepIndex: 11 },
   REJECTED: { key: 'REJECTED', label: 'Cancelled by Restaurant', humanText: 'The restaurant could not accept this order', stepIndex: 0 }
 };
@@ -104,6 +104,7 @@ class Chow45Store {
           if (parsed.selectedLocation && (parsed.selectedLocation.id === 'oou-main' || (parsed.selectedLocation.name && parsed.selectedLocation.name.includes('OOU Main Campus')))) {
             parsed.selectedLocation = null;
           }
+          parsed.selectedCampus = parsed.selectedCampus || localStorage.getItem('chow45_selected_campus') || null;
 
           // Purge demo restaurants from cached localStorage so /app only shows real vendor foods
           parsed.restaurants = (parsed.restaurants || []).filter(r =>
@@ -165,6 +166,7 @@ class Chow45Store {
 
     return {
       currentRole: 'customer', // 'customer' | 'vendor' | 'rider' | 'admin'
+      selectedCampus: localStorage.getItem('chow45_selected_campus') || null,
       selectedLocation: null,
       deliveryConfig: Object.assign({}, DEFAULT_DELIVERY_FEE_CONFIG),
       serviceZones: JSON.parse(JSON.stringify(CHOW45_SERVICE_ZONES)),
@@ -248,6 +250,13 @@ class Chow45Store {
   // -------------------------------------------------------------
   setRole(role) {
     this.state.currentRole = role;
+    this.save();
+  }
+
+  setCampus(campus) {
+    if (campus !== 'sagamu' && campus !== 'ibogun') return;
+    this.state.selectedCampus = campus;
+    localStorage.setItem('chow45_selected_campus', campus);
     this.save();
   }
 
@@ -351,7 +360,7 @@ class Chow45Store {
       lga: '',
       center: [3.6545, 6.8482],
       maxDeliveryDistance: 3000,
-      deliveryRules: { baseFee: 300, ratePerMeter: 0.15, serviceFee: 400 },
+      deliveryRules: { baseFee: 200, ratePerMeter: 0.20, serviceFee: 400 },
       operatingHours: { open: '08:00', close: '23:00' },
       polygon: [
         [3.6400, 6.8300], [3.6700, 6.8300], [3.6700, 6.8600], [3.6400, 6.8600], [3.6400, 6.8300]
@@ -501,7 +510,7 @@ class Chow45Store {
     const quote = orderDetails.deliveryQuote || null;
     const distanceKm = quote
       ? quote.distanceMeters / 1000
-      : (store ? store.distanceKm : 1.8);
+      : (store && store.distanceKm ? store.distanceKm : 1.0);
     const deliveryFee = quote
       ? quote.deliveryFee
       : calculateDeliveryFee(distanceKm * 1000, config);
@@ -509,7 +518,18 @@ class Chow45Store {
     const serviceFee = (config ? config.serviceFee : null) || MANDATORY_SERVICE_FEE;
     const total = subtotal + serviceFee + deliveryFee;
 
+    const hasPreorderItems = (this.state.cart.items || []).some(i => Boolean(i.preorderEnabled));
+    const isPreorder = Boolean(orderDetails.isPreorder ?? hasPreorderItems);
+    const preorderItem = (this.state.cart.items || []).find(i => Boolean(i.preorderEnabled) && (i.preorderDate || i.preorderTime));
+    const preorderReadyDate = orderDetails.preorderReadyDate || (preorderItem ? preorderItem.preorderDate : '') || '';
+    const preorderReadyTime = orderDetails.preorderReadyTime || (preorderItem ? preorderItem.preorderTime : '') || '';
+
     const newOrder = {
+      isPreorder,
+      preorderReadyDate,
+      preorderReadyTime,
+      isFoodReady: false,
+      foodReadyAt: null,
       id: `CH45${Math.floor(100 + Math.random() * 900)}`,
       storeId: orderDetails.storeId,
       storeName: orderDetails.storeName,
@@ -556,6 +576,13 @@ class Chow45Store {
     if (extra.riderId) {
       order.riderId = extra.riderId;
       order.riderName = extra.riderName;
+    }
+    if (extra.isPreorder !== undefined) order.isPreorder = Boolean(extra.isPreorder);
+    if (extra.preorderReadyDate !== undefined) order.preorderReadyDate = extra.preorderReadyDate;
+    if (extra.preorderReadyTime !== undefined) order.preorderReadyTime = extra.preorderReadyTime;
+    if (extra.isFoodReady !== undefined) {
+      order.isFoodReady = Boolean(extra.isFoodReady);
+      if (order.isFoodReady) order.foodReadyAt = new Date().toISOString();
     }
 
     if (!order.history) order.history = [];
@@ -674,11 +701,11 @@ class Chow45Store {
         id: `rest-${Date.now()}`,
         name: v.name,
         slug: v.name.toLowerCase().replace(/\s+/g, '-'),
-        rating: 5.0,
-        reviewsCount: 1,
+        rating: 0,
+        reviewsCount: 0,
         prepTime: '20–30 min',
         distanceKm: 2.0,
-        deliveryFee: 650,
+        deliveryFee: 200,
         address: v.pickupAddress || v.location,
         openingTime: v.openingTime || '7:00 AM',
         closingTime: v.closingTime || '9:00 PM',
@@ -802,7 +829,8 @@ class Chow45Store {
       optionalExtras: optional,
       img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
       category: 'rice',
-      rating: 4.8,
+      rating: 0,
+      reviewsCount: 0,
       prepTime: '20–30 min',
       isPopular: false,
       addonGroups

@@ -80,6 +80,47 @@ export default function MarketingPage() {
   const [addressInput, setAddressInput] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  // Campus modal prompt state
+  const [campusPromptOpen, setCampusPromptOpen] = useState(false);
+  const [campusStep, setCampusStep] = useState<1 | 2>(1);
+  const [chosenCampus, setChosenCampus] = useState<"sagamu" | "ibogun">("sagamu");
+  const [campusAddress, setCampusAddress] = useState("");
+  const [campusError, setCampusError] = useState("");
+  const [detectingGps, setDetectingGps] = useState(false);
+  const [detectedGps, setDetectedGps] = useState<{ lat: number; lng: number; street: string; fullAddress: string } | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<Array<{ text: string; sub: string; placeId?: string; lat?: number; lng?: number; isCampus?: boolean }>>([]);
+  const [autocompleteOpen, setAutocompleteOpen] = useState(false);
+  const [isSearchingAutocomplete, setIsSearchingAutocomplete] = useState(false);
+  const autocompleteTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const CAMPUS_LANDMARKS: Record<"sagamu" | "ibogun", Array<{ name: string; sub: string; lat: number; lng: number }>> = {
+    sagamu: [
+      { name: "Clinical Hostel", sub: "OOU Medical Campus, Sagamu", lat: 6.8420, lng: 3.6480 },
+      { name: "OSUTH Main Gate", sub: "OOU Teaching Hospital, Hospital Rd", lat: 6.8400, lng: 3.6500 },
+      { name: "Hospital Road", sub: "Sagamu, Ogun State", lat: 6.8390, lng: 3.6520 },
+      { name: "OOU Medical Campus", sub: "Faculty of Clinical Sciences", lat: 6.8410, lng: 3.6510 },
+      { name: "Ewusi Street", sub: "Makun, Sagamu", lat: 6.8450, lng: 3.6470 },
+      { name: "Sabo Market", sub: "Sabo, Sagamu", lat: 6.8350, lng: 3.6550 },
+      { name: "GRA Sagamu", sub: "Government Reserved Area, Sagamu", lat: 6.8480, lng: 3.6420 },
+    ],
+    ibogun: [
+      { name: "OGITECH Main Gate", sub: "Ogun State Institute of Technology, Ibogun", lat: 6.7210, lng: 3.3910 },
+      { name: "Student Village", sub: "Student Village Hostels, Ibogun", lat: 6.7230, lng: 3.3890 },
+      { name: "OOU Ibogun Campus Gate", sub: "College of Engineering & Tech, Ibogun", lat: 6.7220, lng: 3.3900 },
+      { name: "Campus Hostels", sub: "Ibogun Campus Residential Lodges", lat: 6.7200, lng: 3.3920 },
+      { name: "Ibogun Market Road", sub: "Ibogun Town, Ogun State", lat: 6.7190, lng: 3.3940 },
+    ],
+  };
+
+  // Check if visitor has selected a campus; if not, open campus popup immediately
+  useEffect(() => {
+    const savedCampus = localStorage.getItem("chow45_selected_campus");
+    if (!savedCampus) {
+      setCampusPromptOpen(true);
+    }
+  }, []);
+
   // If a vendor visits chow45.app, automatically redirect directly to the vendor dashboard
   useEffect(() => {
     try {
@@ -115,8 +156,210 @@ export default function MarketingPage() {
 
   const closeModal = () => setModalOpen(false);
 
+  const handleSelectCampus = (campus: "sagamu" | "ibogun") => {
+    setChosenCampus(campus);
+    setCampusError("");
+    setDetectedGps(null);
+    setAutocompleteOpen(false);
+    setCampusStep(2);
+  };
+
+  const handleDetectGps = () => {
+    setCampusError("");
+    if (!navigator.geolocation) {
+      setCampusError("Geolocation is not supported by your browser. Please type your hostel address below.");
+      return;
+    }
+
+    setDetectingGps(true);
+
+    const onCoordsSuccess = async (lat: number, lng: number) => {
+      try {
+        const res = await fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+        if (res.ok) {
+          const data = await res.json();
+          const campusName = chosenCampus === "ibogun" ? "Ibogun" : "Sagamu";
+          const street = data.street || (data.address ? data.address.split(",")[0] : `Detected Location (${campusName})`);
+          const fullAddress = data.address || `${street}, ${campusName}, Ogun State`;
+          setDetectedGps({ lat, lng, street, fullAddress });
+          setSelectedCoords({ lat, lng });
+        } else {
+          throw new Error("Reverse geocoding failed");
+        }
+      } catch {
+        const campusName = chosenCampus === "ibogun" ? "Ibogun" : "Sagamu";
+        const fallbackStreet = `My Location (${campusName})`;
+        setDetectedGps({ lat, lng, street: fallbackStreet, fullAddress: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}` });
+        setSelectedCoords({ lat, lng });
+      } finally {
+        setDetectingGps(false);
+      }
+    };
+
+    const onGeoError = (err: GeolocationPositionError) => {
+      setDetectingGps(false);
+      let msg = "Could not access location. Please type your hostel or address below.";
+      if (err.code === 1) {
+        msg = "🔒 Location access was denied by your browser. Please allow location in your address bar, or type your hostel below.";
+      } else if (err.code === 2) {
+        msg = "📡 GPS signal unavailable on your device. Please type your hostel or street name below.";
+      } else if (err.code === 3) {
+        msg = "⏱️ Location request timed out. Please enter your hostel or street name below.";
+      }
+      setCampusError(msg);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => onCoordsSuccess(pos.coords.latitude, pos.coords.longitude),
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => onCoordsSuccess(pos.coords.latitude, pos.coords.longitude),
+          onGeoError,
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+    );
+  };
+
+  const handleConfirmDetectedGps = () => {
+    if (!detectedGps) return;
+    const finalStreet = detectedGps.street;
+    setCampusAddress(finalStreet);
+    handleFinalCampusSubmit(finalStreet, detectedGps.lat, detectedGps.lng);
+  };
+
+  const handleRejectDetectedGps = () => {
+    if (detectedGps) {
+      setCampusAddress(detectedGps.street);
+    }
+    setDetectedGps(null);
+  };
+
+  const handleAddressInputChange = (val: string) => {
+    setCampusAddress(val);
+    setCampusError("");
+    if (val.trim().length < 2) {
+      setAutocompleteSuggestions([]);
+      setAutocompleteOpen(false);
+      return;
+    }
+
+    if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
+    setIsSearchingAutocomplete(true);
+
+    autocompleteTimerRef.current = setTimeout(async () => {
+      const q = val.trim().toLowerCase();
+      const campus = chosenCampus;
+      const localMatches = (CAMPUS_LANDMARKS[campus] || [])
+        .filter((l) => l.name.toLowerCase().includes(q) || l.sub.toLowerCase().includes(q))
+        .map((l) => ({ text: l.name, sub: l.sub, lat: l.lat, lng: l.lng, isCampus: true }));
+
+      let googleMatches: Array<{ text: string; sub: string; placeId?: string; isCampus: boolean }> = [];
+      try {
+        const campusContext = campus === "ibogun" ? "Ibogun" : "Sagamu";
+        const res = await fetch(`/api/geocode/autocomplete?q=${encodeURIComponent(val + " " + campusContext)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.results)) {
+            googleMatches = data.results.map((r: any) => ({
+              text: r.text || r.placeName.split(",")[0],
+              sub: r.placeName,
+              placeId: r.placeId,
+              isCampus: false,
+            }));
+          }
+        }
+      } catch {}
+
+      setIsSearchingAutocomplete(false);
+      const seen = new Set<string>();
+      const combined: Array<{ text: string; sub: string; placeId?: string; lat?: number; lng?: number; isCampus?: boolean }> = [];
+      [...localMatches, ...googleMatches].forEach((item) => {
+        const k = item.text.toLowerCase().trim();
+        if (!seen.has(k)) {
+          seen.add(k);
+          combined.push(item);
+        }
+      });
+
+      setAutocompleteSuggestions(combined.slice(0, 6));
+      setAutocompleteOpen(combined.length > 0);
+    }, 220);
+  };
+
+  const handleSelectAutocompleteSuggestion = async (s: { text: string; sub: string; placeId?: string; lat?: number; lng?: number }) => {
+    setCampusAddress(s.text);
+    setAutocompleteOpen(false);
+
+    if (s.lat && s.lng) {
+      setSelectedCoords({ lat: s.lat, lng: s.lng });
+    } else if (s.placeId) {
+      try {
+        const res = await fetch(`/api/geocode/details?placeId=${encodeURIComponent(s.placeId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.lat && data.lng) {
+            setSelectedCoords({ lat: data.lat, lng: data.lng });
+          }
+        }
+      } catch {}
+    }
+  };
+
+  const handleFinalCampusSubmit = (addr: string, latOverride?: number, lngOverride?: number) => {
+    const campus = chosenCampus;
+    const campusName = campus === "ibogun" ? "Ibogun" : "Sagamu";
+    const lat = latOverride ?? (selectedCoords?.lat || (campus === "ibogun" ? 6.7200 : 6.8400));
+    const lng = lngOverride ?? (selectedCoords?.lng || (campus === "ibogun" ? 3.3900 : 3.6500));
+
+    localStorage.setItem("chow45_selected_campus", campus);
+
+    const locObj = {
+      latitude: lat,
+      longitude: lng,
+      accuracy: null,
+      timestamp: Date.now(),
+      address: addr.trim(),
+      locality: campusName,
+      lga: campus === "ibogun" ? "Ewekoro/Ifo" : "Sagamu",
+      state: "Ogun",
+      country: "Nigeria",
+      placeId: null,
+      formattedAddress: `${addr.trim()}, ${campusName}, Ogun State`,
+      label: "Campus",
+      deliveryInstructions: "",
+    };
+
+    try {
+      const raw = localStorage.getItem("chow45_marketplace_state_v2");
+      const st = raw ? JSON.parse(raw) : {};
+      st.selectedCampus = campus;
+      st.selectedLocation = locObj;
+      localStorage.setItem("chow45_marketplace_state_v2", JSON.stringify(st));
+    } catch {}
+
+    setCampusPromptOpen(false);
+    window.location.href = "/app";
+  };
+
+  const handleCampusConfirm = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!campusAddress.trim()) {
+      setCampusError("Please enter your hostel name or delivery address.");
+      return;
+    }
+    handleFinalCampusSubmit(campusAddress);
+  };
+
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const savedCampus = localStorage.getItem("chow45_selected_campus");
+    if (!savedCampus) {
+      if (addressInput.trim()) setCampusAddress(addressInput.trim());
+      setCampusPromptOpen(true);
+      return;
+    }
     if (addressInput.trim()) {
       window.location.href = `/app?search=${encodeURIComponent(addressInput.trim())}`;
     } else {
@@ -126,6 +369,12 @@ export default function MarketingPage() {
 
   const handleModalSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const savedCampus = localStorage.getItem("chow45_selected_campus");
+    if (!savedCampus) {
+      if (addressInput.trim()) setCampusAddress(addressInput.trim());
+      setCampusPromptOpen(true);
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -348,8 +597,8 @@ export default function MarketingPage() {
                 </div>
                 {/* Floating pill badge 2: Popularity */}
                 <div className="absolute bottom-4 right-4 inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-xs font-medium">
-                  <span className="text-[#00a205]">★</span>
-                  <span>4.9 campus rating</span>
+                  <span className="text-[#00a205]">🛵</span>
+                  <span>Fast campus delivery</span>
                 </div>
               </div>
             </div>
@@ -414,97 +663,7 @@ export default function MarketingPage() {
           </div>
         </section>
 
-        {/* =====================================================================
-            CAMPUS FAVORITES / CATEGORIES
-            ===================================================================== */}
-        <section className="py-20 md:py-28 px-4 sm:px-8 bg-[#fafafa]">
-          <div className="max-w-7xl mx-auto">
-            <Reveal className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-              <div>
-                <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-black mb-3">
-                  Campus <span className="text-[#00a205]">favorites</span>
-                </h2>
-                <p className="text-[17px] text-[#4b5563]">
-                  What student tastebuds are craving right now.
-                </p>
-              </div>
-              <Link
-                href="/app"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#00a205] hover:underline"
-              >
-                <span>Explore full menu</span>
-                <span>→</span>
-              </Link>
-            </Reveal>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                {
-                  name: "Jollof Rice & Turkey",
-                  category: "Campus Classics",
-                  price: "From ₦1,800",
-                  image: "/app/hero-food-bg.jpg",
-                  rating: "4.9",
-                },
-                {
-                  name: "Amala, Gbegiri & Ewedu",
-                  category: "Local Delicacies",
-                  price: "From ₦1,500",
-                  image: "/app/chow45_campus_flyer.jpg",
-                  rating: "4.8",
-                },
-                {
-                  name: "Double Beef Shawarma",
-                  category: "Grills & Quick Bites",
-                  price: "From ₦2,200",
-                  image: "/app/chow45_focus_on_school_flyer.jpg",
-                  rating: "5.0",
-                },
-                {
-                  name: "Fried Rice & Crispy Chicken",
-                  category: "After-Class Fuel",
-                  price: "From ₦2,000",
-                  image: "/app/chow45_school_hard_flyer.jpg",
-                  rating: "4.8",
-                },
-              ].map((dish, i) => (
-                <Reveal key={dish.name} delay={i > 0}>
-                  <div className="bg-white border border-[#e5e7eb] rounded-lg overflow-hidden flex flex-col h-full hover:border-black/30 transition">
-                    <div className="h-44 w-full bg-[#e5e7eb] relative overflow-hidden">
-                      <img
-                        src={dish.image}
-                        alt={dish.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-xs text-black text-xs font-bold px-2 py-1 rounded-full border border-[#e5e7eb]">
-                        ★ {dish.rating}
-                      </span>
-                    </div>
-                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
-                          {dish.category}
-                        </span>
-                        <h4 className="font-bold text-base text-black mt-1 mb-2">
-                          {dish.name}
-                        </h4>
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-[#e5e7eb] mt-2">
-                        <span className="text-sm font-bold text-black">{dish.price}</span>
-                        <Link
-                          href="/app"
-                          className="bg-black text-white text-xs font-semibold px-4 py-2 rounded-full hover:bg-neutral-800 transition"
-                        >
-                          Order
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        
 
         {/* =====================================================================
             PARTNER SECTIONS: FOR VENDORS & FOR RIDERS (2 Column Cards)
@@ -651,6 +810,46 @@ export default function MarketingPage() {
           FOOTER (Bright, clean, minimal 1px border)
           ===================================================================== */}
       <footer className="bg-white border-t border-[#e5e7eb] px-4 sm:px-8 py-14 text-sm text-[#4b5563]">
+        {/* Partner Routing Cards */}
+        <div className="max-w-7xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-[#fcfaf7] border border-[#ede7e0] rounded-2xl p-6 sm:p-7 flex flex-col justify-between hover:border-[#00a205] transition-all">
+            <div>
+              <span className="text-3xl mb-2 block">🍳</span>
+              <h3 className="font-extrabold text-lg text-black mb-1">Become a Vendor</h3>
+              <p className="text-xs text-[#6b7280] mb-4 leading-relaxed">
+                Run a cafeteria, restaurant, bakery, or snack stall around campus? Partner with Chow45 to reach students across Sagamu &amp; Ibogun campuses with digital orders.
+              </p>
+            </div>
+            <div>
+              <Link
+                href="/vendor"
+                className="inline-flex items-center gap-2 bg-[#00a205] hover:bg-[#008751] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm"
+              >
+                <span>Become a Vendor</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="bg-[#fcfaf7] border border-[#ede7e0] rounded-2xl p-6 sm:p-7 flex flex-col justify-between hover:border-[#00a205] transition-all">
+            <div>
+              <span className="text-3xl mb-2 block">🛵</span>
+              <h3 className="font-extrabold text-lg text-black mb-1">Become a Rider</h3>
+              <p className="text-xs text-[#6b7280] mb-4 leading-relaxed">
+                Have a motorcycle, scooter, bicycle, or delivery vehicle? Join the verified Chow45 campus delivery fleet for flexible hours and direct ₦200/km payouts.
+              </p>
+            </div>
+            <div>
+              <Link
+                href="/rider/register"
+                className="inline-flex items-center gap-2 bg-[#00a205] hover:bg-[#008751] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm"
+              >
+                <span>Become a Rider</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           {/* Col 1 */}
           <div className="md:col-span-1">
@@ -683,9 +882,9 @@ export default function MarketingPage() {
           <div>
             <h4 className="font-bold text-xs uppercase tracking-wider text-black mb-3">Partners</h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#vendors" onClick={() => openModal("vendor")} className="hover:text-black transition">For Vendors</a></li>
+              <li><Link href="/vendor" className="font-bold text-[#00a205] hover:underline transition">Become a Vendor</Link></li>
               <li><Link href="/rider" className="hover:text-black transition">Rider Portal</Link></li>
-              <li><button onClick={() => openModal("rider")} className="hover:text-black transition text-left">Apply as Rider</button></li>
+              <li><Link href="/rider/register" className="font-bold text-[#00a205] hover:underline transition">Become a Rider</Link></li>
             </ul>
           </div>
 
@@ -709,6 +908,274 @@ export default function MarketingPage() {
       {/* =====================================================================
           ACTION MODAL (Waitlist / Fast Application)
           ===================================================================== */}
+      {/* =====================================================================
+          CAMPUS & LOCATION PROMPT POPUP (Immediate on arrival if not set)
+          ===================================================================== */}
+      {campusPromptOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-[#e5e7eb] shadow-2xl relative">
+            {campusStep === 1 ? (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F8EE] border border-[#C7EDD4] text-xs font-bold text-[#008704]">
+                    <span className="w-2 h-2 rounded-full bg-[#00a205] animate-pulse" />
+                    Select Your Campus
+                  </div>
+                </div>
+
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] mb-2 tracking-tight">
+                  Which campus are you in?
+                </h3>
+                <p className="text-sm text-[#64748B] mb-6 leading-relaxed">
+                  We show verified vendors and instant delivery directly for your campus.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  {/* Sagamu Campus Card */}
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCampus("sagamu")}
+                    className="flex items-start gap-4 text-left p-4 rounded-2xl border-2 border-[#e2e8f0] hover:border-[#00a205] bg-[#fafafa] hover:bg-white hover:shadow-md transition-all group cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#E8F8EE] text-[#00a205] text-2xl flex items-center justify-center flex-shrink-0">
+                      🏥
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-bold text-base text-[#0F172A]">Sagamu Campus</span>
+                        <span className="text-[11px] font-bold text-[#008704] bg-[#E8F8EE] px-2.5 py-0.5 rounded-full">
+                          Verified Kitchens
+                        </span>
+                      </div>
+                      <div className="text-xs font-semibold text-[#334155] mb-0.5">
+                        OOU Medical Campus &amp; OSUTH
+                      </div>
+                      <div className="text-xs text-[#64748B]">
+                        Hospital Road, Ewusi, Sabo, GRA &amp; Sagamu Town
+                      </div>
+                    </div>
+                    <span className="text-[#94a3b8] group-hover:text-[#00a205] text-xl self-center transition-colors">
+                      →
+                    </span>
+                  </button>
+
+                  {/* Ibogun Campus Card */}
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCampus("ibogun")}
+                    className="flex items-start gap-4 text-left p-4 rounded-2xl border-2 border-[#e2e8f0] hover:border-[#2563EB] bg-[#fafafa] hover:bg-white hover:shadow-md transition-all group cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#EFF6FF] text-[#2563EB] text-2xl flex items-center justify-center flex-shrink-0">
+                      🏫
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-bold text-base text-[#0F172A]">Ibogun Campus</span>
+                        <span className="text-[11px] font-bold text-[#1E40AF] bg-[#DBEAFE] px-2.5 py-0.5 rounded-full">
+                          OGITECH / Ibogun
+                        </span>
+                      </div>
+                      <div className="text-xs font-semibold text-[#334155] mb-0.5">
+                        OGITECH &amp; OOU Ibogun Campus
+                      </div>
+                      <div className="text-xs text-[#64748B]">
+                        Student Village, Campus Hostels &amp; Ibogun Market
+                      </div>
+                    </div>
+                    <span className="text-[#94a3b8] group-hover:text-[#2563EB] text-xl self-center transition-colors">
+                      →
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setCampusStep(1)}
+                    className="text-xs font-bold text-[#64748B] hover:text-black flex items-center gap-1 cursor-pointer"
+                  >
+                    ← Back to Campus Choice
+                  </button>
+                  <span
+                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      chosenCampus === "ibogun"
+                        ? "bg-[#DBEAFE] text-[#1E40AF]"
+                        : "bg-[#E8F8EE] text-[#008704]"
+                    }`}
+                  >
+                    {chosenCampus === "ibogun" ? "Ibogun Campus" : "Sagamu Campus"}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] mb-1 tracking-tight">
+                  Where should we deliver?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#64748B] mb-5 leading-relaxed">
+                  Enter your hostel, lodge, department or room address in {chosenCampus === "ibogun" ? "Ibogun" : "Sagamu"}.
+                </p>
+
+                {/* GPS Detect Button */}
+                <div className="mb-3.5">
+                  <button
+                    type="button"
+                    onClick={handleDetectGps}
+                    disabled={detectingGps}
+                    className="w-full h-11 bg-[#F8FAFC] border-2 border-dashed border-[#00a205] hover:bg-[#E8F8EE] text-[#008704] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    {detectingGps ? (
+                      <span>⏳ Detecting &amp; checking Google Maps...</span>
+                    ) : (
+                      <span>📍 Detect My Street via Google Maps</span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Detected Location Confirmation Card */}
+                {detectedGps && (
+                  <div className="mb-4 p-4 bg-[#F0FDF4] border-2 border-[#86EFAC] rounded-2xl shadow-sm">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-[#166534] mb-1 flex items-center gap-1.5">
+                      <span>📍</span> Street detected on Google Maps
+                    </div>
+                    <div className="text-base sm:text-lg font-extrabold text-[#0F172A] mb-0.5">
+                      {detectedGps.street}
+                    </div>
+                    <div className="text-xs text-[#475569] mb-3 leading-snug">
+                      {detectedGps.fullAddress}
+                    </div>
+                    <div className="text-xs font-bold text-[#1E293B] mb-2.5">
+                      Is this your correct delivery location?
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleConfirmDetectedGps}
+                        className="flex-1 py-2.5 bg-[#00a205] text-white text-xs font-bold rounded-lg hover:bg-[#008704] transition cursor-pointer"
+                      >
+                        Yes, Deliver Here ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRejectDetectedGps}
+                        className="px-4 py-2.5 bg-white border border-[#CBD5E1] text-[#475569] text-xs font-bold rounded-lg hover:bg-[#f8fafc] transition cursor-pointer"
+                      >
+                        No, Change ✎
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleCampusConfirm}>
+                  {/* Address Input with Live Suggestions Dropdown */}
+                  <div className="mb-4 relative">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-[#475569]">
+                        Hostel / Room / Street Address
+                      </label>
+                      {isSearchingAutocomplete && (
+                        <span className="text-[11px] font-bold text-[#008704] animate-pulse">
+                          Searching Google Maps...
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={campusAddress}
+                      onChange={(e) => handleAddressInputChange(e.target.value)}
+                      onFocus={() => {
+                        if (campusAddress.trim().length >= 2 && autocompleteSuggestions.length > 0) {
+                          setAutocompleteOpen(true);
+                        }
+                      }}
+                      placeholder={
+                        chosenCampus === "ibogun"
+                          ? "e.g. OGITECH Main Gate, Student Village, Room 3"
+                          : "e.g. Clinical Hostel, OSUTH Gate, Room 14"
+                      }
+                      className="w-full bg-[#f8fafc] border-2 border-[#cbd5e1] rounded-xl px-4 py-3 text-sm font-medium text-black outline-none focus:border-[#00a205] transition-colors"
+                      autoFocus
+                      autoComplete="off"
+                    />
+
+                    {/* Autocomplete Dropdown */}
+                    {autocompleteOpen && autocompleteSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-[#cbd5e1] rounded-xl shadow-xl max-h-56 overflow-y-auto z-50">
+                        {autocompleteSuggestions.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectAutocompleteSuggestion(item)}
+                            className="p-3 border-b border-[#f1f5f9] hover:bg-[#f8fafc] cursor-pointer flex items-center gap-2.5 transition"
+                          >
+                            <span className="text-base flex-shrink-0">
+                              {item.isCampus ? (chosenCampus === "ibogun" ? "🏫" : "🏥") : "📍"}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs sm:text-sm font-bold text-[#0F172A] truncate">
+                                {item.text}
+                              </div>
+                              <div className="text-[11px] text-[#64748B] truncate">
+                                {item.sub}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preset chips */}
+                  <div className="mb-4">
+                    <div className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                      Popular Campus Spots:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(chosenCampus === "ibogun"
+                        ? ["OGITECH Main Gate", "Student Village", "Campus Hostels", "Ibogun Market Road"]
+                        : ["OSUTH Gate", "Clinical Hostel", "Hospital Road", "OOU Med Campus", "Ewusi Street"]
+                      ).map((spot) => (
+                        <button
+                          key={spot}
+                          type="button"
+                          onClick={() => {
+                            setCampusAddress(spot);
+                            setCampusError("");
+                            setAutocompleteOpen(false);
+                            const landmark = (CAMPUS_LANDMARKS[chosenCampus] || []).find((l) => l.name === spot);
+                            if (landmark) setSelectedCoords({ lat: landmark.lat, lng: landmark.lng });
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                            campusAddress === spot
+                              ? "bg-[#E8F8EE] border-[#00a205] text-[#008704] font-bold"
+                              : "bg-[#F8FAFC] border-[#cbd5e1] text-[#334155] font-semibold hover:border-black"
+                          }`}
+                        >
+                          {spot}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {campusError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700">
+                      {campusError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 rounded-xl bg-[#00a205] text-white font-extrabold text-sm sm:text-base hover:bg-[#008704] transition-all shadow-lg shadow-[#00a205]/20 cursor-pointer min-h-[48px]"
+                  >
+                    Confirm &amp; Explore Food 🚀
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {modalOpen && (
         <div
           role="dialog"

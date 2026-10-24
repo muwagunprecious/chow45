@@ -105,6 +105,11 @@ export async function GET(request: Request) {
         total: order.total,
         itemCount,
         status: order.status,
+        isPreorder: order.isPreorder ?? false,
+        preorderReadyDate: order.preorderReadyDate ?? null,
+        preorderReadyTime: order.preorderReadyTime ?? null,
+        isFoodReady: order.isFoodReady ?? false,
+        foodReadyAt: order.foodReadyAt ? order.foodReadyAt.toISOString() : null,
         createdAt: order.createdAt,
         estimatedDurationMinutes: order.estimatedDurationSeconds
           ? Math.round(order.estimatedDurationSeconds / 60)

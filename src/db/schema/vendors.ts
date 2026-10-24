@@ -49,7 +49,7 @@ export const vendors = pgTable("vendors", {
   image: text("image"),
   bannerImage: text("banner_image"),
 
-  rating: real("rating").notNull().default(5),
+  rating: real("rating").notNull().default(0),
   reviewsCount: integer("reviews_count").notNull().default(0),
   prepTime: varchar("prep_time", { length: 50 }),
   deliveryFee: integer("delivery_fee").notNull().default(0),

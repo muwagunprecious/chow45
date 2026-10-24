@@ -41,7 +41,7 @@ export const riders = pgTable("riders", {
   approvedAt: timestamp("approved_at", { withTimezone: true }),
   suspendedAt: timestamp("suspended_at", { withTimezone: true }),
 
-  rating: real("rating").notNull().default(5),
+  rating: real("rating").notNull().default(0),
   tripsCount: integer("trips_count").notNull().default(0),
 
   // Operational Availability

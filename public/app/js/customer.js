@@ -27,7 +27,7 @@ function safeFormatNaira(amount) {
 function safeDeliveryConfig() {
   if (window.chowStore?.state?.deliveryConfig) return window.chowStore.state.deliveryConfig;
   if (typeof DEFAULT_DELIVERY_FEE_CONFIG !== 'undefined') return DEFAULT_DELIVERY_FEE_CONFIG;
-  return { baseFee: 200, ratePerMeter: 0.1, minDeliveryFee: 350, serviceFee: 150 };
+  return { baseFee: 200, ratePerMeter: 0.20, minDeliveryFee: 200, serviceFee: 400 };
 }
 
 const CustomerController = {
@@ -35,6 +35,8 @@ const CustomerController = {
   activeCustomizingDish: null,
   selectedAddons: [],
   customizingQty: 1,
+  isLoading: true,
+  isInitialLoaded: false,
   _esc,
   safeFormatNaira,
   safeDeliveryConfig,
@@ -84,8 +86,73 @@ const CustomerController = {
   },
 
   init() {
+    const hasStores = Array.isArray(window.chowStore?.state?.restaurants) && window.chowStore.state.restaurants.length > 0;
+    this.isInitialLoaded = hasStores;
+    this.isLoading = !hasStores;
+
     this.bindEvents();
     this.render();
+
+    if (!hasStores) {
+      this.fetchStoresBootstrap();
+    }
+  },
+
+  async fetchStoresBootstrap() {
+    try {
+      const res = await fetch('/api/bootstrap');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.stores) && data.stores.length > 0) {
+          window.chowStore.state.restaurants = data.stores;
+          window.chowStore.save();
+        }
+      }
+    } catch (e) {
+      console.warn('[customer] bootstrap fetch error:', e);
+    } finally {
+      this.isLoading = false;
+      this.isInitialLoaded = true;
+      this.render();
+    }
+  },
+
+  renderLoadingState() {
+    return `
+      <div class="discovery-loading-container" style="padding: 24px 0 40px;">
+        <div style="text-align: center; padding: 24px 16px 32px;">
+          <div class="chow-loader-spinner" style="width: 44px; height: 44px; border: 3.5px solid #E2E8F0; border-top-color: #00a205; border-radius: 50%; margin: 0 auto 14px; animation: chowRotate 0.8s linear infinite;"></div>
+          <h3 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0 0 6px;">
+            Loading campus food spots...
+          </h3>
+          <p style="color: #64748B; font-size: 0.86rem; margin: 0;">
+            Fetching menus from kitchens around Sagamu &amp; Ibogun
+          </p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+          ${[1, 2, 3, 4, 5, 6].map(() => `
+            <div style="background: #FFFFFF; border-radius: 18px; border: 1.5px solid #F1F5F9; overflow: hidden; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+              <div style="height: 160px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%); background-size: 200% 100%; animation: chowShimmer 1.5s infinite; border-radius: 14px; margin-bottom: 12px;"></div>
+              <div style="height: 18px; width: 65%; background: #F1F5F9; border-radius: 6px; margin-bottom: 8px;"></div>
+              <div style="height: 14px; width: 40%; background: #F8FAFC; border-radius: 6px; margin-bottom: 12px;"></div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #F1F5F9; padding-top: 10px;">
+                <div style="height: 18px; width: 30%; background: #F1F5F9; border-radius: 6px;"></div>
+                <div style="height: 32px; width: 80px; background: #E2E8F0; border-radius: 10px;"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <style>
+        @keyframes chowRotate {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes chowShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      </style>
+    `;
   },
 
 
@@ -145,8 +212,23 @@ const CustomerController = {
 
     const { restaurants, activeCategory, activeFilter, searchQuery, userProfile } = window.chowStore.state;
 
+    // Show loader if still loading or restaurants not arrived yet
+    const hasStores = Array.isArray(restaurants) && restaurants.length > 0;
+    if (this.isLoading || (!this.isInitialLoaded && !hasStores)) {
+      container.innerHTML = this.renderLoadingState();
+      return;
+    }
+
     // Filter restaurants
     let filteredStores = [...restaurants];
+    const selectedCampus = window.chowStore.state.selectedCampus || 'sagamu';
+
+    // Strictly isolate vendors by campus
+    filteredStores = filteredStores.filter(r => {
+      const storeCampus = r.campus || (String(r.location || r.address || '').toLowerCase().includes('ibogun') ? 'ibogun' : 'sagamu');
+      return storeCampus === selectedCampus;
+    });
+
     if (activeCategory !== 'all') {
       filteredStores = filteredStores.filter(r => r.category === activeCategory || r.menu.some(m => m.category === activeCategory));
     }
@@ -156,7 +238,7 @@ const CustomerController = {
     } else if (activeFilter === 'budget') {
       filteredStores = filteredStores.filter(r => r.isBudget || r.menu.some(m => m.price <= 2000));
     } else if (activeFilter === 'rating') {
-      filteredStores = filteredStores.filter(r => r.rating >= 4.8);
+      filteredStores = filteredStores.filter(r => Number(r.reviewsCount || 0) > 0 && Number(r.rating || 0) >= 4.0);
     }
 
     if (searchQuery) {
@@ -169,6 +251,32 @@ const CustomerController = {
     }
 
     if (filteredStores.length === 0) {
+      if (selectedCampus === 'ibogun') {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 20px; background: white; border-radius: var(--radius-xl); border: 1.5px dashed #CBD5E1; margin: 24px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+            <div style="font-size: 2.8rem; margin-bottom: 10px;">🏫</div>
+            <div style="display: inline-block; padding: 4px 12px; background: #DBEAFE; color: #1E40AF; border-radius: 999px; font-size: 0.76rem; font-weight: 700; margin-bottom: 12px;">
+              Ibogun Campus · OGITECH
+            </div>
+            <h3 style="font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; color: #0F172A; margin-bottom: 8px;">
+              No food vendors active in Ibogun Campus yet
+            </h3>
+            <p style="color: #64748B; font-size: 0.9rem; max-width: 460px; margin: 0 auto 24px; line-height: 1.5;">
+              We are currently onboarding top student food spots and kitchens around OGITECH &amp; OOU Ibogun! Check back shortly, or switch to Sagamu Campus to see active kitchens.
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <button class="action-btn-primary" style="padding: 12px 24px; font-weight: 700; border-radius: 12px;" onclick="Chow45App.chooseCampusStep('sagamu')">
+                Switch to Sagamu Campus 🏥
+              </button>
+              <a href="/vendor" class="action-btn-secondary" style="padding: 12px 24px; font-weight: 700; border-radius: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                Become an Ibogun Vendor 🍳
+              </a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       container.innerHTML = `
         <div style="text-align: center; padding: 48px 16px; background: white; border-radius: var(--radius-xl); border: 1px dashed var(--c-border); margin: 24px 0;">
           <div style="font-size: 2.4rem; margin-bottom: 8px;">🍽️</div>
@@ -192,7 +300,7 @@ const CustomerController = {
       });
     });
 
-    const popularDishes = allDishes.filter(d => d.isPopular || (d.rating && d.rating >= 4.8));
+    const popularDishes = allDishes.filter(d => d.isPopular || (Number(d.reviewsCount || 0) > 0 && Number(d.rating || 0) >= 4.5));
     const displayPopular = popularDishes.length > 0 ? popularDishes : allDishes;
     const fastDishes = allDishes.filter(d => (d.prepTime && d.prepTime.includes('15')) || d.isFast);
     const displayFast = fastDishes.length > 0 ? fastDishes : allDishes.slice().reverse();
@@ -203,7 +311,7 @@ const CustomerController = {
         <div class="section-header">
           <div>
             <h2 class="section-title">Popular Near You</h2>
-            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Most ordered dishes around Idimu & Lagos</p>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Most ordered dishes around ${selectedCampus === 'ibogun' ? 'Ibogun Campus' : 'Sagamu Campus'}</p>
           </div>
           <span class="section-link" onclick="CustomerController.selectCategory('all')">See all</span>
         </div>
@@ -212,25 +320,13 @@ const CustomerController = {
         </div>
       </div>
 
-      <!-- Section 2: Restaurants Near You -->
-      <div style="margin-bottom: var(--space-32);">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Top Kitchens & Restaurants</h2>
-            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Verified hygienic local food spots</p>
-          </div>
-        </div>
-        <div class="stores-grid">
-          ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
-        </div>
-      </div>
 
       <!-- Section 3: Fast Delivery (Under 25 mins) -->
       <div style="margin-bottom: var(--space-32);">
         <div class="section-header">
           <div>
             <h2 class="section-title">⚡ Fast Delivery (Under 25 min)</h2>
-            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Straight to your doorstep in minutes</p>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Straight to your hostel or room in minutes</p>
           </div>
         </div>
         <div class="food-cards-grid">
@@ -269,7 +365,7 @@ const CustomerController = {
         </div>
         <div class="food-card-body">
           <div class="food-card-name">${dish.name}</div>
-          <div class="food-card-store">${dish.storeName} • ★ ${dish.rating || 4.8}</div>
+          <div class="food-card-store">${dish.storeName}${Number(dish.reviewsCount || 0) > 0 && Number(dish.rating || 0) > 0 ? ` • ★ ${Number(dish.rating).toFixed(1)}` : ''}</div>
           <div class="food-card-bottom">
             <span class="food-card-price">${priceLabel}</span>
             ${isOut ? `
@@ -304,7 +400,9 @@ const CustomerController = {
         <div class="store-content">
           <div class="store-name-row">
             <h3 class="store-title">${store.name}</h3>
-            <span class="store-rating">★ ${store.rating}</span>
+            ${Number(store.reviewsCount || 0) > 0 && Number(store.rating || 0) > 0 
+              ? `<span class="store-rating">★ ${Number(store.rating).toFixed(1)}</span>` 
+              : `<span class="store-rating" style="background:#F1F5F9; color:#64748B;">New</span>`}
           </div>
           <div class="store-tags">${(Array.isArray(store.tags) ? store.tags : (store.cuisine ? [store.cuisine] : ['Verified Store'])).join(' • ')}</div>
           <div class="store-meta-row">
@@ -429,7 +527,8 @@ const CustomerController = {
 
     const ratingEl = document.getElementById('store-detail-rating');
     if (ratingEl) {
-      ratingEl.innerText = `${store.rating || '5.0'} Excellent`;
+      const hasReviews = Number(store.reviewsCount || 0) > 0 && Number(store.rating || 0) > 0;
+      ratingEl.innerText = hasReviews ? `${Number(store.rating).toFixed(1)} (${store.reviewsCount} review${store.reviewsCount === 1 ? '' : 's'})` : 'New Kitchen';
     }
 
     const searchInput = document.getElementById('store-menu-search-input');
@@ -1148,7 +1247,7 @@ const CustomerController = {
       const config = safeDeliveryConfig();
       const subtotal = window.chowStore?.getCartSubtotal ? window.chowStore.getCartSubtotal() : (cart.items.reduce((s, i) => s + (i.itemTotal || (i.price * i.qty) || 0), 0));
       const serviceFee = config?.serviceFee ?? 400;
-      const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store ? store.distanceKm : 1.8) * 1000, config) : 200;
+      const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store && store.distanceKm ? store.distanceKm : 1.0) * 1000, config) : 200;
       const total = subtotal + serviceFee + deliveryFee;
 
       const storeHeaderName = document.getElementById('cart-store-header-name');
@@ -1223,25 +1322,28 @@ const CustomerController = {
     const row = document.getElementById('cart-delivery-quote');
     const state = window.chowStore.state;
     const loc = state.selectedLocation;
-    if (!row || !store || !loc) return;
-    if (!window.chowMap || typeof window.chowMap.getDeliveryQuote !== 'function') return;
+    const distEl = document.getElementById('cart-distance-val');
+    const payBtn = document.getElementById('cart-pay-cta-btn');
 
-    const availability = getServiceAvailability({ lng: loc.longitude ?? loc.lng, lat: loc.latitude ?? loc.lat });
-    row.style.display = 'block';
-
-    if (!availability.available) {
+    if (!row || !store) return;
+    if (!loc) {
+      if (distEl) distEl.innerText = 'Select location';
+      row.style.display = 'block';
       row.innerHTML = `
-        <div class="dq-block">
-          <span class="dq-icon">⚠️</span>
-          <div><strong>${availability.title || 'Delivery unavailable'}</strong><span>${availability.message}</span></div>
+        <div class="dq-block" style="border-left: 3px solid #f59e0b;">
+          <span class="dq-icon">📍</span>
+          <div><strong>Delivery location required</strong><span>Please choose your delivery address on the map</span></div>
+          <button type="button" class="dq-change" onclick="CustomerController.changeDeliveryLocation()">Select</button>
         </div>`;
       return;
     }
+    if (!window.chowMap || typeof window.chowMap.getDeliveryQuote !== 'function') return;
 
+    row.style.display = 'block';
     row.innerHTML = `
       <div class="dq-block">
         <span class="dq-icon">🚴</span>
-        <div><strong>Calculating live delivery…</strong><span>Trying the fastest Ogun State route</span></div>
+        <div><strong>Calculating live delivery…</strong><span>Using straight-line GPS distance</span></div>
       </div>`;
 
     let quote = null;
@@ -1251,19 +1353,43 @@ const CustomerController = {
       console.warn('Delivery quote failed:', e);
     }
 
+    if (quote && quote.error) {
+      this.quoteCache = quote;
+      row.innerHTML = `
+        <div class="dq-block" style="border-left: 3px solid #e11d48;">
+          <span class="dq-icon">⚠️</span>
+          <div><strong style="color: #e11d48;">Location Issue</strong><span>${quote.error}</span></div>
+          <button type="button" class="dq-change" onclick="CustomerController.changeDeliveryLocation()">Select Pin</button>
+        </div>`;
+      if (distEl) distEl.innerText = 'Unavailable';
+      if (payBtn) {
+        payBtn.disabled = true;
+        payBtn.style.opacity = '0.5';
+        payBtn.style.cursor = 'not-allowed';
+        payBtn.innerText = 'Location Required to Checkout';
+      }
+      return;
+    }
+
     if (quote && typeof quote.deliveryFee === 'number') {
       this.quoteCache = quote;
       const fee = quote.deliveryFee;
-      const config = safeDeliveryConfig();
+      const config = typeof safeDeliveryConfig === 'function' ? safeDeliveryConfig() : {};
       const total = window.chowStore.getCartSubtotal() + (config?.serviceFee ?? 400) + fee;
 
+      if (distEl && quote.distanceLabel) {
+        distEl.innerText = quote.distanceLabel;
+      }
       const delFeeEl = document.getElementById('cart-delivery-fee-val');
       if (delFeeEl) delFeeEl.innerText = safeFormatNaira(fee);
       const grandTotalEl = document.getElementById('cart-grand-total-val');
       if (grandTotalEl) grandTotalEl.innerText = safeFormatNaira(total);
-      const payBtn = document.getElementById('cart-pay-cta-btn');
-      if (payBtn) payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
-
+      if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.style.opacity = '1';
+        payBtn.style.cursor = 'pointer';
+        payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
+      }
 
       row.innerHTML = `
         <div class="dq-block">
@@ -1346,10 +1472,37 @@ const CustomerController = {
       return;
     }
 
+    // Validate customer delivery coordinates
+    const selectedLoc = window.chowStore.state.selectedLocation;
+    const custLat = selectedLoc ? Number(selectedLoc.latitude ?? selectedLoc.lat) : NaN;
+    const custLng = selectedLoc ? Number(selectedLoc.longitude ?? selectedLoc.lng) : NaN;
+
+    if (!Number.isFinite(custLat) || !Number.isFinite(custLng) || custLat < -90 || custLat > 90 || custLng < -180 || custLng > 180) {
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Please select a valid delivery location pin on the map.', 'error');
+      }
+      this.changeDeliveryLocation();
+      return;
+    }
+
+    if (this.quoteCache && this.quoteCache.error) {
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast(this.quoteCache.error, 'error');
+      }
+      return;
+    }
+
     const customerName = document.getElementById('checkout-name-input').value.trim() || 'Precious M.';
     const customerPhone = document.getElementById('checkout-phone-input').value.trim() || '+234 812 450 4500';
     const deliveryNotes = document.getElementById('checkout-notes-input').value.trim();
     const paymentMethod = document.getElementById('checkout-payment-method').value;
+
+    const payBtn = document.getElementById('cart-pay-cta-btn');
+    const origBtnText = payBtn ? payBtn.innerText : '';
+    if (payBtn) {
+      payBtn.disabled = true;
+      payBtn.innerText = 'Placing Order & Verifying...';
+    }
 
     // 1. Create order initially with PENDING_PAYMENT
     const newOrder = window.chowStore.createOrder({
@@ -1395,18 +1548,43 @@ const CustomerController = {
             pin: newOrder.pin,
             routeDistanceMeters: newOrder.routeDistanceMeters || null,
             estimatedDurationSeconds: newOrder.estimatedDurationSeconds || null,
+            isPreorder: Boolean(newOrder.isPreorder),
+            preorderReadyDate: newOrder.preorderReadyDate || null,
+            preorderReadyTime: newOrder.preorderReadyTime || null,
+            isFoodReady: Boolean(newOrder.isFoodReady),
             items: newOrder.items || [],
             status: 'PENDING_PAYMENT'
           }
         })
       });
-      if (verifyRes.ok) {
-        window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
-      } else {
-        window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+
+      const verifyData = await verifyRes.json().catch(() => ({}));
+
+      if (!verifyRes.ok || verifyData.error) {
+        if (payBtn) {
+          payBtn.disabled = false;
+          payBtn.innerText = origBtnText;
+        }
+        const errMsg = verifyData.error || 'Failed to place order. Please try again.';
+        if (window.chowApp && typeof window.chowApp.toast === 'function') {
+          window.chowApp.toast(errMsg, 'error');
+        } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
+          window.chowApp.showToast(errMsg, 'error');
+        }
+        return;
       }
-    } catch (e) {
+
       window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+    } catch (e) {
+      if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.innerText = origBtnText;
+      }
+      console.error('Checkout error:', e);
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Network error during checkout. Please check your connection.', 'error');
+      }
+      return;
     }
 
     this.closeCart();
@@ -1509,16 +1687,70 @@ const CustomerController = {
       noteDisplay.innerText = order.deliveryNotes ? `Note: ${order.deliveryNotes}` : 'Add Order Note';
     }
 
-    // Rider Dispatch Profile
-    const rider = order.riderId ? window.chowStore.state.riders.find(r => r.id === order.riderId) : null;
-    const riderNameEl = document.getElementById('track-rider-name');
-    if (riderNameEl) riderNameEl.innerText = rider ? rider.name : (order.riderName || 'David Adeleke');
+    // Pre-order Live Banner
+    const preBanner = document.getElementById('track-preorder-banner');
+    const preDateEl = document.getElementById('track-preorder-date');
+    const preTimeEl = document.getElementById('track-preorder-time');
+    const preReadyBadge = document.getElementById('track-preorder-readiness-badge');
+    if (preBanner && preDateEl && preTimeEl && preReadyBadge) {
+      if (order.isPreorder) {
+        preBanner.style.display = 'block';
+        preDateEl.innerText = order.preorderReadyDate || 'Scheduled date pending';
+        preTimeEl.innerText = order.preorderReadyTime || 'Scheduled time pending';
+        if (order.isFoodReady) {
+          preReadyBadge.innerText = '✅ Food Ready for Delivery';
+          preReadyBadge.style.background = '#DCFCE7';
+          preReadyBadge.style.color = '#15803D';
+          preReadyBadge.style.border = '1px solid #86EFAC';
+        } else {
+          preReadyBadge.innerText = '⏳ Kitchen Preparing';
+          preReadyBadge.style.background = '#FEF3C7';
+          preReadyBadge.style.color = '#B45309';
+          preReadyBadge.style.border = '1px solid #FDE68A';
+        }
+      } else {
+        preBanner.style.display = 'none';
+      }
+    }
 
-    const phone = rider ? rider.phone : '+2348124902819';
+    // Rider Dispatch Profile (STRICT: Never show demo/fake rider when order has no assigned rider)
+    const hasAssignedRider = Boolean(order.riderId);
+    const rider = hasAssignedRider ? (window.chowStore.state.riders || []).find(r => r.id === order.riderId) : null;
+    const riderNameEl = document.getElementById('track-rider-name');
+    const riderSubtextEl = document.getElementById('track-rider-subtext');
     const callBtn = document.getElementById('track-rider-call-btn');
-    if (callBtn) callBtn.href = `tel:${phone}`;
     const waBtn = document.getElementById('track-rider-wa-btn');
-    if (waBtn) waBtn.href = `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+    const realRiderName = hasAssignedRider ? ((rider && rider.name) || order.riderName) : null;
+    const realRiderPhone = hasAssignedRider ? ((rider && rider.phone) || order.riderPhone) : null;
+    const realRiderVehicle = hasAssignedRider ? ((rider && rider.vehicle) || order.riderVehicle) : null;
+
+    if (realRiderName) {
+      if (riderNameEl) riderNameEl.innerText = realRiderName;
+      if (riderSubtextEl) riderSubtextEl.innerText = realRiderVehicle || 'Assigned Dispatch Rider';
+      if (realRiderPhone) {
+        if (callBtn) {
+          callBtn.href = `tel:${realRiderPhone}`;
+          callBtn.style.display = 'inline-flex';
+        }
+        if (waBtn) {
+          waBtn.href = `https://wa.me/${realRiderPhone.replace(/\D/g, '')}`;
+          waBtn.style.display = 'inline-flex';
+        }
+      } else {
+        if (callBtn) callBtn.style.display = 'none';
+        if (waBtn) waBtn.style.display = 'none';
+      }
+    } else {
+      if (riderNameEl) riderNameEl.innerText = 'Assigning dispatch rider...';
+      if (riderSubtextEl) {
+        riderSubtextEl.innerText = order.isPreorder
+          ? 'Pre-order confirmed · Rider will be assigned closer to delivery time'
+          : 'Kitchen is preparing your meal · Searching for nearby dispatch rider';
+      }
+      if (callBtn) callBtn.style.display = 'none';
+      if (waBtn) waBtn.style.display = 'none';
+    }
 
     this.updateTrackingStatusUI(order);
 
@@ -1575,15 +1807,68 @@ const CustomerController = {
           }
         }
 
-        // Live Rider GPS Tracking: update live marker on Mapbox map
+        // Live Rider GPS Tracking: update live marker on Google Map & rider profile
         try {
           const trackRes = await fetch(`/api/orders/${orderId}/track`);
           if (trackRes.ok) {
             const trackData = await trackRes.json();
-            if (trackData && Number.isFinite(trackData.riderLat) && Number.isFinite(trackData.riderLng)) {
-              if (window.chowMap && typeof window.chowMap.updateRiderPosition === 'function') {
-                window.chowMap.updateRiderPosition(trackData.riderLng, trackData.riderLat);
+            // Live Pre-Order schedule & food readiness update
+            if (trackData && trackData.isPreorder) {
+              const preBanner = document.getElementById('track-preorder-banner');
+              const preDateEl = document.getElementById('track-preorder-date');
+              const preTimeEl = document.getElementById('track-preorder-time');
+              const preReadyBadge = document.getElementById('track-preorder-readiness-badge');
+              if (preBanner && preDateEl && preTimeEl && preReadyBadge) {
+                preBanner.style.display = 'block';
+                if (trackData.preorderReadyDate) preDateEl.innerText = trackData.preorderReadyDate;
+                if (trackData.preorderReadyTime) preTimeEl.innerText = trackData.preorderReadyTime;
+                if (trackData.isFoodReady) {
+                  preReadyBadge.innerText = '✅ Food Ready for Delivery';
+                  preReadyBadge.style.background = '#DCFCE7';
+                  preReadyBadge.style.color = '#15803D';
+                  preReadyBadge.style.border = '1px solid #86EFAC';
+                } else {
+                  preReadyBadge.innerText = '⏳ Kitchen Preparing';
+                  preReadyBadge.style.background = '#FEF3C7';
+                  preReadyBadge.style.color = '#B45309';
+                  preReadyBadge.style.border = '1px solid #FDE68A';
+                }
               }
+            }
+
+            // Live Rider Dispatch Profile: strictly real assigned rider ONLY
+            const rNameEl = document.getElementById('track-rider-name');
+            const rSubtextEl = document.getElementById('track-rider-subtext');
+            const cBtn = document.getElementById('track-rider-call-btn');
+            const wBtn = document.getElementById('track-rider-wa-btn');
+
+            if (trackData && trackData.riderId && trackData.riderName) {
+              if (rNameEl) rNameEl.innerText = trackData.riderName;
+              if (rSubtextEl) rSubtextEl.innerText = trackData.riderVehicle || 'Assigned Dispatch Rider';
+              if (trackData.riderPhone) {
+                if (cBtn) {
+                  cBtn.href = `tel:${trackData.riderPhone}`;
+                  cBtn.style.display = 'inline-flex';
+                }
+                if (wBtn) {
+                  wBtn.href = `https://wa.me/${trackData.riderPhone.replace(/\D/g, '')}`;
+                  wBtn.style.display = 'inline-flex';
+                }
+              }
+              if (Number.isFinite(trackData.riderLat) && Number.isFinite(trackData.riderLng)) {
+                if (window.chowMap && typeof window.chowMap.updateRiderPosition === 'function') {
+                  window.chowMap.updateRiderPosition(trackData.riderLng, trackData.riderLat, trackData.riderName);
+                }
+              }
+            } else {
+              if (rNameEl) rNameEl.innerText = 'Assigning dispatch rider...';
+              if (rSubtextEl) {
+                rSubtextEl.innerText = (trackData && trackData.isPreorder)
+                  ? 'Pre-order confirmed · Rider will be assigned closer to delivery time'
+                  : 'Kitchen is preparing your meal · Searching for nearby dispatch rider';
+              }
+              if (cBtn) cBtn.style.display = 'none';
+              if (wBtn) wBtn.style.display = 'none';
             }
           }
         } catch (tErr) {

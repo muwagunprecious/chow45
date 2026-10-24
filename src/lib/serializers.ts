@@ -145,6 +145,7 @@ export type ClientStore = {
   id: string;
   name: string;
   locationOfOperation: string;
+  campus?: "sagamu" | "ibogun";
   slug: string;
   description: string;
   status: string;
@@ -180,6 +181,32 @@ export type ClientStore = {
   menu: ClientMenuItem[];
 };
 
+export function resolveCampus(
+  location?: string | null,
+  address?: string | null,
+  lat?: number | string | null,
+  lng?: number | string | null
+): "sagamu" | "ibogun" {
+  const text = `${location ?? ""} ${address ?? ""}`.toLowerCase();
+  if (text.includes("ibogun") || text.includes("ogitech")) {
+    return "ibogun";
+  }
+  if (text.includes("sagamu") || text.includes("osuth") || text.includes("oou med")) {
+    return "sagamu";
+  }
+  const nLat = typeof lat === "string" ? parseFloat(lat) : typeof lat === "number" ? lat : NaN;
+  const nLng = typeof lng === "string" ? parseFloat(lng) : typeof lng === "number" ? lng : NaN;
+  if (!Number.isNaN(nLat) && !Number.isNaN(nLng) && nLat !== 0 && nLng !== 0) {
+    // Ibogun coords ~ 6.7200, 3.3900; Sagamu coords ~ 6.8400, 3.6500
+    const dIbogun = Math.hypot(nLat - 6.72, nLng - 3.39);
+    const dSagamu = Math.hypot(nLat - 6.84, nLng - 3.65);
+    if (dIbogun < dSagamu) {
+      return "ibogun";
+    }
+  }
+  return "sagamu";
+}
+
 export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): ClientStore {
   const firstDishImage = menu.find((d) => d.img)?.img ?? null;
   const defaultStoreImage = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80";
@@ -194,6 +221,7 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
     email: vendor.contactEmail,
     name: vendor.businessName,
     locationOfOperation: (vendor as any).locationOfOperation ?? "",
+    campus: resolveCampus(vendor.location, vendor.address, vendor.latitude, vendor.longitude),
     slug: vendor.slug,
     description: vendor.description ?? "",
     status: vendor.status,
@@ -254,10 +282,10 @@ export function serializeLocation(loc: DeliveryLocation) {
 
 export function serializeConfig(config: DeliveryConfig | undefined) {
   return {
-    baseFee: config?.baseFee ?? 300,
+    baseFee: config?.baseFee ?? 200,
     serviceFee: config?.serviceFee ?? 400,
-    ratePerMeter: config?.ratePerMeter ?? 200,
-    minDeliveryFee: config?.minDeliveryFee ?? 300,
+    ratePerMeter: config?.ratePerMeter ? Number(config.ratePerMeter) : 0.20,
+    minDeliveryFee: config?.minDeliveryFee ?? 200,
   };
 }
 
@@ -297,6 +325,11 @@ export function serializeOrder(
     deliveryFee: order.deliveryFee,
     total: order.total,
     status: order.status,
+    isPreorder: order.isPreorder ?? false,
+    preorderReadyDate: order.preorderReadyDate ?? null,
+    preorderReadyTime: order.preorderReadyTime ?? null,
+    isFoodReady: order.isFoodReady ?? false,
+    foodReadyAt: order.foodReadyAt ? order.foodReadyAt.toISOString() : null,
     riderId: order.riderId,
     riderName: order.riderName,
     pin: order.pin,

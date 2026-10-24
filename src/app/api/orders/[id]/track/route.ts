@@ -65,7 +65,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (!orderRiderId) {
-      return NextResponse.json({ rider: null, riderLat: null, riderLng: null, orderStatus: order.status }, { status: 200 });
+      return NextResponse.json({
+        orderId,
+        orderStatus: order.status,
+        rider: null,
+        riderId: null,
+        riderName: null,
+        riderPhone: null,
+        riderVehicle: null,
+        riderAvatar: null,
+        riderLat: null,
+        riderLng: null,
+        isPreorder: order.isPreorder ?? false,
+        preorderReadyDate: order.preorderReadyDate ?? null,
+        preorderReadyTime: order.preorderReadyTime ?? null,
+        isFoodReady: order.isFoodReady ?? false,
+        foodReadyAt: order.foodReadyAt ? order.foodReadyAt.toISOString() : null,
+      }, { status: 200 });
     }
 
     const orderRider = await db
@@ -80,10 +96,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       orderId,
       orderStatus: order.status,
       riderId: orderRiderId,
-      riderName: order.riderName || riderRow?.name,
-      riderLat: riderRow ? Number(riderRow.currentLat) : null,
-      riderLng: riderRow ? Number(riderRow.currentLng) : null,
-      lastSeenAt: riderRow?.lastSeenAt,
+      riderName: riderRow?.name || order.riderName || null,
+      riderPhone: riderRow?.phone || null,
+      riderVehicle: riderRow?.vehicle || null,
+      riderAvatar: riderRow?.avatar || null,
+      riderLat: riderRow && riderRow.currentLat ? Number(riderRow.currentLat) : null,
+      riderLng: riderRow && riderRow.currentLng ? Number(riderRow.currentLng) : null,
+      lastSeenAt: riderRow?.lastSeenAt || null,
+      isPreorder: order.isPreorder ?? false,
+      preorderReadyDate: order.preorderReadyDate ?? null,
+      preorderReadyTime: order.preorderReadyTime ?? null,
+      isFoodReady: order.isFoodReady ?? false,
+      foodReadyAt: order.foodReadyAt ? order.foodReadyAt.toISOString() : null,
     });
   } catch (error) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });

@@ -4,32 +4,73 @@
  */
 
 const RiderController = {
-  currentRiderId: 'rider-david',
+  currentRiderId: null,
   activeOrder: null,
+  riderData: null,
 
-  init() {
+  async init() {
+    await this.loadCurrentRider();
     this.bindEvents();
     this.render();
     this.startLocationTracking();
   },
 
-   startLocationTracking(){
+  async loadCurrentRider() {
+    try {
+      const res = await fetch('/api/rider/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rider) {
+          this.currentRiderId = data.rider.id;
+          this.riderData = data.rider;
+        }
+      }
+    } catch (e) {}
+
+    if (!this.currentRiderId) {
+      const riders = (window.chowStore && window.chowStore.state.riders) || [];
+      if (riders.length > 0) {
+        this.currentRiderId = riders[0].id;
+        this.riderData = riders[0];
+      }
+    }
+  },
+
+  startLocationTracking() {
+    if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition(
-      (position) => {this.latestposition = position.coords},
-      (error) => console.error("GPS error:", error),
-      {enableHighAccuracy: true}
+      (position) => { this.latestposition = position.coords; },
+      (error) => console.warn("GPS tracking:", error.message || error),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
     );
 
-    setInterval(()=> {
-      if(!this.latestposition) return;
-      if (!this.activeOrder) return;
+    setInterval(async () => {
+      if (!this.latestposition) return;
+      const lat = this.latestposition.latitude;
+      const lng = this.latestposition.longitude;
 
-      fetch(`/api/riders/${this.currentRiderId}`,{
-        method: 'PATCH',
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ lat: this.latestposition.latitude, lng: this.latestposition.longitude})
-      });
-    }, 8000);
+      const r = this.getRider();
+      if (r) {
+        r.currentLat = lat;
+        r.currentLng = lng;
+      }
+
+      try {
+        await fetch('/api/rider/location', {
+          method: 'POST',
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat, lng })
+        });
+      } catch (e) {
+        if (this.currentRiderId) {
+          fetch(`/api/riders/${this.currentRiderId}`, {
+            method: 'PATCH',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lat, lng })
+          }).catch(() => {});
+        }
+      }
+    }, 5000);
   },
 
   bindEvents() {
@@ -58,12 +99,19 @@ const RiderController = {
   },
 
   getRider() {
-    return window.chowStore.state.riders.find(r => r.id === this.currentRiderId) || window.chowStore.state.riders[0];
+    if (this.riderData) return this.riderData;
+    return (window.chowStore.state.riders || []).find(r => r.id === this.currentRiderId) || (window.chowStore.state.riders && window.chowStore.state.riders[0]) || null;
   },
 
   render() {
     const rider = this.getRider();
-    if (!rider) return;
+    if (!rider) {
+      const name = document.getElementById('rider-profile-name');
+      if (name) name.innerText = 'Rider Fleet';
+      const vehicle = document.getElementById('rider-profile-vehicle');
+      if (vehicle) vehicle.innerText = 'Active Fleet';
+      return;
+    }
 
     this.activeOrder = window.chowStore.state.orders.find(o =>
       o.riderId === rider.id && !['DELIVERED'].includes(o.status)
@@ -71,11 +119,16 @@ const RiderController = {
 
     // Profile card
     const name = document.getElementById('rider-profile-name');
-    if (name) name.innerText = rider.name;
+    if (name) name.innerText = rider.name || 'Dispatch Rider';
     const vehicle = document.getElementById('rider-profile-vehicle');
-    if (vehicle) vehicle.innerText = rider.vehicle;
+    if (vehicle) vehicle.innerText = rider.vehicle || 'Active Fleet';
     const avatar = document.getElementById('rider-profile-avatar');
-    if (avatar) avatar.src = rider.avatar;
+    if (avatar && rider.avatar) avatar.src = rider.avatar;
+    const ratingEl = document.getElementById('rider-kpi-rating');
+    if (ratingEl) {
+      const r = Number(rider.rating || 0);
+      ratingEl.innerText = r > 0 ? `${r.toFixed(1)} ★` : 'New ★';
+    }
 
     // Daily earnings & completed drops
     const completed = window.chowStore.state.orders.filter(o => o.riderId === rider.id && o.status === 'DELIVERED');
@@ -136,6 +189,19 @@ const RiderController = {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 8px; margin: 6px 0;">
+            ${order.isPreorder ? `
+            <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 8px 12px; margin: 4px 0 8px; font-size: 0.8rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <span style="font-weight: 800; color: #92400E; font-size: 0.76rem;">🗓️ PRE-ORDER DELIVERY</span>
+                <span style="font-weight: 800; font-size: 0.74rem; color: ${order.isFoodReady ? "#15803D" : "#B45309"}; background: ${order.isFoodReady ? "#DCFCE7" : "#FEF3C7"}; padding: 2px 8px; border-radius: 999px; border: 1px solid ${order.isFoodReady ? "#86EFAC" : "#FDE68A"};">
+                  ${order.isFoodReady ? "✅ Food Ready for Pickup" : "⏳ Kitchen Preparing"}
+                </span>
+              </div>
+              <div style="color: #78350F; font-weight: 700;">
+                Scheduled Ready: ${order.preorderReadyDate || "Scheduled date"} ${order.preorderReadyTime ? "at " + order.preorderReadyTime : ""}
+              </div>
+            </div>
+            ` : ""}
             <div class="route-stop-line">
               <span class="stop-icon stop-pickup">P</span>
               <div class="stop-details">
@@ -160,11 +226,16 @@ const RiderController = {
     }).join('');
   },
 
-  acceptJob(orderId) {
-    const rider = this.getRider();
+  async acceptJob(orderId) {
+    const rider = this.getRider() || { id: this.currentRiderId || 'rider-fleet', name: 'Dispatch Rider' };
+
+    try {
+      await fetch(`/api/rider/deliveries/${orderId}/accept`, { method: 'POST' });
+    } catch (e) {}
+
     window.chowStore.advanceOrderStatus(orderId, 'RIDER_ASSIGNED', {
       riderId: rider.id,
-      riderName: rider.name
+      riderName: rider.name || 'Dispatch Rider'
     });
 
     window.chowApp.toast(`Accepted delivery #${orderId}! Navigate to restaurant.`, 'success');
@@ -176,6 +247,23 @@ const RiderController = {
 
     const orderIdEl = document.getElementById('mission-order-id');
     if (orderIdEl) orderIdEl.innerText = `#${order.id}`;
+
+    // Pre-Order Mission Schedule
+    const preBanner = document.getElementById('mission-preorder-banner');
+    const preReadyTag = document.getElementById('mission-preorder-ready-tag');
+    const preDateTime = document.getElementById('mission-preorder-datetime');
+    if (preBanner && preReadyTag && preDateTime) {
+      if (order.isPreorder) {
+        preBanner.style.display = 'block';
+        preReadyTag.innerText = order.isFoodReady ? '✅ Food Ready for Pickup' : '⏳ Kitchen Preparing';
+        preReadyTag.style.background = order.isFoodReady ? '#DCFCE7' : '#FEF3C7';
+        preReadyTag.style.color = order.isFoodReady ? '#15803D' : '#B45309';
+        preReadyTag.style.border = order.isFoodReady ? '1px solid #86EFAC' : '1px solid #FDE68A';
+        preDateTime.innerText = `${order.preorderReadyDate || 'Scheduled Date'} at ${order.preorderReadyTime || 'Scheduled Time'}`;
+      } else {
+        preBanner.style.display = 'none';
+      }
+    }
 
     // 1. Pickup Vendor Details (Name, Address, Call)
     const storeNameEl = document.getElementById('mission-store-name');
@@ -365,10 +453,10 @@ const RiderController = {
 
   advanceMission(nextStatus) {
     if (!this.activeOrder) return;
-    const rider = this.getRider();
+    const rider = this.getRider() || { id: this.currentRiderId || 'rider-fleet', name: 'Dispatch Rider' };
     window.chowStore.advanceOrderStatus(this.activeOrder.id, nextStatus, {
       riderId: rider.id,
-      riderName: rider.name
+      riderName: rider.name || 'Dispatch Rider'
     });
     window.chowApp.toast(`Status updated: ${ORDER_STAGES[nextStatus]?.label}`, 'success');
   },

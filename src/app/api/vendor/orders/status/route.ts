@@ -96,13 +96,25 @@ export async function POST(request: Request) {
 
     const now = new Date();
 
-    // Update order status
+    // Update order status and pre-order state
+    const updateSet: Record<string, any> = {
+      status: newStatus,
+      updatedAt: now,
+    };
+    if (body.isFoodReady !== undefined) {
+      updateSet.isFoodReady = Boolean(body.isFoodReady);
+      if (body.isFoodReady) updateSet.foodReadyAt = now;
+    }
+    if (body.preorderReadyDate !== undefined) {
+      updateSet.preorderReadyDate = String(body.preorderReadyDate).trim() || null;
+    }
+    if (body.preorderReadyTime !== undefined) {
+      updateSet.preorderReadyTime = String(body.preorderReadyTime).trim() || null;
+    }
+
     const [updatedOrder] = await db
       .update(orders)
-      .set({
-        status: newStatus,
-        updatedAt: now,
-      })
+      .set(updateSet)
       .where(eq(orders.id, orderId))
       .returning();
 

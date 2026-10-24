@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test tests/delivery-pricing.test.ts tests/delivery-pricing-integration.test.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts"
   },

@@ -8,6 +8,7 @@ import {
   varchar,
   text,
   integer,
+  boolean,
   timestamp,
   jsonb,
   index,
@@ -77,6 +78,12 @@ export const orders = pgTable(
     total: integer("total").notNull(),
 
     status: varchar("status", { length: 30 }).notNull().default("PAID"),
+
+    isPreorder: boolean("is_preorder").notNull().default(false),
+    preorderReadyDate: varchar("preorder_ready_date", { length: 50 }),
+    preorderReadyTime: varchar("preorder_ready_time", { length: 50 }),
+    isFoodReady: boolean("is_food_ready").notNull().default(false),
+    foodReadyAt: timestamp("food_ready_at", { withTimezone: true }),
 
     riderId: varchar("rider_id", { length: 64 }).references(() => riders.id, {
       onDelete: "set null",

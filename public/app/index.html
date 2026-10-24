@@ -28,6 +28,10 @@
   <script>
     // Early resilient global stubs so button clicks before full script hydration never throw
     window.Chow45App = window.Chow45App || {
+      openCampusModal: function() {
+        var m = document.getElementById('campus-prompt-modal');
+        if (m) m.classList.add('open');
+      },
       openLocationModal: function() {
         if (window.chowLocationPicker && window.chowLocationPicker.open) {
           window.chowLocationPicker.open();
@@ -137,9 +141,9 @@
         </a>
 
         <!-- Location Selector Pill -->
-        <button type="button" class="location-pill" onclick="event.preventDefault(); (window.Chow45App?.openLocationModal ? window.Chow45App.openLocationModal() : (window.Chow45LocationPicker?.open?.() || window.chowLocationPicker?.open?.()))" title="Change delivery location">
+        <button type="button" class="location-pill" onclick="event.preventDefault(); (window.Chow45App?.openCampusModal ? window.Chow45App.openCampusModal(true) : (window.Chow45App?.openLocationModal ? window.Chow45App.openLocationModal() : (window.Chow45LocationPicker?.open?.() || window.chowLocationPicker?.open?.())))" title="Change campus or delivery location">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span class="loc-text" id="current-location-text">Select your location</span>
+          <span class="loc-text" id="current-location-text">Select your campus &amp; location</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
 
@@ -254,7 +258,7 @@
             <button class="filter-chip active" data-filter="all" onclick="CustomerController.setFilter('all')">All Food</button>
             <button class="filter-chip" data-filter="fast" onclick="CustomerController.setFilter('fast')">⚡ Fast Delivery (<25m)</button>
             <button class="filter-chip" data-filter="budget" onclick="CustomerController.setFilter('budget')">🎓 Budget Friendly (≤₦2k)</button>
-            <button class="filter-chip" data-filter="rating" onclick="CustomerController.setFilter('rating')">★ Top Rated (4.8+)</button>
+            <button class="filter-chip" data-filter="rating" onclick="CustomerController.setFilter('rating')">★ Top Rated</button>
           </div>
 
           <!-- Circular Food Category Buttons (Point 5) -->
@@ -268,8 +272,158 @@
 
           <!-- Dynamic Discovery Sections (Popular, Fast Delivery, Stores) -->
           <div id="discovery-sections-container">
-            <!-- Injected by customer.js -->
+            <div class="discovery-loading-container" style="padding: 24px 0 40px;">
+              <div style="text-align: center; padding: 24px 16px 32px;">
+                <div class="chow-loader-spinner" style="width: 44px; height: 44px; border: 3.5px solid #E2E8F0; border-top-color: #00a205; border-radius: 50%; margin: 0 auto 14px; animation: chowRotate 0.8s linear infinite;"></div>
+                <h3 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0 0 6px;">
+                  Loading campus food spots...
+                </h3>
+                <p style="color: #64748B; font-size: 0.86rem; margin: 0;">
+                  Fetching menus from kitchens around Sagamu &amp; Ibogun
+                </p>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                <div style="background: #FFFFFF; border-radius: 18px; border: 1.5px solid #F1F5F9; overflow: hidden; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                  <div style="height: 160px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%); background-size: 200% 100%; animation: chowShimmer 1.5s infinite; border-radius: 14px; margin-bottom: 12px;"></div>
+                  <div style="height: 18px; width: 65%; background: #F1F5F9; border-radius: 6px; margin-bottom: 8px;"></div>
+                  <div style="height: 14px; width: 40%; background: #F8FAFC; border-radius: 6px; margin-bottom: 12px;"></div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #F1F5F9; padding-top: 10px;">
+                    <div style="height: 18px; width: 30%; background: #F1F5F9; border-radius: 6px;"></div>
+                    <div style="height: 32px; width: 80px; background: #E2E8F0; border-radius: 10px;"></div>
+                  </div>
+                </div>
+                <div style="background: #FFFFFF; border-radius: 18px; border: 1.5px solid #F1F5F9; overflow: hidden; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                  <div style="height: 160px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%); background-size: 200% 100%; animation: chowShimmer 1.5s infinite; border-radius: 14px; margin-bottom: 12px;"></div>
+                  <div style="height: 18px; width: 65%; background: #F1F5F9; border-radius: 6px; margin-bottom: 8px;"></div>
+                  <div style="height: 14px; width: 40%; background: #F8FAFC; border-radius: 6px; margin-bottom: 12px;"></div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #F1F5F9; padding-top: 10px;">
+                    <div style="height: 18px; width: 30%; background: #F1F5F9; border-radius: 6px;"></div>
+                    <div style="height: 32px; width: 80px; background: #E2E8F0; border-radius: 10px;"></div>
+                  </div>
+                </div>
+                <div style="background: #FFFFFF; border-radius: 18px; border: 1.5px solid #F1F5F9; overflow: hidden; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                  <div style="height: 160px; background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%); background-size: 200% 100%; animation: chowShimmer 1.5s infinite; border-radius: 14px; margin-bottom: 12px;"></div>
+                  <div style="height: 18px; width: 65%; background: #F1F5F9; border-radius: 6px; margin-bottom: 8px;"></div>
+                  <div style="height: 14px; width: 40%; background: #F8FAFC; border-radius: 6px; margin-bottom: 12px;"></div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #F1F5F9; padding-top: 10px;">
+                    <div style="height: 18px; width: 30%; background: #F1F5F9; border-radius: 6px;"></div>
+                    <div style="height: 32px; width: 80px; background: #E2E8F0; border-radius: 10px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- Marketplace Partner CTA & Routing Footer -->
+          <footer class="marketplace-footer" style="margin-top: 52px; padding-top: 36px; padding-bottom: 110px; border-top: 1px solid #EDE7E0;">
+            <!-- Partner Callout Cards (Become a Vendor / Become a Rider) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 40px;">
+              <!-- Become a Vendor Card -->
+              <div style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 16px rgba(0,0,0,0.03); transition: transform 0.2s ease, border-color 0.2s ease;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #F0FDF4; border: 1px solid #BBF7D0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                      🍳
+                    </div>
+                    <div>
+                      <span style="font-size: 0.72rem; font-weight: 800; color: #00a205; text-transform: uppercase; letter-spacing: 0.05em;">Kitchens & Cafeterias</span>
+                      <h3 style="font-family: var(--font-display); font-size: 1.18rem; font-weight: 800; color: #0F172A; margin: 0;">Become a Vendor</h3>
+                    </div>
+                  </div>
+                  <p style="font-size: 0.85rem; color: #64748B; line-height: 1.5; margin: 0 0 18px 0;">
+                    Run a cafeteria, restaurant, bakery, or snack stall around campus? Partner with Chow45 to reach students across Sagamu & Ibogun campuses with real-time digital orders.
+                  </p>
+                </div>
+                <div>
+                  <a href="/vendor" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 44px; background: #00a205; color: #FFFFFF; border-radius: 12px; font-size: 0.9rem; font-weight: 800; text-decoration: none; box-shadow: 0 4px 14px rgba(0,162,5,0.25); transition: opacity 0.2s ease;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    <span>Become a Vendor</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Become a Rider Card -->
+              <div style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 20px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 16px rgba(0,0,0,0.03); transition: transform 0.2s ease, border-color 0.2s ease;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #F0FDF4; border: 1px solid #BBF7D0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                      🛵
+                    </div>
+                    <div>
+                      <span style="font-size: 0.72rem; font-weight: 800; color: #00a205; text-transform: uppercase; letter-spacing: 0.05em;">Dispatch Fleet</span>
+                      <h3 style="font-family: var(--font-display); font-size: 1.18rem; font-weight: 800; color: #0F172A; margin: 0;">Become a Rider</h3>
+                    </div>
+                  </div>
+                  <p style="font-size: 0.85rem; color: #64748B; line-height: 1.5; margin: 0 0 18px 0;">
+                    Have a motorcycle, scooter, bicycle, or delivery vehicle? Join the verified Chow45 delivery fleet for flexible campus deliveries with transparent ₦200/km payouts.
+                  </p>
+                </div>
+                <div>
+                  <a href="/rider/register" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 44px; background: #00a205; color: #FFFFFF; border-radius: 12px; font-size: 0.9rem; font-weight: 800; text-decoration: none; box-shadow: 0 4px 14px rgba(0,162,5,0.25); transition: opacity 0.2s ease;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    <span>Become a Rider</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Navigation Links Columns -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 28px; padding-bottom: 28px; border-bottom: 1px solid #EDE7E0;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <img src="/logo.png" alt="Chow45" style="height: 24px; width: 24px; object-fit: contain; border-radius: 6px;" />
+                  <strong style="font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; color: #0F172A;">CHOW45</strong>
+                </div>
+                <p style="font-size: 0.82rem; color: #64748B; line-height: 1.5; margin: 0 0 12px 0;">
+                  Fast, reliable food & grocery marketplace serving OOU Sagamu campus and surrounding communities.
+                </p>
+                <div style="font-size: 0.78rem; font-weight: 700; color: #00a205; display: flex; align-items: center; gap: 6px;">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: #00a205; display: inline-block;"></span>
+                  <span>Operating Daily: 7am – 10pm</span>
+                </div>
+              </div>
+
+              <div>
+                <h4 style="font-size: 0.75rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px 0;">Marketplace</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem;">
+                  <li><a href="/app" onclick="if(window.CustomerController) { CustomerController.selectCategory('all'); } return true;" style="color: #475569; text-decoration: none;">All Food & Restaurants</a></li>
+                  <li><a href="/app" onclick="if(window.CustomerController) { CustomerController.setFilter('fast'); } return false;" style="color: #475569; text-decoration: none;">⚡ Fast Delivery (&lt;25m)</a></li>
+                  <li><a href="/app" onclick="if(window.CustomerController) { CustomerController.setFilter('budget'); } return false;" style="color: #475569; text-decoration: none;">🎓 Budget Deals (≤₦2k)</a></li>
+                  <li><a href="/app" onclick="if(window.CustomerController) { CustomerController.openOrderHistory(); } return false;" style="color: #475569; text-decoration: none;">📦 Track My Orders</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style="font-size: 0.75rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px 0;">Partners & Fleet</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem;">
+                  <li><a href="/vendor" style="color: #00a205; font-weight: 800; text-decoration: none;">Become a Vendor</a></li>
+                  <li><a href="/rider/register" style="color: #00a205; font-weight: 800; text-decoration: none;">Become a Rider</a></li>
+                  <li><a href="/vendor" style="color: #475569; text-decoration: none;">Vendor Dashboard</a></li>
+                  <li><a href="/rider" style="color: #475569; text-decoration: none;">Rider Portal</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style="font-size: 0.75rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px 0;">Pricing & Coverage</h4>
+                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.84rem; color: #475569;">
+                  <li><span>₦200 per km straight-line</span></li>
+                  <li><span>₦200 minimum delivery fee</span></li>
+                  <li><span>Sagamu (OSUTH & College)</span></li>
+                  <li><span>Ibogun Campus & Remo</span></li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Bottom Copyright & Credit -->
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-top: 18px; font-size: 0.78rem; color: #8E7F77;">
+              <div>© 2026 Chow45. Built with care for campus communities.</div>
+              <div style="display: flex; gap: 16px;">
+                <a href="mailto:hello@chow45.com" style="color: #8E7F77; text-decoration: none;">hello@chow45.com</a>
+                <a href="/vendor" style="color: #8E7F77; text-decoration: none;">Vendor Portal</a>
+                <a href="/rider" style="color: #8E7F77; text-decoration: none;">Rider Portal</a>
+              </div>
+            </div>
+          </footer>
         </div>
 
         <!-- 1B: Restaurant Menu Detail Section (Initially hidden) -->
@@ -294,7 +448,7 @@
                 <p id="store-detail-tags" style="color: #64748B; font-size: 0.88rem; margin: 0;"></p>
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.88rem; color: #334155; background: #FFF; padding: 4px 10px; border-radius: 999px; border: 1px solid #E2E8F0; flex-shrink: 0;">
-                <span style="color: #F59E0B;">★</span> <span id="store-detail-rating">5.0 Excellent</span>
+                <span style="color: #F59E0B;">★</span> <span id="store-detail-rating">New Kitchen</span>
               </div>
             </div>
 
@@ -411,6 +565,28 @@
             <p id="track-status-subtext" style="color: #64748B; font-size: 0.88rem; margin: 4px 0 0 0;">
               Your Order Is On The Way
             </p>
+
+            <!-- Pre-order Live Scheduled Banner -->
+            <div id="track-preorder-banner" style="display: none; background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 16px; padding: 14px 18px; margin: 12px 0 8px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 800; color: #92400E; text-transform: uppercase; letter-spacing: 0.04em;">
+                  🗓️ Pre-Order Delivery
+                </span>
+                <span id="track-preorder-readiness-badge" style="font-size: 0.76rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;">
+                  ⏳ Kitchen Preparing
+                </span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: #78350F; background: #FEF3C7; padding: 10px 12px; border-radius: 10px;">
+                <div>
+                  <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #92400E;">Delivery Date</div>
+                  <strong id="track-preorder-date" style="font-size: 0.92rem; color: #78350F;">Scheduled</strong>
+                </div>
+                <div>
+                  <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #92400E;">Ready Time</div>
+                  <strong id="track-preorder-time" style="font-size: 0.92rem; color: #78350F;">--:--</strong>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="tracking-screen" style="position: relative;">
@@ -431,17 +607,17 @@
                     🛵
                   </div>
                   <div>
-                    <h3 id="track-rider-name" style="font-size: 0.98rem; font-weight: 800; color: #0F172A; margin: 0 0 2px 0;">David Adeleke</h3>
-                    <span style="font-size: 0.78rem; color: #64748B; font-weight: 600;">Dispatch</span>
+                    <h3 id="track-rider-name" style="font-size: 0.98rem; font-weight: 800; color: #0F172A; margin: 0 0 2px 0;">Assigning rider...</h3>
+                    <span id="track-rider-subtext" style="font-size: 0.78rem; color: #64748B; font-weight: 600;">Dispatch</span>
                   </div>
                 </div>
 
                 <!-- Three Action Buttons: Call, WhatsApp, Report -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <a id="track-rider-call-btn" href="tel:+2348124902819" title="Call Dispatch" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
+                  <a id="track-rider-call-btn" href="#" title="Call Dispatch" style="display: none; width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
                     📞
                   </a>
-                  <a id="track-rider-wa-btn" href="https://wa.me/2348124902819" target="_blank" rel="noopener" title="WhatsApp" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
+                  <a id="track-rider-wa-btn" href="#" target="_blank" rel="noopener" title="WhatsApp" style="display: none; width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; align-items: center; justify-content: center; color: #0F172A; text-decoration: none; font-size: 1rem;">
                     💬
                   </a>
                   <button type="button" onclick="window.chowApp.toast('Contacting Chow45 Support Team...', 'info')" title="Report Issue" style="width: 38px; height: 38px; border-radius: 50%; background: #F8FAFC; border: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: center; color: #0F172A; cursor: pointer; font-size: 1rem;">
@@ -650,6 +826,9 @@
                   <button class="vendor-tab-btn vnd-tab" data-tab="preparing" onclick="VendorController.setTab('preparing')">
                     🟡 Preparing <span id="vendor-count-preparing" class="tab-count">0</span>
                   </button>
+                  <button class="vendor-tab-btn vnd-tab" data-tab="preorders" onclick="VendorController.setTab('preorders')">
+                    🗓️ Pre-orders <span id="vendor-count-preorders" class="tab-count">0</span>
+                  </button>
                   <button class="vendor-tab-btn vnd-tab" data-tab="complete" onclick="VendorController.setTab('complete')">
                     🟢 Completed / In Transit
                   </button>
@@ -849,8 +1028,8 @@
                   <span class="rider-official-tag">✦ VERIFIED DISPATCH RIDER</span>
                   <span class="rider-campus-subtag">Sagamu Campus Fleet</span>
                 </div>
-                <h3 id="rider-profile-name" class="rider-name-heading">David Adeleke</h3>
-                <div id="rider-profile-vehicle" class="rider-vehicle-type">Bajaj Boxer 150 (LAG-452-IKJ)</div>
+                <h3 id="rider-profile-name" class="rider-name-heading">Dispatch Rider</h3>
+                <div id="rider-profile-vehicle" class="rider-vehicle-type">Active Fleet</div>
               </div>
             </div>
 
@@ -872,7 +1051,7 @@
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Rider Rating</div>
-              <div class="kpi-val">4.9 ★</div>
+              <div id="rider-kpi-rating" class="kpi-val">—</div>
             </div>
           </div>
 
@@ -903,6 +1082,17 @@
                   <h3 style="font-family: var(--font-display); font-size: 1.25rem; margin: 4px 0 0;">Active Delivery</h3>
                 </div>
                 <span id="mission-order-id" class="mission-order-badge"></span>
+              </div>
+
+              <!-- Pre-Order Mission Schedule Card (Shown when order is preorder) -->
+              <div id="mission-preorder-banner" style="display: none; background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 14px; padding: 12px 16px; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <span style="font-weight: 800; font-size: 0.8rem; color: #92400E; text-transform: uppercase;">🗓️ PRE-ORDER DELIVERY</span>
+                  <span id="mission-preorder-ready-tag" style="font-size: 0.76rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: #FEF3C7; color: #B45309;">⏳ Kitchen Preparing</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #78350F; font-weight: 600;">
+                  Ready for Delivery: <strong id="mission-preorder-datetime" style="color: #92400E;"></strong>
+                </div>
               </div>
 
               <!-- Pickup & Delivery Addresses -->
@@ -1309,13 +1499,17 @@
                 <span>Food subtotal</span>
                 <span id="cart-subtotal-val">₦0</span>
               </div>
-              <div class="price-row service-fee-row">
-                <span>Service fee <span class="service-fee-badge">Mandatory</span></span>
-                <span id="cart-service-fee-val">₦500</span>
+              <div class="price-row" id="cart-distance-row">
+                <span>Delivery distance</span>
+                <span id="cart-distance-val">0.00 km (straight-line)</span>
               </div>
               <div class="price-row">
                 <span>Delivery fee</span>
-                <span id="cart-delivery-fee-val">₦800</span>
+                <span id="cart-delivery-fee-val">₦200</span>
+              </div>
+              <div class="price-row service-fee-row">
+                <span>Service fee <span class="service-fee-badge">Mandatory</span></span>
+                <span id="cart-service-fee-val">₦400</span>
               </div>
               <div id="cart-delivery-quote" class="delivery-quote-row" style="display: none;"></div>
               <div class="price-row total-row">
@@ -1366,6 +1560,154 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Campus & Location Prompt Modal -->
+    <div id="campus-prompt-modal" class="modal-backdrop" style="z-index: 350;">
+      <div class="modal-sheet" style="max-width: 500px; width: 92%; border-radius: 24px; overflow: hidden; background: #ffffff; box-shadow: 0 25px 70px rgba(0,0,0,0.35); border: 1.5px solid #E2E8F0; padding: 0;">
+        
+        <!-- Step 1: Select Campus -->
+        <div id="campus-modal-step-1" style="padding: 24px 22px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #E8F8EE; border: 1px solid #C7EDD4; border-radius: 999px; font-size: 0.75rem; font-weight: 700; color: #008704;">
+              <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #00a205;"></span>
+              Select Your Campus
+            </div>
+            <button id="campus-modal-close-btn" class="modal-close-btn" style="display: none; background: #F3F4F6; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 14px; cursor: pointer; line-height: 1;" onclick="Chow45App.closeCampusModal()">✕</button>
+          </div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; color: #0F172A; margin: 8px 0 4px; letter-spacing: -0.02em;">
+            Which campus are you in?
+          </h2>
+          <p style="font-size: 0.85rem; color: #64748B; margin: 0 0 20px; line-height: 1.45;">
+            We filter menus &amp; food vendors strictly by campus so your chow arrives fresh and hot in minutes.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
+            <!-- Sagamu Campus Option -->
+            <button type="button" class="campus-card-btn" onclick="Chow45App.chooseCampusStep('sagamu')"
+              style="display: flex; align-items: flex-start; gap: 14px; text-align: left; padding: 16px; border-radius: 18px; border: 2px solid #E2E8F0; background: #FAFAFA; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); width: 100%;">
+              <div style="width: 44px; height: 44px; border-radius: 14px; background: #E8F8EE; color: #00a205; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                🏥
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px;">
+                  <span style="font-size: 1rem; font-weight: 800; color: #0F172A;">Sagamu Campus</span>
+                  <span style="font-size: 0.7rem; font-weight: 700; color: #008704; background: #E8F8EE; padding: 2px 8px; border-radius: 999px;">Verified Kitchens</span>
+                </div>
+                <div style="font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 2px;">OOU Medical Campus &amp; OSUTH</div>
+                <div style="font-size: 0.74rem; color: #64748B; line-height: 1.35;">Hospital Road, Ewusi, Sabo, GRA &amp; Sagamu Town</div>
+              </div>
+              <span style="color: #94A3B8; font-size: 1.2rem; align-self: center;">→</span>
+            </button>
+
+            <!-- Ibogun Campus Option -->
+            <button type="button" class="campus-card-btn" onclick="Chow45App.chooseCampusStep('ibogun')"
+              style="display: flex; align-items: flex-start; gap: 14px; text-align: left; padding: 16px; border-radius: 18px; border: 2px solid #E2E8F0; background: #FAFAFA; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); width: 100%;">
+              <div style="width: 44px; height: 44px; border-radius: 14px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+                🏫
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px;">
+                  <span style="font-size: 1rem; font-weight: 800; color: #0F172A;">Ibogun Campus</span>
+                  <span style="font-size: 0.7rem; font-weight: 700; color: #1E40AF; background: #DBEAFE; padding: 2px 8px; border-radius: 999px;">OGITECH / Ibogun</span>
+                </div>
+                <div style="font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 2px;">OGITECH &amp; OOU Ibogun Campus</div>
+                <div style="font-size: 0.74rem; color: #64748B; line-height: 1.35;">Student Village, Campus Hostels &amp; Ibogun Market</div>
+              </div>
+              <span style="color: #94A3B8; font-size: 1.2rem; align-self: center;">→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Input Delivery Address / Hostel -->
+        <div id="campus-modal-step-2" style="display: none; padding: 24px 22px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <button type="button" onclick="Chow45App.showCampusStep(1)" style="display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: #64748B; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 0;">
+              ← Back to Campus Choice
+            </button>
+            <span id="campus-modal-badge" style="font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E8F8EE; color: #008704;">Sagamu</span>
+          </div>
+
+          <h2 id="campus-step-2-title" style="font-size: 1.3rem; font-weight: 800; color: #0F172A; margin: 0 0 4px; letter-spacing: -0.02em;">
+            Where should we deliver?
+          </h2>
+          <p id="campus-step-2-sub" style="font-size: 0.84rem; color: #64748B; margin: 0 0 16px; line-height: 1.4;">
+            Enter your hostel name, hall, lodge, or room address.
+          </p>
+
+          <!-- GPS Current Location Detection Option -->
+          <div style="margin-bottom: 14px;">
+            <button type="button" id="campus-modal-gps-btn" onclick="Chow45App.useLiveLocationForCampusModal()"
+              style="width: 100%; height: 42px; background: #F8FAFC; border: 1.5px dashed #00a205; border-radius: 12px; font-size: 0.84rem; font-weight: 700; color: #008704; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+              📍 Detect My Street via Google Maps
+            </button>
+          </div>
+
+          <!-- Detected Location Confirmation Box ("Is this correct?") -->
+          <div id="campus-gps-confirm-card" style="display: none; margin-bottom: 16px; padding: 14px 16px; background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: 16px; box-shadow: 0 4px 14px rgba(0,162,5,0.08);">
+            <div style="font-size: 0.72rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>📍</span> Street detected on Google Maps
+            </div>
+            <div id="campus-gps-detected-street" style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin-bottom: 2px;"></div>
+            <div id="campus-gps-detected-full" style="font-size: 0.78rem; color: #475569; margin-bottom: 12px; line-height: 1.35;"></div>
+            <div style="font-size: 0.84rem; font-weight: 700; color: #1E293B; margin-bottom: 10px;">
+              Is this your correct delivery location?
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" onclick="Chow45App.confirmGpsLocation()" style="flex: 1; height: 40px; background: #00a205; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.86rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                Yes, Deliver Here ✓
+              </button>
+              <button type="button" onclick="Chow45App.rejectGpsLocation()" style="padding: 0 16px; height: 40px; background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 10px; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                No, Change ✎
+              </button>
+            </div>
+          </div>
+
+          <!-- Address Input with Live Suggestions Dropdown -->
+          <div style="position: relative; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <label for="campus-address-input" style="font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">
+                Hostel / Room / Street Address
+              </label>
+              <span id="campus-input-status" style="font-size: 0.72rem; color: #008704; font-weight: 700; display: none;">
+                Searching Google Maps...
+              </span>
+            </div>
+            <input type="text" id="campus-address-input"
+              placeholder="e.g. Clinical Hostel, Room 14, OSUTH"
+              autocomplete="off"
+              style="width: 100%; height: 48px; padding: 0 14px; border: 2px solid #CBD5E1; border-radius: 14px; font-size: 0.95rem; color: #0F172A; outline: none; transition: border-color 0.2s; box-sizing: border-box;"
+              oninput="Chow45App.handleCampusAddressInput(this.value)"
+              onfocus="Chow45App.handleCampusAddressFocus()"
+              onkeydown="if(event.key === 'Enter'){ event.preventDefault(); Chow45App.submitCampusDeliveryLocation(); }"
+            />
+
+            <!-- Live Autocomplete Suggestions Dropdown -->
+            <div id="campus-autocomplete-dropdown"
+              style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 14px; box-shadow: 0 12px 28px rgba(0,0,0,0.15); max-height: 230px; overflow-y: auto; z-index: 100;">
+              <!-- Dynamic suggestions populated while typing -->
+            </div>
+          </div>
+
+          <!-- Quick Campus Landmarks -->
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em;">
+              Popular Campus Spots:
+            </div>
+            <div id="campus-presets-container" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <!-- Dynamically rendered based on chosen campus -->
+            </div>
+          </div>
+
+          <div id="campus-modal-error" style="display: none; padding: 10px 14px; background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 12px; color: #991B1B; font-size: 0.82rem; font-weight: 600; margin-bottom: 14px; line-height: 1.4;"></div>
+
+          <button type="button" id="campus-modal-submit-btn" onclick="Chow45App.submitCampusDeliveryLocation()"
+            style="width: 100%; height: 48px; background: #00a205; color: #ffffff; border: none; border-radius: 14px; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,162,5,0.3); transition: all 0.2s ease;">
+            Confirm &amp; Explore Vendors 🚀
+          </button>
+        </div>
+
       </div>
     </div>
 

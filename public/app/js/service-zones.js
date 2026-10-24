@@ -22,8 +22,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.1975, 6.8111],
     maxDeliveryDistance: 8000, // meters
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '07:00', close: '23:30' },
@@ -44,8 +44,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.3900, 6.7200],
     maxDeliveryDistance: 4000, // meters
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '08:00', close: '23:00' },
@@ -66,8 +66,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.6139, 6.8270],
     maxDeliveryDistance: 5000,
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '08:00', close: '23:00' },
@@ -88,8 +88,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.6545, 6.8482],
     maxDeliveryDistance: 4000,
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '08:00', close: '23:00' },
@@ -110,8 +110,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.6450, 6.8450],
     maxDeliveryDistance: 6000,
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '07:00', close: '00:00' },
@@ -132,8 +132,8 @@ const CHOW45_SERVICE_ZONES = [
     center: [3.3860, 6.7210],
     maxDeliveryDistance: 3000,
     deliveryRules: {
-      baseFee: 300,
-      ratePerMeter: 0.15,
+      baseFee: 200,
+      ratePerMeter: 0.20,
       serviceFee: 400
     },
     operatingHours: { open: '08:00', close: '22:00' },
@@ -168,10 +168,10 @@ const OGUN_STATE_BOUNDARY = [
  * serviceFee  = flat mandatory per parent order
  */
 const DEFAULT_DELIVERY_FEE_CONFIG = {
-  baseFee: 300,
+  baseFee: 200,
   serviceFee: 400,
-  ratePerMeter: 0.15,
-  minDeliveryFee: 300
+  ratePerMeter: 0.20,
+  minDeliveryFee: 200
 };
 
 // -------------------------------------------------------------
@@ -205,26 +205,36 @@ function isPointInPolygon(point, polygon) {
  * Haversine distance between two [lng, lat] / {lng, lat} points in meters.
  */
 function haversineDistanceMeters(a, b) {
-  const lat1 = a.lat !== undefined ? a.lat : a[1];
-  const lng1 = a.lng !== undefined ? a.lng : a[0];
-  const lat2 = b.lat !== undefined ? b.lat : b[1];
-  const lng2 = b.lng !== undefined ? b.lng : b[0];
+  if (!a || !b) return 0;
+  const lat1 = Number(a.lat !== undefined ? a.lat : (a.latitude !== undefined ? a.latitude : a[1]));
+  const lng1 = Number(a.lng !== undefined ? a.lng : (a.longitude !== undefined ? a.longitude : a[0]));
+  const lat2 = Number(b.lat !== undefined ? b.lat : (b.latitude !== undefined ? b.latitude : b[1]));
+  const lng2 = Number(b.lng !== undefined ? b.lng : (b.longitude !== undefined ? b.longitude : b[0]));
+
+  if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) {
+    return 0;
+  }
+  if (lat1 === lat2 && lng1 === lng2) {
+    return 0;
+  }
+
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const s1 = Math.sin(dLat / 2) ** 2;
   const s2 = Math.sin(dLng / 2) ** 2;
   const a1 = Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180);
-  return 2 * R * Math.asin(Math.sqrt(s1 + a1 * s2));
+  const safeA = Math.min(1, Math.max(0, s1 + a1 * s2));
+  return 2 * R * Math.asin(Math.sqrt(safeA));
 }
 
 /**
- * Human readable distance: "850 m" / "2.4 km".
+ * Human readable distance: "850 m (straight-line)" / "1.50 km (straight-line)".
  */
 function formatDistanceMeters(meters) {
   const m = Math.max(0, Math.round(meters || 0));
-  if (m < 1000) return `${m} m`;
-  return `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1)} km`;
+  if (m < 1000) return `${m} m (straight-line)`;
+  return `${(m / 1000).toFixed(2)} km (straight-line)`;
 }
 
 /**
@@ -334,9 +344,14 @@ function isZoneOpen(zone, date = new Date()) {
  * @returns {number} fee in Naira
  */
 function calculateDeliveryFee(routeDistanceMeters, config = {}) {
-  const minFee = config.minDeliveryFee !== undefined ? config.minDeliveryFee : 200;
-  const distance = Math.max(0, routeDistanceMeters || 0);
-  const fee = Math.ceil((distance / 1000) * 200);
+  const minFee = config.minDeliveryFee !== undefined ? Number(config.minDeliveryFee) : 200;
+  let ratePerKm = 200;
+  if (config.ratePerMeter !== undefined) {
+    const r = Number(config.ratePerMeter);
+    ratePerKm = r <= 1 ? Math.round(r * 1000) : Math.round(r);
+  }
+  const distance = Math.max(0, Number(routeDistanceMeters) || 0);
+  const fee = Math.ceil((distance / 1000) * ratePerKm);
   return Math.max(minFee, fee);
 }
 

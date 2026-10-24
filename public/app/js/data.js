@@ -33,32 +33,8 @@ const CHOW45_CATEGORIES = [
 // Real restaurants and uploaded foods are loaded dynamically from real vendors.
 const CHOW45_RESTAURANTS = [];
 
-const CHOW45_RIDERS = [
-  {
-    id: 'rider-david',
-    name: 'David Adeleke',
-    phone: '+234 812 490 2819',
-    vehicle: 'Bajaj Boxer 150 (Plate: LAG-452-IKJ)',
-    rating: 4.9,
-    tripsCount: 840,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    online: true,
-    currentLat: 6.5760,
-    currentLng: 3.2700
-  },
-  {
-    id: 'rider-chinedu',
-    name: 'Chinedu Okafor',
-    phone: '+234 803 891 4410',
-    vehicle: 'TVS Neo Scooter (Plate: SGM-881-OG)',
-    rating: 4.8,
-    tripsCount: 620,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    online: true,
-    currentLat: 6.8450,
-    currentLng: 3.6520
-  }
-];
+// Real dispatch riders are loaded dynamically from verified registered fleet accounts.
+const CHOW45_RIDERS = [];
 
 // Delivery fee calculation is defined in service-zones.js and applied
 // config-driven (baseFee + ratePerMeter). Kept as a compat alias only.

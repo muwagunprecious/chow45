@@ -973,60 +973,81 @@ class GoogleMapsService {
   }
 
   // -------------------------------------------------------------
-  // DELIVERY QUOTE
+  // DELIVERY QUOTE (COORDINATE-BASED HAWAISINE ENGINE)
   // -------------------------------------------------------------
   async getDeliveryQuote(store, deliveryLocation, opts = {}) {
-    // 1. Resolve store origin coordinates with campus fallbacks
-    let originLat = store ? (store.lat ?? store.latitude) : null;
-    let originLng = store ? (store.lng ?? store.longitude) : null;
-    if (originLat == null || originLng == null || (Number(originLat) === 0 && Number(originLng) === 0)) {
-      const addr = ((store?.address || '') + ' ' + (store?.name || '')).toLowerCase();
-      if (addr.includes('oou') || addr.includes('ago-iwoye') || addr.includes('ago iwoye')) {
-        originLat = 6.9320; originLng = 3.9180;
-      } else if (addr.includes('babcock') || addr.includes('ilishan')) {
-        originLat = 6.8900; originLng = 3.7200;
-      } else if (addr.includes('ibogun')) {
-        originLat = 6.9050; originLng = 3.1600;
-      } else {
-        originLat = 6.8400; originLng = 3.6500; // Sagamu OSUTH default
-      }
+    // 1. Resolve store origin coordinates
+    const originLat = store ? (store.lat ?? store.latitude) : null;
+    const originLng = store ? (store.lng ?? store.longitude) : null;
+    const numOriginLat = Number(originLat);
+    const numOriginLng = Number(originLng);
+
+    if (
+      originLat === null ||
+      originLat === undefined ||
+      originLng === null ||
+      originLng === undefined ||
+      !Number.isFinite(numOriginLat) ||
+      !Number.isFinite(numOriginLng) ||
+      numOriginLat < -90 ||
+      numOriginLat > 90 ||
+      numOriginLng < -180 ||
+      numOriginLng > 180
+    ) {
+      return {
+        error: 'Vendor location coordinates are not configured. Please contact the vendor or select another store.',
+        deliveryFee: 200,
+        distanceMeters: 0,
+        distanceLabel: 'Unavailable'
+      };
     }
 
-    // 2. Resolve dropoff coordinates with campus fallbacks
-    let destLat = deliveryLocation ? (deliveryLocation.latitude ?? deliveryLocation.lat) : null;
-    let destLng = deliveryLocation ? (deliveryLocation.longitude ?? deliveryLocation.lng) : null;
-    if (destLat == null || destLng == null || (Number(destLat) === 0 && Number(destLng) === 0)) {
-      const name = ((deliveryLocation?.name || '') + ' ' + (deliveryLocation?.formattedAddress || '')).toLowerCase();
-      if (name.includes('oou') || name.includes('ago-iwoye') || name.includes('ago iwoye')) {
-        destLat = 6.9320; destLng = 3.9180;
-      } else if (name.includes('babcock') || name.includes('ilishan')) {
-        destLat = 6.8900; destLng = 3.7200;
-      } else if (name.includes('ibogun')) {
-        destLat = 6.9050; destLng = 3.1600;
-      } else {
-        destLat = 6.8482; destLng = 3.6545; // Sagamu Campus dropoff default
-      }
+    // 2. Resolve dropoff coordinates
+    const destLat = deliveryLocation ? (deliveryLocation.latitude ?? deliveryLocation.lat) : null;
+    const destLng = deliveryLocation ? (deliveryLocation.longitude ?? deliveryLocation.lng) : null;
+    const numDestLat = Number(destLat);
+    const numDestLng = Number(destLng);
+
+    if (
+      destLat === null ||
+      destLat === undefined ||
+      destLng === null ||
+      destLng === undefined ||
+      !Number.isFinite(numDestLat) ||
+      !Number.isFinite(numDestLng) ||
+      numDestLat < -90 ||
+      numDestLat > 90 ||
+      numDestLng < -180 ||
+      numDestLng > 180
+    ) {
+      return {
+        error: 'Please select a valid delivery location pin on the map.',
+        deliveryFee: 200,
+        distanceMeters: 0,
+        distanceLabel: 'Select location'
+      };
     }
 
-    const origin = { lat: Number(originLat), lng: Number(originLng) };
-    const dest = { lat: Number(destLat), lng: Number(destLng) };
+    const origin = { lat: numOriginLat, lng: numOriginLng };
+    const dest = { lat: numDestLat, lng: numDestLng };
 
-    const clientRoute = await this.getDirections(origin, dest);
-    const haversineDist = typeof haversineDistanceMeters === 'function' ? haversineDistanceMeters(origin, dest) : 2500;
-    const fallbackRoute = clientRoute || {
-      distanceMeters: haversineDist,
-      durationSeconds: Math.round((haversineDist / 500) * 60),
-      geometry: null
-    };
+    // 3. Coordinate-based straight-line distance (never blocked by Google Maps routing)
+    const haversineDist = typeof haversineDistanceMeters === 'function'
+      ? haversineDistanceMeters(origin, dest)
+      : 0;
+    const durationSeconds = Math.round((haversineDist / 500) * 60);
 
     const config = opts.config || (typeof safeDeliveryConfig === 'function' ? safeDeliveryConfig() : {});
     const zone = typeof getServiceAvailability === 'function' ? getServiceAvailability(dest).zone : null;
 
+    // 4. Server-authoritative quote check
     try {
       const apiRoute = await fetch('/api/delivery/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          storeId: store?.id || store?.storeId || null,
+          vendorId: store?.numericId || store?.vendorId || null,
           pickup: { lat: origin.lat, lng: origin.lng },
           dropoff: { lat: dest.lat, lng: dest.lng },
           zoneId: zone ? zone.id : null
@@ -1034,45 +1055,55 @@ class GoogleMapsService {
       });
       if (apiRoute.ok) {
         const server = await apiRoute.json();
-        const dist = server.distanceMeters ?? fallbackRoute.distanceMeters;
-        const dur = server.durationSeconds ?? fallbackRoute.durationSeconds;
-        if (typeof buildDeliveryQuote === 'function') {
-          return buildDeliveryQuote(
-            dist,
-            dur,
-            zone,
-            config
-          );
-        }
-        const srvFee = server.deliveryFee || Math.max(200, Math.ceil((dist / 1000) * 200));
+        const dist = server.distanceMeters ?? haversineDist;
+        const dur = server.durationSeconds ?? durationSeconds;
+        const srvFee = server.deliveryFee ?? Math.max(200, Math.ceil((dist / 1000) * 200));
+        const distLabel = server.distanceLabel || (typeof formatDistanceMeters === 'function' ? formatDistanceMeters(dist) : `${(dist / 1000).toFixed(2)} km (straight-line)`);
+        const feeLabel = server.deliveryFeeLabel || (typeof formatNaira === 'function' ? formatNaira(srvFee) : `₦${srvFee.toLocaleString()}`);
+
         return {
-          distanceMeters: dist,
+          distanceMeters: Math.round(dist),
           durationSeconds: dur,
           deliveryFee: srvFee,
-          deliveryFeeLabel: typeof formatNaira === 'function' ? formatNaira(srvFee) : `₦${srvFee.toLocaleString()}`,
-          distanceLabel: `${(dist / 1000).toFixed(1)} km`,
-          durationLabel: `${Math.ceil(dur / 60)} mins`
+          deliveryFeeLabel: feeLabel,
+          distanceLabel: distLabel,
+          durationLabel: `${Math.ceil(dur / 60)} mins`,
+          serviceFee: server.serviceFee ?? 400,
+          inZone: server.inZone ?? true
         };
+      } else {
+        const errJson = await apiRoute.json().catch(() => ({}));
+        if (errJson.error) {
+          return {
+            error: errJson.error,
+            deliveryFee: 200,
+            distanceMeters: 0,
+            distanceLabel: 'Unavailable'
+          };
+        }
       }
     } catch (err) {
-      console.warn('Delivery quote API unavailable, using client calculations.', err);
+      console.warn('Delivery quote API unavailable, using client straight-line calculations.', err);
     }
 
-    if (typeof buildDeliveryQuote === 'function') {
-      return buildDeliveryQuote(fallbackRoute.distanceMeters, fallbackRoute.durationSeconds, zone, config);
-    }
-
+    // 5. Fallback straight-line calculation if offline
     const calculatedFee = typeof calculateDeliveryFee === 'function'
-      ? calculateDeliveryFee(fallbackRoute.distanceMeters, config)
-      : Math.max(200, Math.ceil((fallbackRoute.distanceMeters / 1000) * 200));
+      ? calculateDeliveryFee(haversineDist, config)
+      : Math.max(200, Math.ceil((haversineDist / 1000) * 200));
+
+    const distLabel = typeof formatDistanceMeters === 'function'
+      ? formatDistanceMeters(haversineDist)
+      : `${(haversineDist / 1000).toFixed(2)} km (straight-line)`;
 
     return {
-      distanceMeters: fallbackRoute.distanceMeters,
-      durationSeconds: fallbackRoute.durationSeconds,
+      distanceMeters: Math.round(haversineDist),
+      durationSeconds,
       deliveryFee: calculatedFee,
       deliveryFeeLabel: typeof formatNaira === 'function' ? formatNaira(calculatedFee) : `₦${calculatedFee.toLocaleString()}`,
-      distanceLabel: `${(fallbackRoute.distanceMeters / 1000).toFixed(1)} km`,
-      durationLabel: `${Math.ceil(fallbackRoute.durationSeconds / 60)} mins`
+      distanceLabel: distLabel,
+      durationLabel: `${Math.ceil(durationSeconds / 60)} mins`,
+      serviceFee: config.serviceFee || 400,
+      inZone: true
     };
   }
 
@@ -1094,16 +1125,10 @@ class GoogleMapsService {
     const map = await this.initMap(containerId, { initCenter: custCoord, zoom: 13.5 });
     if (!map) return;
 
-    const state = (window.chowStore && window.chowStore.state) || {};
-    const rider = (state.riders && state.riders[0]) || {
-      name: 'Chow45 Rider',
-      currentLat: storeCoord[1],
-      currentLng: storeCoord[0]
-    };
-    const riderCoord = [
-      rider.currentLng ?? (storeCoord[0] + custCoord[0]) / 2,
-      rider.currentLat ?? (storeCoord[1] + custCoord[1]) / 2
-    ];
+    if (this.routeAnimationTimer) {
+      clearInterval(this.routeAnimationTimer);
+      this.routeAnimationTimer = null;
+    }
 
     map.panTo({ lat: custCoord[1], lng: custCoord[0] });
     this.clearRoute(containerId);
@@ -1124,57 +1149,33 @@ class GoogleMapsService {
       popupHtml: `<strong>Delivery Point</strong><br><small>${order.deliveryAddress || 'Home'}</small>`
     });
 
-    // Rider Marker
-    const riderEl = this._pinElement('rider');
-    riderEl.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><path d="M15 6h-5l-3 6.5h6l3-6.5z"/><path d="M19 17.5l-4-7.5h-5"/></svg>`;
-    this.pixelMarkers.rider = this.addMarker(map, 'rider', riderCoord, {
-      svg: riderEl.innerHTML,
-      popupHtml: `<strong>${order.riderName || rider.name}</strong><br><small>Chow45 Express Dispatch</small>`
-    });
-
     // Compute and draw Google route
     const route = await this.getDirections(storeCoord, custCoord);
     if (route && route.geometry) {
       this.drawRoute(containerId, route.geometry);
     }
 
-    this.fitBounds(containerId, [storeCoord, custCoord, riderCoord], 80);
-    this.startRiderSimulation(order.status, riderCoord, storeCoord, custCoord);
-  }
+    const boundsCoords = [storeCoord, custCoord];
 
-  startRiderSimulation(status, riderCoord, storeCoord, custCoord) {
-    if (this.routeAnimationTimer) clearInterval(this.routeAnimationTimer);
-
-    if (status === 'DELIVERED') {
-      if (this.pixelMarkers.rider) {
-        this.pixelMarkers.rider.setLngLat(custCoord);
-      }
-      return;
+    // Check if real rider coordinates exist on order or assigned rider
+    // STRICT: Only instantiate rider pin if an actual rider is assigned to the order
+    const numRiderLng = Number(order.riderLng);
+    const numRiderLat = Number(order.riderLat);
+    if (order.riderId && Number.isFinite(numRiderLng) && Number.isFinite(numRiderLat)) {
+      const riderCoord = [numRiderLng, numRiderLat];
+      const riderEl = this._pinElement('rider');
+      riderEl.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><path d="M15 6h-5l-3 6.5h6l3-6.5z"/><path d="M19 17.5l-4-7.5h-5"/></svg>`;
+      this.pixelMarkers.rider = this.addMarker(map, 'rider', riderCoord, {
+        svg: riderEl.innerHTML,
+        popupHtml: `<strong>${order.riderName || 'Dispatch Rider'}</strong><br><small>Live GPS Location</small>`
+      });
+      boundsCoords.push(riderCoord);
     }
 
-    const headingToCustomer = ['PICKED_UP', 'OUT_FOR_DELIVERY', 'RIDER_NEARBY'].includes(status);
-    const start = headingToCustomer ? storeCoord : riderCoord;
-    const end = headingToCustomer ? custCoord : storeCoord;
-
-    if (!this.pixelMarkers.rider) return;
-    this.pixelMarkers.rider.setLngLat(start);
-
-    let progress = 0;
-    this.routeAnimationTimer = setInterval(() => {
-      if (!this.pixelMarkers.rider) {
-        clearInterval(this.routeAnimationTimer);
-        return;
-      }
-      progress += 0.025;
-      if (progress > 1) progress = 0;
-      this.pixelMarkers.rider.setLngLat([
-        start[0] + (end[0] - start[0]) * progress,
-        start[1] + (end[1] - start[1]) * progress
-      ]);
-    }, 400);
+    this.fitBounds(containerId, boundsCoords, 80);
   }
 
-  updateRiderPosition(lng, lat) {
+  updateRiderPosition(lng, lat, riderName) {
     if (this.routeAnimationTimer) {
       clearInterval(this.routeAnimationTimer);
       this.routeAnimationTimer = null;
@@ -1182,8 +1183,19 @@ class GoogleMapsService {
     const numLng = Number(lng);
     const numLat = Number(lat);
     if (!Number.isFinite(numLng) || !Number.isFinite(numLat)) return;
+
+    const map = this.getMap('mapbox-canvas');
+    if (!map) return;
+
     if (this.pixelMarkers && this.pixelMarkers.rider) {
       this.pixelMarkers.rider.setLngLat([numLng, numLat]);
+    } else {
+      const riderEl = this._pinElement('rider');
+      riderEl.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><path d="M15 6h-5l-3 6.5h6l3-6.5z"/><path d="M19 17.5l-4-7.5h-5"/></svg>`;
+      this.pixelMarkers.rider = this.addMarker(map, 'rider', [numLng, numLat], {
+        svg: riderEl.innerHTML,
+        popupHtml: `<strong>${riderName || 'Dispatch Rider'}</strong><br><small>Live GPS Location</small>`
+      });
     }
   }
 

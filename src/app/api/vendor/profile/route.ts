@@ -10,14 +10,15 @@ import { isValidEmail, normalizeEmail } from "@/lib/validation";
  * The vendor profile is read and written by the signed-in vendor.
  *
  * The row is keyed on `vendors.userId`, which is unique, so POST doubles as an
- * upsert. `latitude`/`longitude` are filled in when the vendor shares their live
- * location; a manually typed address leaves them null.
+ * upsert. `latitude`/`longitude` are validated server-side to ensure valid numeric ranges.
  */
 
-function toCoord(value: unknown): string | null {
+function toCoord(value: unknown, isLat: boolean): string | null {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
+  if (isLat && (n < -90 || n > 90)) return null;
+  if (!isLat && (n < -180 || n > 180)) return null;
   return n.toFixed(6);
 }
 
@@ -102,8 +103,23 @@ export async function POST(request: Request) {
 
     const address = text(body.address);
     const image = text(body.image);
-    const latitude = toCoord(body.latitude);
-    const longitude = toCoord(body.longitude);
+
+    // Validate coordinates
+    if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
+      const parsedLat = toCoord(body.latitude, true);
+      if (parsedLat === null) {
+        return NextResponse.json({ error: "Invalid store latitude: must be a number between -90 and 90." }, { status: 400 });
+      }
+    }
+    if (body.longitude !== undefined && body.longitude !== null && body.longitude !== "") {
+      const parsedLng = toCoord(body.longitude, false);
+      if (parsedLng === null) {
+        return NextResponse.json({ error: "Invalid store longitude: must be a number between -180 and 180." }, { status: 400 });
+      }
+    }
+
+    const latitude = toCoord(body.latitude, true);
+    const longitude = toCoord(body.longitude, false);
 
     const patch = {
       businessName,
