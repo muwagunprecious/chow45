@@ -81,7 +81,7 @@ export async function GET(request: Request) {
     }
 
     // New vendor applicant: guide through store creation with prefilled Google info
-    const onboardUrl = new URL("/app", request.url);
+    const onboardUrl = new URL("/vendor", request.url);
     onboardUrl.searchParams.set("role", "vendor");
     onboardUrl.searchParams.set("action", "onboard");
     onboardUrl.searchParams.set("email", userEmail);

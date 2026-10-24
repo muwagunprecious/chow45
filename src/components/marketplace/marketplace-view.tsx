@@ -295,6 +295,31 @@ export function MarketplaceView({
           await waitForGlobals(REQUIRED_GLOBALS);
           if (cancelled) return;
 
+          // Vendor access restriction: vendors must NOT have access to /app section
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/app')) {
+            const rawSession = localStorage.getItem('chow45_auth_session_v1') || localStorage.getItem('chow45_user');
+            let isVendorSession = false;
+            try {
+              if (rawSession) {
+                const s = JSON.parse(rawSession);
+                const r = String(s?.user?.role || s?.role || '').toLowerCase();
+                if (r === 'vendor') isVendorSession = true;
+              }
+            } catch (_) {}
+
+            const isVendor = isVendorSession ||
+              (window.Chow45Auth && typeof window.Chow45Auth.isVendorUser === 'function' && window.Chow45Auth.isVendorUser()) ||
+              window.chowStore?.state?.userProfile?.role === 'vendor' ||
+              window.chowStore?.state?.userProfile?.role === 'VENDOR' ||
+              window.chowStore?.state?.currentRole === 'vendor';
+
+            if (isVendor) {
+              console.warn('[marketplace] Vendor accounts are restricted from /app. Redirecting to /vendor.');
+              window.location.replace('/vendor');
+              return;
+            }
+          }
+
           // init() guards against re-entry, so a Fast Refresh re-run is safe.
           window.Chow45App.init();
 

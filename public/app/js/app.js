@@ -44,7 +44,19 @@ const Chow45App = {
         return;
       }
       initialRole = 'vendor';
-    } else if (pathname === '/app' || pathname === '/') {
+    } else if (pathname === '/app' || pathname.startsWith('/app') || pathname === '/') {
+      // Vendor access restriction: vendor should NOT have access to /app section
+      if (
+        typeof Chow45Auth !== 'undefined' &&
+        typeof Chow45Auth.isLoggedIn === 'function' &&
+        Chow45Auth.isLoggedIn() &&
+        typeof Chow45Auth.isVendorUser === 'function' &&
+        Chow45Auth.isVendorUser()
+      ) {
+        console.warn('[chow45] Vendor accounts are restricted from /app. Redirecting to /vendor.');
+        window.location.replace('/vendor');
+        return;
+      }
       // On marketplace route, if no ?role= is provided, ensure customer role
       if (!initialRole) {
         initialRole = 'customer';
@@ -224,6 +236,12 @@ const Chow45App = {
           Chow45Auth.updateUI();
         }
 
+        if (role === 'vendor' && window.location.pathname.startsWith('/app')) {
+          console.warn('[chow45] Logged-in vendor detected on /app. Redirecting to /vendor.');
+          window.location.replace('/vendor');
+          return;
+        }
+
         if (role === 'vendor' && window.location.pathname.startsWith('/vendor')) {
           if (typeof VendorController !== 'undefined') {
             if (VendorController.render) VendorController.render();
@@ -274,6 +292,21 @@ const Chow45App = {
   },
 
   switchRole(roleName) {
+    if (roleName === 'customer') {
+      if (
+        typeof Chow45Auth !== 'undefined' &&
+        typeof Chow45Auth.isLoggedIn === 'function' &&
+        Chow45Auth.isLoggedIn() &&
+        typeof Chow45Auth.isVendorUser === 'function' &&
+        Chow45Auth.isVendorUser()
+      ) {
+        console.warn('[chow45] Logged-in vendor cannot access customer marketplace view.');
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('Vendor accounts are restricted to the Vendor Portal.', 'warning');
+        }
+        return;
+      }
+    }
     if (roleName === 'vendor') {
       if (
         typeof Chow45Auth !== 'undefined' &&

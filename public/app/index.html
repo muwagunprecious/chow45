@@ -134,7 +134,7 @@
     <header class="top-nav">
       <div class="top-nav-inner">
         <!-- Brand Badge -->
-        <a href="/app" class="brand-badge" title="Chow45 Marketplace" style="display: inline-flex; align-items: center; gap: 8px;">
+        <a href="/app" class="brand-badge" title="Chow45 Marketplace" onclick="if(window.location.pathname.startsWith('/vendor') || (window.Chow45Auth && window.Chow45Auth.isVendorUser && window.Chow45Auth.isVendorUser())){ event.preventDefault(); window.location.href='/vendor'; }" style="display: inline-flex; align-items: center; gap: 8px;">
           <img src="/logo.png" alt="Chow45" style="height: 28px; width: 28px; object-fit: contain; border-radius: 6px;" />
           <span>CHOW45</span>
           <span class="badge-tag">Marketplace</span>

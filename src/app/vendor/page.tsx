@@ -37,7 +37,10 @@ export default async function VendorPage() {
       )
       .limit(1);
 
-    const isVendor = vendorRows.length > 0 || isAdmin;
+    const isVendor =
+      vendorRows.length > 0 ||
+      isAdmin ||
+      String(resolved.user.role || '').toUpperCase() === 'VENDOR';
 
     if (!isVendor) {
       // User is logged in as a customer or rider. Prevent account role hijacking.
@@ -47,4 +50,3 @@ export default async function VendorPage() {
 
   return <MarketplaceView initialRole="vendor" initialTab="food" />;
 }
-
