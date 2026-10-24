@@ -85,7 +85,7 @@ class Chow45Store {
             parsed.vendorOnboarding = { status: 'none', storeId: null, applicationId: null, storeName: null, appliedAt: null, approvedAt: null };
           }
           if (Array.isArray(parsed.orders)) {
-            parsed.orders = parsed.orders.filter(o => o.storeId !== 'rest-mama-t' && o.id !== 'CH45281');
+            parsed.orders = parsed.orders.filter(o => o.storeId !== 'rest-mama-t' && o.id !== 'CH45281' && o.id !== 'CH45908');
           }
           if (Array.isArray(parsed.pendingVendors)) {
             parsed.pendingVendors = parsed.pendingVendors.filter(v => v.id !== 'pv-101' && !String(v.name || '').includes('Iya Moria'));

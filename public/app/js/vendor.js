@@ -1098,7 +1098,9 @@ const VendorController = {
   // Live order monitoring & Real-Time Server Sync
   // ---------------------------------------------------------------
   _orderBuckets(storeOrders) {
-    const list = Array.isArray(storeOrders) ? storeOrders : [];
+    const list = (Array.isArray(storeOrders) ? storeOrders : []).filter(
+      o => o && o.id !== 'CH45908' && o.id !== 'CH45281'
+    );
     return {
       new: list.filter(o => o.status === 'PAID'),
       preparing: list.filter(o => o.status === 'RESTAURANT_ACCEPTED' || o.status === 'PREPARING'),
