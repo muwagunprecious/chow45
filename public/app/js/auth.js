@@ -1614,7 +1614,12 @@ const Chow45Auth = {
       : (window.chowStore?.getCurrentVendor ? window.chowStore.getCurrentVendor() : null);
 
     const sessionUser = this.getSession();
-    const vendorEmail = (store && store.email) || sessionUser?.email || window.chowStore?.state?.userProfile?.email || '';
+    const urlParams = new URLSearchParams(window.location.search);
+    const vendorEmail = (store && store.email) ||
+                        sessionUser?.email ||
+                        window.chowStore?.state?.userProfile?.email ||
+                        urlParams.get('email') ||
+                        '';
 
     const headers = { 'Content-Type': 'application/json' };
     if (store?.id) headers['x-vendor-store-id'] = String(store.id);

@@ -107,6 +107,9 @@ export async function GET(request: Request) {
     );
   }
 
+  if (!auth.vendor) {
+    return NextResponse.json({ error: "Store not found" }, { status: 404 });
+  }
   const vendorId = auth.vendor.id;
 
   const items = await db
@@ -168,6 +171,9 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!auth.vendor) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
     const vendorId = auth.vendor.id;
 
     const name = String(body.name ?? "").trim();
@@ -339,6 +345,9 @@ export async function DELETE(request: Request) {
     );
   }
 
+  if (!auth.vendor) {
+    return NextResponse.json({ error: "Store not found" }, { status: 404 });
+  }
   const vendorId = auth.vendor.id;
 
   const itemId = readClientId(id);

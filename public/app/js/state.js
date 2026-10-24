@@ -214,12 +214,69 @@ class Chow45Store {
     };
   }
 
+  _prepareForStorage(state) {
+    if (!state || typeof state !== 'object') return {};
+    const clone = Object.assign({}, state);
+
+    const sanitizeObj = (obj, depth = 0) => {
+      if (!obj || depth > 4) return;
+      for (const k of Object.keys(obj)) {
+        const val = obj[k];
+        if (typeof val === 'string' && val.startsWith('data:image/') && val.length > 15000) {
+          obj[k] = '';
+        } else if (typeof val === 'object' && val !== null) {
+          sanitizeObj(val, depth + 1);
+        }
+      }
+    };
+
+    if (Array.isArray(clone.restaurants)) {
+      clone.restaurants = clone.restaurants.map(r => {
+        const item = Object.assign({}, r);
+        if (typeof item.image === 'string' && item.image.startsWith('data:image/') && item.image.length > 15000) {
+          item.image = '';
+        }
+        if (typeof item.bannerImg === 'string' && item.bannerImg.startsWith('data:image/') && item.bannerImg.length > 15000) {
+          item.bannerImg = '';
+        }
+        return item;
+      });
+    }
+
+    if (Array.isArray(clone.orders) && clone.orders.length > 25) {
+      clone.orders = clone.orders.slice(0, 25);
+    }
+
+    sanitizeObj(clone);
+    return clone;
+  }
+
   save() {
     this.ensureUserProfileIntegrity();
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+      const sanitized = this._prepareForStorage(this.state);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sanitized));
     } catch (e) {
-      console.error('Failed saving state to localStorage', e);
+      const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+      if (isQuota) {
+        console.warn('[state] LocalStorage quota reached. Clearing legacy caches and persisting essential session only.');
+        try {
+          localStorage.removeItem('chow45_marketplace_state');
+          localStorage.removeItem('chow45_marketplace_state_v1');
+          localStorage.removeItem('chow45_cached_menus');
+
+          const minimal = Object.assign({}, this._prepareForStorage(this.state));
+          minimal.restaurants = [];
+          if (Array.isArray(minimal.orders)) minimal.orders = minimal.orders.slice(0, 10);
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(minimal));
+        } catch (retryErr) {
+          try {
+            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(this._prepareForStorage(this.state)));
+          } catch (_) {}
+        }
+      } else {
+        console.error('Failed saving state to localStorage', e);
+      }
     }
     this.notify();
   }

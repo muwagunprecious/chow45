@@ -8,16 +8,26 @@ const RiderController = {
   activeOrder: null,
   riderData: null,
 
+  trackingInterval: null,
+  watchId: null,
+
   async init() {
-    await this.loadCurrentRider();
+    const isRiderRole = window.chowStore?.state?.currentRole === 'rider';
+    if (isRiderRole) {
+      await this.loadCurrentRider();
+    }
     this.bindEvents();
     this.render();
-    this.startLocationTracking();
+    if (isRiderRole) {
+      this.startLocationTracking();
+    }
   },
 
   async loadCurrentRider() {
+    const isRiderRole = window.chowStore?.state?.currentRole === 'rider';
+    if (!isRiderRole) return;
     try {
-      const res = await fetch('/api/rider/me');
+      const res = await fetch('/api/rider/me', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data && data.rider) {
@@ -38,13 +48,23 @@ const RiderController = {
 
   startLocationTracking() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(
-      (position) => { this.latestposition = position.coords; },
-      (error) => console.warn("GPS tracking:", error.message || error),
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
-    );
+    if (this.trackingInterval) return;
 
-    setInterval(async () => {
+    if (window.chowStore?.state?.currentRole !== 'rider') return;
+
+    if (!this.watchId) {
+      this.watchId = navigator.geolocation.watchPosition(
+        (position) => { this.latestposition = position.coords; },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+      );
+    }
+
+    this.trackingInterval = setInterval(async () => {
+      if (window.chowStore?.state?.currentRole !== 'rider') {
+        this.stopLocationTracking();
+        return;
+      }
       if (!this.latestposition) return;
       const lat = this.latestposition.latitude;
       const lng = this.latestposition.longitude;
@@ -56,25 +76,40 @@ const RiderController = {
       }
 
       try {
-        await fetch('/api/rider/location', {
+        const res = await fetch('/api/rider/location', {
           method: 'POST',
           headers: { "Content-Type": "application/json" },
+          credentials: 'include',
           body: JSON.stringify({ lat, lng })
         });
-      } catch (e) {
-        if (this.currentRiderId) {
-          fetch(`/api/riders/${this.currentRiderId}`, {
-            method: 'PATCH',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lat, lng })
-          }).catch(() => {});
+        if (res.status === 401 || res.status === 403) {
+          this.stopLocationTracking();
+          return;
         }
-      }
-    }, 5000);
+      } catch (e) {}
+    }, 15000);
+  },
+
+  stopLocationTracking() {
+    if (this.trackingInterval) {
+      clearInterval(this.trackingInterval);
+      this.trackingInterval = null;
+    }
+    if (this.watchId && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.watchId);
+      this.watchId = null;
+    }
   },
 
   bindEvents() {
-    window.chowStore.subscribe(() => {
+    window.chowStore.subscribe((state) => {
+      if (state && state.currentRole === 'rider') {
+        if (!this.trackingInterval) {
+          this.loadCurrentRider().then(() => this.startLocationTracking());
+        }
+      } else {
+        this.stopLocationTracking();
+      }
       this.render();
     });
 

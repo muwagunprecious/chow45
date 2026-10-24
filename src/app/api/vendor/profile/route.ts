@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { vendors, vendorWallets, users } from "@/db";
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         vendorId: vendorId || undefined,
         email: email || undefined,
       },
-      { allowPendingPasswordChange: true }
+      { allowPendingPasswordChange: true, allowUncreatedVendor: true }
     );
 
     if (!authResult.ok) {
@@ -58,13 +58,13 @@ export async function GET(request: Request) {
     }
 
     const vendor = authResult.vendor;
-    const userEmail = (authResult.user?.email || vendor?.contactEmail || "").toLowerCase();
-    const requiresPasswordChange = vendorRequiresPasswordChange(vendor, userEmail);
+    const userEmail = (authResult.user?.email || vendor?.contactEmail || email || "").toLowerCase();
+    const requiresPasswordChange = vendor ? vendorRequiresPasswordChange(vendor, userEmail) : false;
 
     return NextResponse.json({
-      vendor,
+      vendor: vendor || null,
       requiresPasswordChange,
-      requiresFirstTimeSetup: requiresPasswordChange,
+      requiresFirstTimeSetup: vendor ? requiresPasswordChange : true,
       userEmail,
     });
   } catch (e: any) {
@@ -80,14 +80,25 @@ export async function POST(request: Request) {
       storeId: body.storeId,
       vendorId: body.vendorId,
       email: body.contactEmail || body.email,
-    });
+      name: body.ownerName || body.businessName,
+    }, { allowPendingPasswordChange: true, allowUncreatedVendor: true });
 
     if (!authResult.ok) {
       return NextResponse.json({ error: authResult.error, message: authResult.message || "Unauthorized" }, { status: authResult.status });
     }
 
     const userId = authResult.userId;
-    const currentVendor = authResult.vendor;
+    let currentVendor = authResult.vendor;
+
+    if (!currentVendor && userId) {
+      const [found] = await db.select().from(vendors).where(eq(vendors.userId, userId)).limit(1);
+      if (found) currentVendor = found;
+    }
+    const rawEmail = String(body.contactEmail ?? body.email ?? "").trim();
+    if (!currentVendor && rawEmail) {
+      const [found] = await db.select().from(vendors).where(sql`LOWER(${vendors.contactEmail}) = ${rawEmail.toLowerCase()}`).limit(1);
+      if (found) currentVendor = found;
+    }
 
     const businessName = String(body.businessName ?? currentVendor?.businessName ?? "").trim();
     if (businessName.length < 2) {
@@ -95,7 +106,7 @@ export async function POST(request: Request) {
     }
 
     // Contact email is validated server-side.
-    const rawEmail = String(body.contactEmail ?? "").trim();
+    // Contact email is validated server-side.
     if (rawEmail.length > 0 && !isValidEmail(rawEmail)) {
       return NextResponse.json({ error: "Please provide a valid email address." }, { status: 400 });
     }
@@ -144,6 +155,9 @@ export async function POST(request: Request) {
         .set(patch)
         .where(eq(vendors.id, currentVendor.id))
         .returning();
+      if (userId) {
+        await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, userId)).catch(() => {});
+      }
       return NextResponse.json({ vendor: updated });
     }
 
@@ -160,7 +174,7 @@ export async function POST(request: Request) {
 
     // A vendor with no wallet row reads as a zero balance rather than as an
     // error, so the row is created alongside the storefront.
-    await db.insert(vendorWallets).values({ vendorId: created.id });
+    await db.insert(vendorWallets).values({ vendorId: created.id }).catch(() => {});
 
     return NextResponse.json({ vendor: created }, { status: 201 });
   } catch (e: any) {

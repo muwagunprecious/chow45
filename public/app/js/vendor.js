@@ -1706,9 +1706,15 @@ const VendorController = {
       return;
     }
 
-    const store = this.getStore();
+    const store = this.getStore() || {};
     const userProfile = window.chowStore?.state?.userProfile;
-    const email = (store && store.email) || userProfile?.email;
+    const session = window.Chow45Auth ? window.Chow45Auth.getSession() : null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = (store && (store.email || store.contactEmail)) ||
+                  session?.email ||
+                  userProfile?.email ||
+                  urlParams.get('email') ||
+                  '';
 
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -1735,9 +1741,15 @@ const VendorController = {
 
     // 2. Persist to server API (/api/vendor/profile)
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (email) headers['x-vendor-email'] = email;
+      if (store?.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store?.numericId) headers['x-vendor-id'] = String(store.numericId);
+
       const res = await fetch('/api/vendor/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
+        credentials: 'include',
         body: JSON.stringify({
           storeId: store?.id,
           vendorId: store?.numericId,
@@ -3306,21 +3318,37 @@ const VendorController = {
     try {
       const store = this.getStore() || {};
       const session = window.Chow45Auth ? window.Chow45Auth.getSession() : null;
-      const email = (store && (store.email || store.contactEmail)) || session?.email || '';
+      const urlParams = new URLSearchParams(window.location.search);
+      const email = (store && (store.email || store.contactEmail)) ||
+                    session?.email ||
+                    window.chowStore?.state?.userProfile?.email ||
+                    urlParams.get('email') ||
+                    '';
+      const storeName = store.name ||
+                        window.chowStore?.state?.vendorOnboarding?.storeName ||
+                        document.getElementById('vendor-store-name')?.textContent?.trim() ||
+                        urlParams.get('name') ||
+                        'Your Store';
 
       const payload = {
         storeId: store.id,
         vendorId: store.numericId,
-        businessName: store.name || 'Your Store',
+        businessName: storeName,
         address: address,
         latitude: lat,
         longitude: lng,
-        contactEmail: email
+        contactEmail: email,
+        email: email
       };
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (email) headers['x-vendor-email'] = email;
+      if (store.id) headers['x-vendor-store-id'] = String(store.id);
+      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
 
       const res = await fetch('/api/vendor/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         credentials: 'include',
         body: JSON.stringify(payload)
       });

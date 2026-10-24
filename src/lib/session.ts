@@ -153,7 +153,7 @@ export interface AuthenticatedVendorContext {
   ok: true;
   userId: number;
   user: SessionUser;
-  vendor: typeof vendors.$inferSelect;
+  vendor: typeof vendors.$inferSelect | null;
 }
 
 export interface FailedVendorContext {
@@ -170,10 +170,12 @@ export interface FallbackVendorData {
   storeId?: unknown;
   email?: unknown;
   vendorEmail?: unknown;
+  name?: unknown;
 }
 
 export interface RequireVendorOptions {
   allowPendingPasswordChange?: boolean;
+  allowUncreatedVendor?: boolean;
 }
 
 /**
@@ -334,6 +336,18 @@ export async function requireVendor(
         vendor: targetVendor,
       };
     }
+
+    if (options?.allowUncreatedVendor) {
+      if (roleUpper !== "VENDOR" && roleUpper !== "ADMIN") {
+        await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, resolved.userId));
+      }
+      return {
+        ok: true,
+        userId: resolved.userId,
+        user: resolved.user,
+        vendor: null,
+      };
+    }
   }
 
   // 2. Fallback: If cookie was dropped or session missing in production,
@@ -402,6 +416,36 @@ export async function requireVendor(
               role: "VENDOR",
             }) as any,
         vendor: targetVendor,
+      };
+    }
+  }
+
+  if (options?.allowUncreatedVendor && headerEmail) {
+    const userMatches = await db
+      .select()
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${headerEmail}`)
+      .limit(1);
+
+    if (userMatches.length > 0) {
+      const u = userMatches[0];
+      if (u.role !== "VENDOR" && u.role !== "ADMIN") {
+        await db.update(users).set({ role: "VENDOR" }).where(eq(users.id, u.id));
+      }
+      return {
+        ok: true,
+        userId: u.id,
+        user: {
+          id: String(u.id),
+          email: u.email,
+          name: u.name,
+          role: "VENDOR",
+          image: u.image,
+          emailVerified: u.emailVerified,
+          createdAt: u.createdAt,
+          updatedAt: u.updatedAt,
+        } as any,
+        vendor: null,
       };
     }
   }
