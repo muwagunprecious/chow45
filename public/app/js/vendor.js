@@ -23,7 +23,7 @@ const VendorController = {
   _orderPollTimer: null,
   _isSyncingOrders: false,
 
-  placeholderImg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
+  placeholderImg: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Crect width='100%25' height='100%25' fill='%23F8FAFC'/%3E%3Ccircle cx='80' cy='80' r='54' fill='%23F1F5F9' stroke='%23E2E8F0' stroke-width='2'/%3E%3Ctext x='50%25' y='54%25' font-size='42' text-anchor='middle' dominant-baseline='middle'%3E🍲%3C/text%3E%3C/svg%3E",
 
   isVendorContext() {
     if (typeof window !== 'undefined' && window.Chow45Auth && typeof window.Chow45Auth.isLoggedIn === 'function' && window.Chow45Auth.isLoggedIn()) {
@@ -193,7 +193,7 @@ const VendorController = {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const maxDim = 800; // Optimal resolution for clear food photos & fast transmission
+          const maxDim = 640; // Optimal resolution for crisp food photos, fast uploads & zero quota bottlenecks
           if (width > maxDim || height > maxDim) {
             if (width > height) {
               height = Math.round((height * maxDim) / width);
@@ -207,17 +207,13 @@ const VendorController = {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
 
-          const isPng = file.type === 'image/png' || ext === 'png';
-          if (!isPng) {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-          }
+          // Always draw on crisp white background to prevent dark transparent backgrounds
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Output png for PNGs with possible transparency, and high quality jpeg for others
-          const mime = isPng ? 'image/png' : 'image/jpeg';
-          const quality = isPng ? undefined : 0.84;
-          const dataUrl = canvas.toDataURL(mime, quality);
+          // Output high-quality lightweight JPEG (~25-35KB) for seamless transmission & persistent storage
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
           callback(dataUrl);
         } catch (canvasErr) {
           // If canvas tainted, fallback to direct data URL
@@ -689,7 +685,7 @@ const VendorController = {
           platePrice: Number(item.platePrice) || Number(item.price) || 0,
           scoopPrice: Number(item.scoopPrice) || 0,
           piecePrice: Number(item.piecePrice) || 0,
-          img: item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80',
+          img: item.imageUrl || '',
           image: item.imageUrl || '',
           status: item.status === 'out_of_stock' ? 'OUT_OF_STOCK' : 'AVAILABLE',
           inStock: item.status !== 'out_of_stock',
@@ -1970,7 +1966,7 @@ const VendorController = {
     return `
       <div class="vnd-visual-food-card ${isOut ? 'is-out-of-stock' : ''}">
         <div class="vnd-fc-thumb-wrap">
-          <img class="vnd-fc-thumb" src="${this._esc(dish.img || this.placeholderImg)}" alt="${this._esc(dish.name)}" onerror="this.src='${this.placeholderImg}'" />
+          <img class="vnd-fc-thumb" src="${this._esc(dish.img || dish.image || this.placeholderImg)}" alt="${this._esc(dish.name)}" onerror="this.onerror=null; this.src='${this.placeholderImg}'" />
           <div class="vnd-fc-badge-pos">${statusPill}</div>
         </div>
         <div class="vnd-fc-body">
@@ -2960,7 +2956,7 @@ const VendorController = {
       name: d.name,
       category: d.category || 'rice',
       desc: d.desc || '',
-      img: d.image || this.placeholderImg,
+      img: d.image || '',
       priceType: d.priceType,
       scoopPrice: Number(d.scoopPrice) || 0,
       platePrice: Number(d.platePrice) || 0,
@@ -3007,15 +3003,57 @@ const VendorController = {
         return;
       }
 
+      if (syncResult && syncResult.data && syncResult.data.item) {
+        serverId = syncResult.data.item.id;
+        payload.id = serverId;
+        if (syncResult.data.item.imageUrl) {
+          payload.img = syncResult.data.item.imageUrl;
+        }
+      }
+
       if (d.dishId) {
         window.chowStore.updateDish(store.id, d.dishId, payload);
         window.chowApp.toast(`"${d.name}" updated successfully!`, 'success');
       } else {
-        // addDish returns the stored dish, whose id is the key the server uses.
         const saved = window.chowStore.addDish(store.id, payload);
-        serverId = (saved && saved.id) || null;
+        if (!serverId && saved) serverId = saved.id;
         window.chowApp.toast(`"${d.name}" published to menu!`, 'success');
       }
+
+      // Immediately synchronize store.menu in-memory with the uploaded image and details
+      const existingMenu = store.menu || [];
+      const targetId = d.dishId || serverId;
+      const updatedDishObj = {
+        id: targetId,
+        dishId: targetId,
+        name: payload.name,
+        category: payload.category,
+        desc: payload.desc,
+        price: payload.priceType === 'PIECE' ? payload.piecePrice : (payload.priceType === 'SCOOP' ? payload.scoopPrice : payload.platePrice),
+        priceType: payload.priceType,
+        platePrice: payload.platePrice,
+        scoopPrice: payload.scoopPrice,
+        piecePrice: payload.piecePrice,
+        img: payload.img || d.image || '',
+        image: payload.img || d.image || '',
+        status: payload.status,
+        inStock: payload.inStock,
+        sizes: payload.sizes || [],
+        compulsoryExtras: payload.compulsoryExtras || [],
+        optionalExtras: payload.optionalExtras || [],
+        preorderEnabled: payload.preorderEnabled,
+        preorderDate: payload.preorderDate || '',
+        preorderTime: payload.preorderTime || ''
+      };
+
+      const dishIdx = existingMenu.findIndex(item => item.id === targetId);
+      if (dishIdx >= 0) {
+        existingMenu[dishIdx] = Object.assign(existingMenu[dishIdx], updatedDishObj);
+      } else {
+        existingMenu.unshift(updatedDishObj);
+      }
+      store.menu = existingMenu;
+      this.renderMenu(store);
 
       // Draft successfully published - clear saved draft
       localStorage.removeItem('chow45_vendor_food_draft');

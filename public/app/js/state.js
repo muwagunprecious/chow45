@@ -254,29 +254,35 @@ class Chow45Store {
   save() {
     this.ensureUserProfileIntegrity();
     try {
-      const serialized = JSON.stringify(this.state, (key, value) => {
-        if (typeof value === 'string' && value.startsWith('data:image/') && value.length > 15000) {
-          return '';
-        }
-        return value;
-      });
-      localStorage.setItem(this.STORAGE_KEY, serialized);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
     } catch (e) {
       const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
       if (isQuota) {
-        console.warn('[state] LocalStorage quota reached. Clearing legacy caches.');
+        console.warn('[state] LocalStorage quota reached. Clearing legacy caches and trimming non-vendor cache.');
         try {
           localStorage.removeItem('chow45_marketplace_state');
           localStorage.removeItem('chow45_marketplace_state_v1');
           localStorage.removeItem('chow45_cached_menus');
 
+          // Keep current vendor's menu intact, strip only heavy data from 3rd-party restaurants
           const minimal = Object.assign({}, this.state);
-          minimal.restaurants = [];
+          if (Array.isArray(minimal.restaurants)) {
+            minimal.restaurants = minimal.restaurants.map(r => {
+              if (r.id === 'precious-kitchen' || r.numericId === 80) return r;
+              const rCopy = Object.assign({}, r);
+              if (Array.isArray(rCopy.menu)) {
+                rCopy.menu = rCopy.menu.map(d => {
+                  if (typeof d.img === 'string' && d.img.startsWith('data:image/') && d.img.length > 50000) {
+                    return Object.assign({}, d, { img: '' });
+                  }
+                  return d;
+                });
+              }
+              return rCopy;
+            });
+          }
           if (Array.isArray(minimal.orders)) minimal.orders = minimal.orders.slice(0, 10);
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(minimal, (k, v) => {
-            if (typeof v === 'string' && v.startsWith('data:image/')) return '';
-            return v;
-          }));
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(minimal));
         } catch (_) {}
       } else {
         console.error('Failed saving state to localStorage', e);
@@ -888,7 +894,7 @@ class Chow45Store {
       preorderTime: dishData.preorderTime || '',
       compulsoryExtras: compulsory,
       optionalExtras: optional,
-      img: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
+      img: dishData.img || dishData.image || '',
       category: 'rice',
       rating: 0,
       reviewsCount: 0,
