@@ -552,9 +552,9 @@ const Chow45Auth = {
           : null;
 
         const storeName = store?.name || user.name || 'Your Kitchen';
-        const storePhone = store?.phone || user.phone || '+234 812 450 4500';
-        const storeEmail = store?.email || store?.contactEmail || user.email || 'vendor@chow45.com';
-        const storeAddress = store?.address || 'Sagamu Campus (OSUTH), Sagamu';
+        const storePhone = store?.phone || user.phone || '';
+        const storeEmail = store?.email || store?.contactEmail || user.email || '';
+        const storeAddress = store?.address || (store?.location ? store.location + ' Campus' : 'Near OSUTH Main Gate, Hospital Road, Sagamu');
         const isOpen = store ? store.isOpen !== false : true;
 
         const vndTitleEl = document.getElementById('account-vnd-title');
@@ -570,7 +570,7 @@ const Chow45Auth = {
           vndStatusBadge.style.background = isOpen ? '#DCFCE7' : '#FEE2E2';
           vndStatusBadge.style.color = isOpen ? '#15803D' : '#B91C1C';
         }
-        if (vndPhoneEl) vndPhoneEl.textContent = storePhone;
+        if (vndPhoneEl) vndPhoneEl.textContent = storePhone || 'No phone set';
         if (vndEmailEl) vndEmailEl.textContent = storeEmail;
         if (vndAddrEl) vndAddrEl.textContent = '📍 ' + storeAddress;
         if (vndAvatarEl && store?.image) {
@@ -635,7 +635,7 @@ const Chow45Auth = {
           const displayName = user.name || (user.email ? user.email.split('@')[0] : 'Chow45 Customer');
           if (nameEl) nameEl.textContent = displayName;
           if (emailEl) emailEl.textContent = user.email || 'customer@chow45.com';
-          if (phoneEl) phoneEl.textContent = user.phone || '+234 812 450 4500';
+          if (phoneEl) phoneEl.textContent = user.phone || 'No phone set';
           if (addrTextEl) addrTextEl.textContent = currentAddress || 'No delivery address set';
 
           if (badgeEl) {

@@ -947,7 +947,7 @@
                       <input type="text" id="vnd-settings-address" placeholder="e.g. Sagamu Campus (OSUTH), Sagamu" style="width: 100%; height: 42px; padding: 0 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; box-sizing: border-box; outline: none; margin-bottom: 8px;" />
                       <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                         <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'Sagamu Campus (OSUTH), Sagamu, Ogun State'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏥 Sagamu (OSUTH)</button>
-                        <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'OOU Main Campus Gate, Ago-Iwoye'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏫 OOU Main Campus</button>
+                        <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'Ibogun Campus (OGITECH), Ibogun, Ogun State'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏫 Ibogun (OGITECH)</button>
                         <button type="button" class="vnd-addr-chip" onclick="document.getElementById('vnd-settings-address').value = 'Hospital Road, Sagamu, Ogun State'" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.74rem; font-weight: 600; cursor: pointer;">🏠 Hospital Road</button>
                       </div>
                     </div>
@@ -2857,7 +2857,7 @@
                   </div>
                   <div class="auth-input-wrap">
                     <span class="auth-input-icon">📍</span>
-                    <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Science Canteen, Ago-Iwoye, Ogun" required />
+                    <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Near OSUTH Main Gate, Hospital Road, Sagamu" required />
                   </div>
                   <small class="auth-field-hint">Type your current address manually, or use your live location to populate it.</small>
                 </div>
@@ -2953,7 +2953,7 @@
                   <span id="account-role-badge" class="account-badge customer">Customer</span>
                 </div>
                 <p id="account-display-email" class="account-contact">customer@chow45.com</p>
-                <p id="account-display-phone" class="account-contact">+234 812 450 4500</p>
+                <p id="account-display-phone" class="account-contact">No phone number set</p>
                 <p id="account-display-address" class="account-contact" style="color: #64748B; font-size: 0.76rem;">📍 <span id="account-display-address-text">No delivery address set</span></p>
               </div>
             </div>
@@ -3073,9 +3073,9 @@
                   <h3 id="account-vnd-title" class="account-name" style="color: #00a205;">Your Kitchen</h3>
                   <span id="account-vnd-status-badge" class="account-badge" style="background: #DCFCE7; color: #15803D;">● OPEN</span>
                 </div>
-                <p id="account-vnd-phone-text" class="account-contact">+234 812 450 4500</p>
-                <p id="account-vnd-email-text" class="account-contact">vendor@chow45.com</p>
-                <p id="account-vnd-address-text" class="account-contact" style="color: #0F766E; font-size: 0.76rem;">📍 Sagamu Campus (OSUTH)</p>
+                <p id="account-vnd-phone-text" class="account-contact">No phone number set</p>
+                <p id="account-vnd-email-text" class="account-contact"></p>
+                <p id="account-vnd-address-text" class="account-contact" style="color: #0F766E; font-size: 0.76rem;">📍 Near OSUTH Main Gate, Hospital Road, Sagamu</p>
               </div>
             </div>
 
@@ -3265,7 +3265,7 @@
           </label>
           <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
             <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Sagamu Campus (OSUTH), Sagamu, Ogun State', 6.8400, 3.6500)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏥 Sagamu (OSUTH)</button>
-            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('OOU Main Campus Gate, Ago-Iwoye, Ogun State', 6.9320, 3.9180)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏫 OOU Main Campus</button>
+            <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Ibogun Campus (OGITECH), Ibogun, Ogun State', 6.7210, 3.3910)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏫 Ibogun (OGITECH)</button>
             <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Babcock University Gate, Ilishan-Remo, Ogun State', 6.8900, 3.7200)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🎓 Babcock Gate</button>
             <button type="button" class="vnd-addr-chip" onclick="VendorController.setModalAddressPreset('Hospital Road, Sagamu, Ogun State', 6.8420, 3.6480)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.78rem; font-weight: 600; cursor: pointer;">🏠 Hospital Road</button>
           </div>

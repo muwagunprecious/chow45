@@ -175,7 +175,7 @@ class Chow45Store {
       searchQuery: '',
       userProfile: {
         name: 'Precious M.',
-        phone: '+234 812 450 4500',
+        phone: '',
         savedAddresses: [],
         favorites: {
           foods: [],
@@ -254,26 +254,30 @@ class Chow45Store {
   save() {
     this.ensureUserProfileIntegrity();
     try {
-      const sanitized = this._prepareForStorage(this.state);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sanitized));
+      const serialized = JSON.stringify(this.state, (key, value) => {
+        if (typeof value === 'string' && value.startsWith('data:image/') && value.length > 15000) {
+          return '';
+        }
+        return value;
+      });
+      localStorage.setItem(this.STORAGE_KEY, serialized);
     } catch (e) {
       const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
       if (isQuota) {
-        console.warn('[state] LocalStorage quota reached. Clearing legacy caches and persisting essential session only.');
+        console.warn('[state] LocalStorage quota reached. Clearing legacy caches.');
         try {
           localStorage.removeItem('chow45_marketplace_state');
           localStorage.removeItem('chow45_marketplace_state_v1');
           localStorage.removeItem('chow45_cached_menus');
 
-          const minimal = Object.assign({}, this._prepareForStorage(this.state));
+          const minimal = Object.assign({}, this.state);
           minimal.restaurants = [];
           if (Array.isArray(minimal.orders)) minimal.orders = minimal.orders.slice(0, 10);
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(minimal));
-        } catch (retryErr) {
-          try {
-            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(this._prepareForStorage(this.state)));
-          } catch (_) {}
-        }
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(minimal, (k, v) => {
+            if (typeof v === 'string' && v.startsWith('data:image/')) return '';
+            return v;
+          }));
+        } catch (_) {}
       } else {
         console.error('Failed saving state to localStorage', e);
       }

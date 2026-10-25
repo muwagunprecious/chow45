@@ -6,7 +6,7 @@
  */
 
 const VendorController = {
-  currentStoreId: 'rest-mama-t',
+  currentStoreId: null,
   activeTab: 'new', // 'new' | 'preparing' | 'complete'
   activeSubTab: 'food', // 'food' | 'orders' | 'money' | 'home' | 'store'
   activeCategoryFilter: 'all',
@@ -359,7 +359,7 @@ const VendorController = {
               id: v.storeId,
               numericId: v.id,
               name: v.businessName,
-              address: v.address || 'Hospital Road, Sagamu, Ogun State',
+              address: v.address || 'Near OSUTH Main Gate, Hospital Road, Sagamu, Ogun State',
               email: v.contactEmail,
               contactEmail: v.contactEmail,
               phone: v.contactPhone || '',

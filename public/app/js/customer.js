@@ -336,6 +336,36 @@ const CustomerController = {
     `;
   },
 
+  getDishFallbackImage(dish) {
+    const name = String(dish?.name || '').toLowerCase();
+    const cat = String(dish?.category || '').toLowerCase();
+    if (name.includes('jollof') || cat.includes('rice') || name.includes('rice')) {
+      return 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('chicken') || name.includes('wing') || name.includes('turkey') || cat.includes('chicken')) {
+      return 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('spaghetti') || name.includes('pasta') || name.includes('noodle')) {
+      return 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('pancake')) {
+      return 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('soup') || name.includes('swallow') || name.includes('egusi') || name.includes('amala') || name.includes('eba')) {
+      return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('suya') || name.includes('grill') || name.includes('beef') || name.includes('meat') || name.includes('asun')) {
+      return 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('shawarma') || name.includes('burger')) {
+      return 'https://images.unsplash.com/photo-1561651823-34feb02250e4?w=500&auto=format&fit=crop&q=80';
+    }
+    if (name.includes('drink') || name.includes('juice') || name.includes('water') || name.includes('coke') || cat.includes('drink')) {
+      return 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80';
+  },
+
   renderFoodCard(dish) {
     const favFoods = window.chowStore?.state?.userProfile?.favorites?.foods;
     const isFav = Array.isArray(favFoods) ? favFoods.includes(dish.id) : false;
@@ -1493,7 +1523,7 @@ const CustomerController = {
     }
 
     const customerName = document.getElementById('checkout-name-input').value.trim() || 'Precious M.';
-    const customerPhone = document.getElementById('checkout-phone-input').value.trim() || '+234 812 450 4500';
+    const customerPhone = document.getElementById('checkout-phone-input').value.trim() || (window.chowStore?.state?.userProfile?.phone || '');
     const deliveryNotes = document.getElementById('checkout-notes-input').value.trim();
     const paymentMethod = document.getElementById('checkout-payment-method').value;
 

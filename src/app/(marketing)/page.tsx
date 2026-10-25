@@ -694,7 +694,7 @@ export default function MarketingPage() {
                       Register as Vendor
                     </button>
                     <Link
-                      href="/app"
+                      href="/vendor"
                       className="text-sm font-semibold text-[#00a205] hover:underline"
                     >
                       Vendor dashboard →
