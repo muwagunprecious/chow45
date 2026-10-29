@@ -1007,7 +1007,7 @@ const VendorController = {
           appliedAt: 'Earlier',
           cuisine: 'Nigerian Specialties',
           status: 'pending',
-          coverImg: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80'
+          coverImg: ob.coverImg || ob.photoUrl || ''
         });
         pv = state.pendingVendors[0];
       }

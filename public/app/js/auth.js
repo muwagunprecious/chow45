@@ -1908,7 +1908,7 @@ const Chow45Auth = {
     }
 
     try {
-      const photo = this.uploadedPhotoDataUrl || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80';
+      const photo = this.uploadedPhotoDataUrl || null;
 
       // Register with the server endpoint to create user, hash password, and create vendor row
       let serverVendor = null;

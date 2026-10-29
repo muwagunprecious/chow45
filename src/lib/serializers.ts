@@ -209,7 +209,7 @@ export function resolveCampus(
 
 export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): ClientStore {
   const firstDishImage = menu.find((d) => d.img)?.img ?? null;
-  const defaultStoreImage = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80";
+  const defaultStoreImage = "/logo.png";
   const storeBanner = vendor.bannerImage || vendor.image || firstDishImage || defaultStoreImage;
   const storeImage = vendor.image || vendor.bannerImage || firstDishImage || defaultStoreImage;
 

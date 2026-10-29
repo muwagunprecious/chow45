@@ -18,16 +18,16 @@ const CHOW45_LOCATIONS = [
 ];
 
 const CHOW45_CATEGORIES = [
-  { id: 'all', name: 'All Food', icon: '🍽️', img: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=150&auto=format&fit=crop&q=80' },
-  { id: 'rice', name: 'Rice', icon: '🍚', img: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=150&auto=format&fit=crop&q=80' },
-  { id: 'chicken', name: 'Chicken', icon: '🍗', img: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=150&auto=format&fit=crop&q=80' },
-  { id: 'soups', name: 'Soups & Swallows', icon: '🍲', img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&auto=format&fit=crop&q=80' },
-  { id: 'grills', name: 'Suya & Grills', icon: '🥩', img: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=150&auto=format&fit=crop&q=80' },
-  { id: 'shawarma', name: 'Shawarma & Burgers', icon: '🌯', img: 'https://images.unsplash.com/photo-1561651823-34feb02250e4?w=150&auto=format&fit=crop&q=80' },
-  { id: 'pasta', name: 'Pasta & Noodles', icon: '🍝', img: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=150&auto=format&fit=crop&q=80' },
-  { id: 'african', name: 'African Classics', icon: '🥘', img: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=150&auto=format&fit=crop&q=80' },
-  { id: 'drinks', name: 'Drinks', icon: '🥤', img: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=150&auto=format&fit=crop&q=80' },
-  { id: 'snacks', name: 'Snacks & Desserts', icon: '🥧', img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&auto=format&fit=crop&q=80' }
+  { id: 'all', name: 'All Food', icon: '🍽️', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🍽️%3C/text%3E%3C/svg%3E" },
+  { id: 'rice', name: 'Rice', icon: '🍚', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🍚%3C/text%3E%3C/svg%3E" },
+  { id: 'chicken', name: 'Chicken', icon: '🍗', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🍗%3C/text%3E%3C/svg%3E" },
+  { id: 'soups', name: 'Soups & Swallows', icon: '🍲', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🍲%3C/text%3E%3C/svg%3E" },
+  { id: 'grills', name: 'Suya & Grills', icon: '🥩', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🥩%3C/text%3E%3C/svg%3E" },
+  { id: 'shawarma', name: 'Shawarma & Burgers', icon: '🌯', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🌯%3C/text%3E%3C/svg%3E" },
+  { id: 'pasta', name: 'Pasta & Noodles', icon: '🍝', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🍝%3C/text%3E%3C/svg%3E" },
+  { id: 'african', name: 'African Classics', icon: '🥘', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🥘%3C/text%3E%3C/svg%3E" },
+  { id: 'drinks', name: 'Drinks', icon: '🥤', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🥤%3C/text%3E%3C/svg%3E" },
+  { id: 'snacks', name: 'Snacks & Desserts', icon: '🥧', img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%23F1F5F9' rx='20'/%3E%3Ctext x='50%25' y='55%25' font-size='50' text-anchor='middle' dominant-baseline='middle'%3E🥧%3C/text%3E%3C/svg%3E" }
 ];
 
 // Real restaurants and uploaded foods are loaded dynamically from real vendors.

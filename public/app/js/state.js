@@ -744,7 +744,7 @@ class Chow45Store {
       appliedAt: 'Just now',
       cuisine: vendorData.cuisine || 'Nigerian Specialties',
       status: 'pending',
-      coverImg: vendorData.coverImg || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80'
+      coverImg: vendorData.coverImg || null
     };
     this.state.pendingVendors.unshift(newPending);
     this.state.vendorOnboarding = {
