@@ -350,6 +350,8 @@ const VendorController = {
             matched.address = v.address || matched.address;
             matched.email = v.contactEmail || matched.email;
             matched.contactEmail = v.contactEmail || matched.contactEmail;
+            if (v.image) matched.image = v.image;
+            if (v.bannerImage || v.image) matched.bannerImg = v.bannerImage || v.image;
           } else {
             matched = {
               id: v.storeId,
