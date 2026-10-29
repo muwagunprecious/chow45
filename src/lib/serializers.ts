@@ -78,6 +78,8 @@ export type ClientMenuItem = {
   isPopular: boolean;
   prepTime: string;
   isFast: boolean;
+  image?: string;
+  imageUrl?: string;
 };
 
 export function serializeMenuItem(
@@ -120,6 +122,8 @@ export function serializeMenuItem(
     optionalExtras: optional.map(toAddon),
     addonGroups,
     img: item.imageUrl || "",
+    image: item.imageUrl || "",
+    imageUrl: item.imageUrl || "",
     category: item.category ?? "rice",
     status: (item.status || "available").toLowerCase(),
     inStock:

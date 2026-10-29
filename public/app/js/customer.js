@@ -355,7 +355,11 @@ const CustomerController = {
 
     const dishImgSrc = (dish.img && !dish.img.includes('unsplash.com'))
       ? dish.img
-      : ((dish.image && !dish.image.includes('unsplash.com')) ? dish.image : 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'120\' viewBox=\'0 0 120 120\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F8FAFC\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'44\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E');
+      : ((dish.image && !dish.image.includes('unsplash.com'))
+        ? dish.image
+        : ((dish.imageUrl && !dish.imageUrl.includes('unsplash.com'))
+          ? dish.imageUrl
+          : 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'120\' viewBox=\'0 0 120 120\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F8FAFC\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'44\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E'));
 
     return `
       <div class="food-card ${isOut ? 'is-out-of-stock' : ''}" style="${isOut ? 'opacity:0.75;' : ''}" onclick="CustomerController.handleFoodCardClick('${dish.storeId}', '${dish.id}')">
@@ -693,7 +697,7 @@ const CustomerController = {
           </div>
 
           <div style="position: relative; width: 92px; height: 92px; flex-shrink: 0; border-radius: 14px; overflow: hidden; align-self: center;">
-            <img src="${this._esc((dish.img && !dish.img.includes('unsplash.com')) ? dish.img : ((dish.image && !dish.image.includes('unsplash.com')) ? dish.image : 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F1F5F9\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'38\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E'))}" alt="${this._esc(dish.name)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F1F5F9\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'38\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E';" />
+            <img src="${this._esc((dish.img && !dish.img.includes('unsplash.com')) ? dish.img : ((dish.image && !dish.image.includes('unsplash.com')) ? dish.image : ((dish.imageUrl && !dish.imageUrl.includes('unsplash.com')) ? dish.imageUrl : 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F1F5F9\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'38\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E')))}" alt="${this._esc(dish.name)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23F1F5F9\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' font-size=\'38\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E';" />
             <button type="button" aria-label="Add ${this._esc(dish.name)}"
                     onclick="event.stopPropagation(); CustomerController.handleQuickAdd('${store.id}', '${dish.id}')"
                     ${isOut ? 'disabled style="background: #94A3B8; cursor: not-allowed;"' : ''}
@@ -829,7 +833,7 @@ const CustomerController = {
       });
     }
 
-    document.getElementById('custom-dish-banner').src = dish.img;
+    document.getElementById('custom-dish-banner').src = dish.img || dish.image || dish.imageUrl || '/logo.png';
     document.getElementById('custom-dish-title').innerText = dish.name;
     document.getElementById('custom-dish-store').innerText = this.activeRestaurant.name;
     document.getElementById('custom-dish-desc').innerText = dish.desc || '';

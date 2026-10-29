@@ -674,6 +674,10 @@ const VendorController = {
         const compExtras = itemExtras.filter(e => e.extraType === 'REQUIRED');
         const optExtras = itemExtras.filter(e => e.extraType === 'OPTIONAL');
 
+        // Check if existing local dish has an image preserved
+        const existingDish = (store.menu || []).find(d => d.id === item.id);
+        const resolvedImg = item.imageUrl || (existingDish ? (existingDish.img || existingDish.image || existingDish.imageUrl) : '') || '';
+
         return {
           id: item.id,
           dishId: item.id,
@@ -685,8 +689,9 @@ const VendorController = {
           platePrice: Number(item.platePrice) || Number(item.price) || 0,
           scoopPrice: Number(item.scoopPrice) || 0,
           piecePrice: Number(item.piecePrice) || 0,
-          img: item.imageUrl || '',
-          image: item.imageUrl || '',
+          img: resolvedImg,
+          image: resolvedImg,
+          imageUrl: resolvedImg,
           status: item.status === 'out_of_stock' ? 'OUT_OF_STOCK' : 'AVAILABLE',
           inStock: item.status !== 'out_of_stock',
           sizes: itemSizes,
@@ -1966,7 +1971,7 @@ const VendorController = {
     return `
       <div class="vnd-visual-food-card ${isOut ? 'is-out-of-stock' : ''}">
         <div class="vnd-fc-thumb-wrap">
-          <img class="vnd-fc-thumb" src="${this._esc(dish.img || dish.image || this.placeholderImg)}" alt="${this._esc(dish.name)}" onerror="this.onerror=null; this.src='${this.placeholderImg}'" />
+          <img class="vnd-fc-thumb" src="${this._esc(dish.img || dish.image || dish.imageUrl || this.placeholderImg)}" alt="${this._esc(dish.name)}" onerror="this.onerror=null; this.src='${this.placeholderImg}'" />
           <div class="vnd-fc-badge-pos">${statusPill}</div>
         </div>
         <div class="vnd-fc-body">
@@ -2217,7 +2222,7 @@ const VendorController = {
       dishId: dish.id,
       name: dish.name || '',
       category: dish.category || 'rice',
-      image: dish.img || null,
+      image: dish.img || dish.image || dish.imageUrl || null,
       desc: dish.desc || '',
       priceType: isPiece ? 'PIECE' : (dish.priceType || 'PLATE'),
       scoopPrice: dish.scoopPrice || '',
