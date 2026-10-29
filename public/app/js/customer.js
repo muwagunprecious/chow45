@@ -93,9 +93,8 @@ const CustomerController = {
     this.bindEvents();
     this.render();
 
-    if (!hasStores) {
-      this.fetchStoresBootstrap();
-    }
+    // Always fetch fresh stores in background so dish image updates and new vendors display immediately
+    this.fetchStoresBootstrap();
   },
 
   async fetchStoresBootstrap() {
