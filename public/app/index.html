@@ -18,7 +18,7 @@
   <!-- Chow45 Design System & Role Styles -->
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="stylesheet" href="/app/css/tokens.css?v=20260921b" />
-  <link rel="stylesheet" href="/app/css/layout.css?v=20261029b" />
+  <link rel="stylesheet" href="/app/css/layout.css?v=20261029d" />
   <link rel="stylesheet" href="/app/css/marketplace.css?v=20260921b" />
   <link rel="stylesheet" href="/app/css/tracking.css?v=20260921c" />
   <link rel="stylesheet" href="/app/css/location-picker.css?v=20261015b?v=20260921d" />
@@ -2850,16 +2850,33 @@
 
               <div class="checkout-input-group">
                 <div class="auth-label-row">
-                    <label class="checkout-label" for="auth-vnd-address">Store / Pickup Address</label>
-                    <button type="button" class="auth-use-location-btn" onclick="Chow45Auth.useCurrentLocationForVendor()">
-                      📍 Use my current location
+                    <label class="checkout-label" for="auth-vnd-address">Store / Kitchen Location <span style="color: #e11d48;">*</span></label>
+                    <button type="button" class="auth-use-location-btn" id="auth-vnd-gps-btn" onclick="Chow45Auth.useCurrentLocationForVendor()">
+                      📍 Use my current GPS location
                     </button>
                   </div>
                   <div class="auth-input-wrap">
                     <span class="auth-input-icon">📍</span>
-                    <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Near OSUTH Main Gate, Hospital Road, Sagamu" required />
+                    <input type="text" id="auth-vnd-address" class="checkout-input auth-input" placeholder="e.g. Near OSUTH Main Gate, Hospital Road, Sagamu" required oninput="Chow45Auth.handleAddressInput(this.value)" />
                   </div>
-                  <small class="auth-field-hint">Type your current address manually, or use your live location to populate it.</small>
+                  <input type="hidden" id="auth-vnd-lat" value="" />
+                  <input type="hidden" id="auth-vnd-lng" value="" />
+
+                  <!-- Quick Campus Coordinates Presets -->
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button type="button" class="vnd-addr-chip" onclick="Chow45Auth.setVendorAddressPreset('Sagamu Campus (OSUTH), Sagamu, Ogun State', 6.8400, 3.6500)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: #334155;">🏥 Sagamu (OSUTH)</button>
+                    <button type="button" class="vnd-addr-chip" onclick="Chow45Auth.setVendorAddressPreset('Ibogun Campus (OGITECH), Ibogun, Ogun State', 6.7210, 3.3910)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: #334155;">🏫 Ibogun (OGITECH)</button>
+                    <button type="button" class="vnd-addr-chip" onclick="Chow45Auth.setVendorAddressPreset('Babcock University Gate, Ilishan-Remo, Ogun State', 6.8900, 3.7200)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: #334155;">🎓 Babcock Gate</button>
+                    <button type="button" class="vnd-addr-chip" onclick="Chow45Auth.setVendorAddressPreset('Hospital Road, Sagamu, Ogun State', 6.8420, 3.6480)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #CBD5E1; background: #F8FAFC; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: #334155;">🏠 Hospital Road</button>
+                  </div>
+
+                  <!-- Coordinates Verified Badge -->
+                  <div id="auth-vnd-coords-badge" style="display: none; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; font-size: 0.75rem; font-weight: 700; align-items: center; gap: 6px;">
+                    <span style="display:inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22C55E;"></span>
+                    <span id="auth-vnd-coords-text">📍 GPS Coordinates Detected</span>
+                  </div>
+
+                  <small class="auth-field-hint" style="margin-top: 6px; display: block;">Exact GPS coordinates are required to calculate accurate delivery fees for customers ordering from your store.</small>
                 </div>
 
               <div class="checkout-input-group">
@@ -3287,6 +3304,10 @@
               />
               <input type="hidden" id="vnd-modal-lat-input" value="" />
               <input type="hidden" id="vnd-modal-lng-input" value="" />
+              <div id="vnd-modal-coords-badge" style="display: none; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: #F0FDF4; border: 1px solid #86EFAC; color: #166534; font-size: 0.76rem; font-weight: 700; align-items: center; gap: 6px;">
+                <span style="display:inline-block; width: 6px; height: 6px; border-radius: 50%; background: #22C55E;"></span>
+                <span id="vnd-modal-coords-text">📍 GPS Coordinates Detected</span>
+              </div>
             </div>
 
             <!-- Error Banner -->
@@ -3298,7 +3319,7 @@
               id="vnd-modal-address-submit-btn"
               style="width: 100%; height: 48px; background: #00a205; color: #ffffff; border: none; border-radius: 14px; font-weight: 800; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,162,5,0.3); transition: all 0.2s ease;"
             >
-              <span>Save Pickup Address ✓</span>
+              <span>Save Kitchen Location & Coordinates ✓</span>
             </button>
           </form>
         </div>
@@ -3314,21 +3335,21 @@
     window.__CHOW45_GOOGLE_MAPS_KEY__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
     window.__CHOW45_MAPBOX_TOKEN__ = "AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo";
   </script>
-  <script src="/app/js/google-maps-config.js?v=20261029b"></script>
-  <script src="/app/js/mapbox-config.js?v=20261029b"></script>
-  <script src="/app/js/service-zones.js?v=20261029b"></script>
-  <script src="/app/js/units.js?v=20261029b"></script>
-  <script src="/app/js/data.js?v=20261029b"></script>
-  <script src="/app/js/state.js?v=20261029b"></script>
-  <script src="/app/js/google-maps-service.js?v=20261029b"></script>
-  <script src="/app/js/location-picker.js?v=20261029b"></script>
-  <script src="/app/js/customer.js?v=20261029c"></script>
-  <script src="/app/js/vendor.js?v=20261029c"></script>
-  <script src="/app/js/rider.js?v=20261029c"></script>
-  <script src="/app/js/admin.js?v=20261029c"></script>
-  <script src="/app/js/auth.js?v=20261029c"></script>
-  <script src="/app/js/vendor-onboarding.js?v=20261029c"></script>
-  <script src="/app/js/app.js?v=20261029c"></script>
+  <script src="/app/js/google-maps-config.js?v=20261029d"></script>
+  <script src="/app/js/mapbox-config.js?v=20261029d"></script>
+  <script src="/app/js/service-zones.js?v=20261029d"></script>
+  <script src="/app/js/units.js?v=20261029d"></script>
+  <script src="/app/js/data.js?v=20261029d"></script>
+  <script src="/app/js/state.js?v=20261029d"></script>
+  <script src="/app/js/google-maps-service.js?v=20261029d"></script>
+  <script src="/app/js/location-picker.js?v=20261029d"></script>
+  <script src="/app/js/customer.js?v=20261029d"></script>
+  <script src="/app/js/vendor.js?v=20261029d"></script>
+  <script src="/app/js/rider.js?v=20261029d"></script>
+  <script src="/app/js/admin.js?v=20261029d"></script>
+  <script src="/app/js/auth.js?v=20261029d"></script>
+  <script src="/app/js/vendor-onboarding.js?v=20261029d"></script>
+  <script src="/app/js/app.js?v=20261029d"></script>
 </body>
 </html>
 

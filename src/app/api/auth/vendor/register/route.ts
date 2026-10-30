@@ -53,6 +53,41 @@ export async function POST(request: Request) {
     const storeType = String(body.storeType ?? "physical").trim();
     const image = typeof body.image === "string" ? body.image : null;
 
+    // Validate or derive coordinates so delivery fees can be calculated immediately
+    let latitude: string | null = null;
+    let longitude: string | null = null;
+    if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
+      const n = Number(body.latitude);
+      if (Number.isFinite(n) && n >= -90 && n <= 90) {
+        latitude = n.toFixed(6);
+      }
+    }
+    if (body.longitude !== undefined && body.longitude !== null && body.longitude !== "") {
+      const n = Number(body.longitude);
+      if (Number.isFinite(n) && n >= -180 && n <= 180) {
+        longitude = n.toFixed(6);
+      }
+    }
+
+    // Fallback coordinates based on address keywords if GPS coordinates were omitted
+    if ((!latitude || !longitude) && address) {
+      const lower = address.toLowerCase();
+      if (lower.includes("ibogun") || lower.includes("ogitech")) {
+        latitude = "6.721000";
+        longitude = "3.391000";
+      } else if (lower.includes("babcock") || lower.includes("ilishan")) {
+        latitude = "6.890000";
+        longitude = "3.720000";
+      } else if (lower.includes("ago-iwoye") || lower.includes("ago iwoye")) {
+        latitude = "6.932000";
+        longitude = "3.918000";
+      } else {
+        // Default to Sagamu OSUTH Campus center
+        latitude = "6.841500";
+        longitude = "3.649200";
+      }
+    }
+
     if (!rawEmail || !rawEmail.includes("@") || !rawEmail.includes(".")) {
       return NextResponse.json(
         { error: "A valid email address is required." },
@@ -184,6 +219,8 @@ export async function POST(request: Request) {
           contactEmail: email,
           ownerPhone: phone,
           address: address || undefined,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
           image: image || undefined,
           bannerImage: image || undefined,
           status: "approved",
@@ -205,6 +242,8 @@ export async function POST(request: Request) {
           contactEmail: email,
           ownerPhone: phone,
           address,
+          latitude,
+          longitude,
           image,
           bannerImage: image,
           status: "approved",
@@ -259,6 +298,8 @@ export async function POST(request: Request) {
         contactEmail: email,
         ownerPhone: phone,
         address,
+        latitude,
+        longitude,
       },
     });
 

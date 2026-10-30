@@ -1577,8 +1577,131 @@ const Chow45Auth = {
     return this._captureLiveLocation('auth-cust-address');
   },
 
+  setVendorAddressPreset(name, lat, lng) {
+    const addrInput = document.getElementById('auth-vnd-address');
+    const latInput = document.getElementById('auth-vnd-lat');
+    const lngInput = document.getElementById('auth-vnd-lng');
+    const badge = document.getElementById('auth-vnd-coords-badge');
+    const badgeText = document.getElementById('auth-vnd-coords-text');
+
+    if (addrInput) addrInput.value = name;
+    if (latInput) latInput.value = lat;
+    if (lngInput) lngInput.value = lng;
+    if (badge && badgeText) {
+      badgeText.textContent = `📍 Coordinates: ${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)} (Delivery fee calculation active)`;
+      badge.style.display = 'inline-flex';
+    }
+    if (window.chowStore && window.chowStore.state) {
+      window.chowStore.state.selectedLocation = {
+        name,
+        formattedAddress: name,
+        lat: Number(lat),
+        lng: Number(lng),
+        type: 'current',
+        isUserSelected: true
+      };
+      if (typeof window.chowStore.save === 'function') window.chowStore.save();
+    }
+  },
+
+  handleAddressInput(text) {
+    const t = (text || '').toLowerCase().trim();
+    const latInput = document.getElementById('auth-vnd-lat');
+    const lngInput = document.getElementById('auth-vnd-lng');
+    const badge = document.getElementById('auth-vnd-coords-badge');
+    const badgeText = document.getElementById('auth-vnd-coords-text');
+
+    const resolved = this._resolveCoordinatesFromText(t);
+    if (resolved && latInput && lngInput) {
+      latInput.value = resolved.lat;
+      lngInput.value = resolved.lng;
+      if (badge && badgeText) {
+        badgeText.textContent = `📍 Coordinates: ${resolved.lat.toFixed(4)}, ${resolved.lng.toFixed(4)} (Delivery fee calculation active)`;
+        badge.style.display = 'inline-flex';
+      }
+    }
+  },
+
+  _resolveCoordinatesFromText(text) {
+    const lower = (text || '').toLowerCase();
+    if (lower.includes('ibogun') || lower.includes('ogitech')) {
+      return { lat: 6.7210, lng: 3.3910 };
+    }
+    if (lower.includes('babcock') || lower.includes('ilishan')) {
+      return { lat: 6.8900, lng: 3.7200 };
+    }
+    if (lower.includes('ago-iwoye') || lower.includes('ago iwoye')) {
+      return { lat: 6.9320, lng: 3.9180 };
+    }
+    if (lower.includes('hospital road') || lower.includes('osuth') || lower.includes('sagamu') || lower.includes('shagamu')) {
+      return { lat: 6.8415, lng: 3.6492 };
+    }
+    return { lat: 6.8400, lng: 3.6500 };
+  },
+
   useCurrentLocationForVendor() {
-    return this._captureLiveLocation('auth-vnd-address', 'Store pickup address');
+    const btn = document.getElementById('auth-vnd-gps-btn');
+    const addrInput = document.getElementById('auth-vnd-address');
+    const latInput = document.getElementById('auth-vnd-lat');
+    const lngInput = document.getElementById('auth-vnd-lng');
+    const badge = document.getElementById('auth-vnd-coords-badge');
+    const badgeText = document.getElementById('auth-vnd-coords-text');
+
+    if (!navigator.geolocation) {
+      if (window.chowApp && window.chowApp.toast) {
+        window.chowApp.toast('Geolocation not supported by browser. Pick a campus preset instead.', 'warning');
+      }
+      return;
+    }
+
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) btn.innerHTML = '<span>⏳ Acquiring GPS...</span>';
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (latInput) latInput.value = lat;
+        if (lngInput) lngInput.value = lng;
+
+        let streetText = `Sagamu, Ogun State (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        try {
+          streetText = await this._reverseGeocodeToStreet(lat, lng);
+        } catch (_) {}
+
+        if (addrInput) addrInput.value = streetText;
+        if (badge && badgeText) {
+          badgeText.textContent = `📍 GPS Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)} (Delivery fee calculation active)`;
+          badge.style.display = 'inline-flex';
+        }
+        if (window.chowStore && window.chowStore.state) {
+          window.chowStore.state.selectedLocation = {
+            name: 'Store Location',
+            formattedAddress: streetText,
+            lat: lat,
+            lng: lng,
+            type: 'current',
+            isUserSelected: true
+          };
+          if (typeof window.chowStore.save === 'function') window.chowStore.save();
+        }
+        if (btn) btn.innerHTML = '<span>✓ GPS Detected!</span>';
+        setTimeout(() => { if (btn) btn.innerHTML = origText; }, 2000);
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('Store GPS coordinates captured! Delivery fees will be accurate.', 'success');
+        }
+      },
+      (err) => {
+        console.warn('Vendor GPS error:', err);
+        if (btn) btn.innerHTML = origText;
+        // Fallback to Sagamu default preset
+        this.setVendorAddressPreset('Sagamu Campus (OSUTH), Sagamu, Ogun State', 6.8400, 3.6500);
+        if (window.chowApp && window.chowApp.toast) {
+          window.chowApp.toast('GPS permission needed. Defaulted to Sagamu Campus; you can adjust with presets.', 'info');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   },
 
   /**
@@ -1913,6 +2036,24 @@ const Chow45Auth = {
       // Register with the server endpoint to create user, hash password, and create vendor row
       let serverVendor = null;
       let serverUser = null;
+      // Extract coordinates from hidden inputs, state, or address resolution
+      let lat = document.getElementById('auth-vnd-lat')?.value ? parseFloat(document.getElementById('auth-vnd-lat').value) : null;
+      let lng = document.getElementById('auth-vnd-lng')?.value ? parseFloat(document.getElementById('auth-vnd-lng').value) : null;
+
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        const live = window.chowStore?.state?.selectedLocation;
+        if (live && live.lat && live.lng) {
+          lat = Number(live.lat);
+          lng = Number(live.lng);
+        }
+      }
+
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        const resolved = this._resolveCoordinatesFromText(address);
+        lat = resolved.lat;
+        lng = resolved.lng;
+      }
+
       try {
         const regRes = await fetch('/api/auth/vendor/register', {
           method: 'POST',
@@ -1924,6 +2065,8 @@ const Chow45Auth = {
             storeName,
             phone,
             address,
+            latitude: lat,
+            longitude: lng,
             storeType,
             image: photo
           })
@@ -1965,19 +2108,16 @@ const Chow45Auth = {
         ? window.VendorOnboarding.zoneInfo(window.VendorOnboarding.getZoneId())
         : null;
 
-      const live = window.chowStore && window.chowStore.state && window.chowStore.state.selectedLocation;
-      const liveCoords = live && live.type === 'current' && live.lat && live.lng
-        ? { lat: live.lat, lng: live.lng }
-        : null;
-
       const newStore = {
         id: storeId,
         numericId: serverVendor?.id || undefined,
         name: storeName,
         storeType: storeType === 'physical' ? 'Physical Restaurant' : 'Online Kitchen',
         address: address,
-        latitude: liveCoords ? liveCoords.lat : null,
-        longitude: liveCoords ? liveCoords.lng : null,
+        latitude: lat,
+        longitude: lng,
+        lat: lat,
+        lng: lng,
         phone: phone,
         email: email,
         banner: photo,

@@ -3224,7 +3224,10 @@ const VendorController = {
       addr.toLowerCase() === 'set your pickup/delivery address' ||
       addr.toLowerCase().includes('no pickup address');
 
-    if (isMissing) {
+    const hasCoords = Number.isFinite(Number(store.lat ?? store.latitude)) && 
+                      Number.isFinite(Number(store.lng ?? store.longitude));
+
+    if (isMissing || !hasCoords) {
       this.openAddressModal(store);
     }
   },
@@ -3248,8 +3251,21 @@ const VendorController = {
         input.value = '';
       }
     }
-    if (latInput && currentStore) latInput.value = currentStore.lat || currentStore.latitude || '';
-    if (lngInput && currentStore) lngInput.value = currentStore.lng || currentStore.longitude || '';
+    const curLat = currentStore ? (currentStore.lat ?? currentStore.latitude) : null;
+    const curLng = currentStore ? (currentStore.lng ?? currentStore.longitude) : null;
+    if (latInput) latInput.value = curLat || '';
+    if (lngInput) lngInput.value = curLng || '';
+
+    const badge = document.getElementById('vnd-modal-coords-badge');
+    const badgeText = document.getElementById('vnd-modal-coords-text');
+    if (badge && badgeText) {
+      if (curLat && curLng && !isNaN(Number(curLat)) && !isNaN(Number(curLng))) {
+        badgeText.textContent = `📍 GPS Coordinates: ${Number(curLat).toFixed(4)}, ${Number(curLng).toFixed(4)} (Delivery fee calculation active)`;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
 
     modal.classList.add('open');
     if (input) setTimeout(() => input.focus(), 150);
@@ -3265,10 +3281,16 @@ const VendorController = {
     const latInput = document.getElementById('vnd-modal-lat-input');
     const lngInput = document.getElementById('vnd-modal-lng-input');
     const errEl = document.getElementById('vnd-modal-address-error');
+    const badge = document.getElementById('vnd-modal-coords-badge');
+    const badgeText = document.getElementById('vnd-modal-coords-text');
 
     if (input) input.value = name;
     if (latInput) latInput.value = lat;
     if (lngInput) lngInput.value = lng;
+    if (badge && badgeText) {
+      badgeText.textContent = `📍 Coordinates: ${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)} (Delivery fee calculation active)`;
+      badge.style.display = 'inline-flex';
+    }
     if (errEl) errEl.style.display = 'none';
   },
 
@@ -3306,8 +3328,14 @@ const VendorController = {
         }
 
         if (input) input.value = resolvedName;
+        const badge = document.getElementById('vnd-modal-coords-badge');
+        const badgeText = document.getElementById('vnd-modal-coords-text');
+        if (badge && badgeText) {
+          badgeText.textContent = `📍 GPS Coordinates: ${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)} (Delivery fee calculation active)`;
+          badge.style.display = 'inline-flex';
+        }
         if (errEl) errEl.style.display = 'none';
-        if (btn) btn.innerHTML = '<span>✓ Location Detected!</span>';
+        if (btn) btn.innerHTML = '<span>✓ GPS Detected!</span>';
         setTimeout(() => { if (btn) btn.innerHTML = origText; }, 2000);
       },
       (err) => {
@@ -3363,12 +3391,28 @@ const VendorController = {
     try {
       const store = this.getStore() || {};
       const session = window.Chow45Auth ? window.Chow45Auth.getSession() : null;
+      const authUser = window.Chow45Auth?.getUser ? window.Chow45Auth.getUser() : null;
       const urlParams = new URLSearchParams(window.location.search);
-      const email = (store && (store.email || store.contactEmail)) ||
-                    session?.email ||
-                    window.chowStore?.state?.userProfile?.email ||
-                    urlParams.get('email') ||
-                    '';
+      let email = (store && (store.email || store.contactEmail)) ||
+                  session?.email ||
+                  session?.user?.email ||
+                  authUser?.email ||
+                  window.chowStore?.state?.userProfile?.email ||
+                  urlParams.get('email') ||
+                  '';
+
+      if (!email) {
+        try {
+          const raw = localStorage.getItem('chow45_auth_session_v1');
+          if (raw) {
+            const p = JSON.parse(raw);
+            email = p?.user?.email || p?.email || '';
+          }
+        } catch (_) {}
+      }
+
+      const storeId = store.id || window.chowStore?.state?.userProfile?.storeId || '';
+      const vendorId = store.numericId || window.chowStore?.state?.userProfile?.vendorId || undefined;
       const storeName = store.name ||
                         window.chowStore?.state?.vendorOnboarding?.storeName ||
                         document.getElementById('vendor-store-name')?.textContent?.trim() ||
@@ -3376,8 +3420,8 @@ const VendorController = {
                         'Your Store';
 
       const payload = {
-        storeId: store.id,
-        vendorId: store.numericId,
+        storeId: storeId,
+        vendorId: vendorId,
         businessName: storeName,
         address: address,
         latitude: lat,
@@ -3388,8 +3432,8 @@ const VendorController = {
 
       const headers = { 'Content-Type': 'application/json' };
       if (email) headers['x-vendor-email'] = email;
-      if (store.id) headers['x-vendor-store-id'] = String(store.id);
-      if (store.numericId) headers['x-vendor-id'] = String(store.numericId);
+      if (storeId) headers['x-vendor-store-id'] = String(storeId);
+      if (vendorId) headers['x-vendor-id'] = String(vendorId);
 
       const res = await fetch('/api/vendor/profile', {
         method: 'POST',

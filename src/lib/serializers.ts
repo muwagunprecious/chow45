@@ -165,6 +165,8 @@ export type ClientStore = {
   closingTime: string;
   lat: number;
   lng: number;
+  latitude?: number;
+  longitude?: number;
   open: boolean;
   isVerified: boolean;
   isBudget: boolean;
@@ -241,6 +243,8 @@ export function serializeStore(vendor: Vendor, menu: ClientMenuItem[] = []): Cli
     closingTime: vendor.closingTime ?? "",
     lat: numOr(vendor.latitude, 0),
     lng: numOr(vendor.longitude, 0),
+    latitude: numOr(vendor.latitude, 0),
+    longitude: numOr(vendor.longitude, 0),
     open: vendor.isOpen,
     isVerified: true,
     isBudget: vendor.isBudget || menu.some((m) => m.price <= 2500),
