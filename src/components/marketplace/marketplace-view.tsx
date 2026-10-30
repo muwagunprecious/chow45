@@ -34,24 +34,24 @@ const GOOGLE_MAPS_SCRIPT =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261029d',
-  '/app/js/mapbox-config.js?v=20261029d',
-  '/app/js/service-zones.js?v=20261029d',
+  '/app/js/google-maps-config.js?v=20261029e',
+  '/app/js/mapbox-config.js?v=20261029e',
+  '/app/js/service-zones.js?v=20261029e',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261029d',
-  '/app/js/data.js?v=20261029d',
-  '/app/js/state.js?v=20261029d',
-  '/app/js/google-maps-service.js?v=20261029d',
-  '/app/js/location-picker.js?v=20261029d',
-  '/app/js/customer.js?v=20261029d',
-  '/app/js/vendor.js?v=20261029d',
-  '/app/js/rider.js?v=20261029d',
-  '/app/js/admin.js?v=20261029d',
-  '/app/js/auth.js?v=20261029d',
+  '/app/js/units.js?v=20261029e',
+  '/app/js/data.js?v=20261029e',
+  '/app/js/state.js?v=20261029e',
+  '/app/js/google-maps-service.js?v=20261029e',
+  '/app/js/location-picker.js?v=20261029e',
+  '/app/js/customer.js?v=20261029e',
+  '/app/js/vendor.js?v=20261029e',
+  '/app/js/rider.js?v=20261029e',
+  '/app/js/admin.js?v=20261029e',
+  '/app/js/auth.js?v=20261029e',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261029d',
-  '/app/js/app.js?v=20261029d',
+  '/app/js/vendor-onboarding.js?v=20261029e',
+  '/app/js/app.js?v=20261029e',
 ];
 
 
@@ -380,14 +380,14 @@ export function MarketplaceView({
   return (
     <div className="chow45-marketplace-wrapper min-h-screen relative">
       {/* Stylesheets for the marketplace shell */}
-      <link rel="stylesheet" href="/app/css/tokens.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/layout.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/marketplace.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/tracking.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/location-picker.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/vendor.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/rider.css?v=20261029d" />
-      <link rel="stylesheet" href="/app/css/admin.css?v=20261029d" />
+      <link rel="stylesheet" href="/app/css/tokens.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/layout.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/marketplace.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/tracking.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/location-picker.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/vendor.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/rider.css?v=20261029e" />
+      <link rel="stylesheet" href="/app/css/admin.css?v=20261029e" />
 
 
       {/* When entering directly as vendor, prevent customer marketplace UI from flashing */}

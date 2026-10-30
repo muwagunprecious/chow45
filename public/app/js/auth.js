@@ -1627,9 +1627,7 @@ const Chow45Auth = {
     if (lower.includes('ibogun') || lower.includes('ogitech')) {
       return { lat: 6.7210, lng: 3.3910 };
     }
-    if (lower.includes('babcock') || lower.includes('ilishan')) {
-      return { lat: 6.8900, lng: 3.7200 };
-    }
+    
     if (lower.includes('ago-iwoye') || lower.includes('ago iwoye')) {
       return { lat: 6.9320, lng: 3.9180 };
     }

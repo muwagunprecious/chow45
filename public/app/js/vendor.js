@@ -3374,8 +3374,7 @@ const VendorController = {
       const lower = address.toLowerCase();
       if (lower.includes('oou') || lower.includes('ago-iwoye') || lower.includes('ago iwoye')) {
         lat = 6.9320; lng = 3.9180;
-      } else if (lower.includes('babcock') || lower.includes('ilishan')) {
-        lat = 6.8900; lng = 3.7200;
+      
       } else if (lower.includes('ibogun')) {
         lat = 6.9050; lng = 3.1600;
       } else {

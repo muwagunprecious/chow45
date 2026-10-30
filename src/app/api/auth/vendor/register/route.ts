@@ -75,9 +75,7 @@ export async function POST(request: Request) {
       if (lower.includes("ibogun") || lower.includes("ogitech")) {
         latitude = "6.721000";
         longitude = "3.391000";
-      } else if (lower.includes("babcock") || lower.includes("ilishan")) {
-        latitude = "6.890000";
-        longitude = "3.720000";
+      
       } else if (lower.includes("ago-iwoye") || lower.includes("ago iwoye")) {
         latitude = "6.932000";
         longitude = "3.918000";
