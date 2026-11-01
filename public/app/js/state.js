@@ -427,7 +427,7 @@ class Chow45Store {
       lga: '',
       center: [3.6545, 6.8482],
       maxDeliveryDistance: 3000,
-      deliveryRules: { baseFee: 200, ratePerMeter: 0.20, serviceFee: 400 },
+      deliveryRules: { baseFee: 200, ratePerMeter: 0.20, serviceFee: 100 },
       operatingHours: { open: '08:00', close: '23:00' },
       polygon: [
         [3.6400, 6.8300], [3.6700, 6.8300], [3.6700, 6.8600], [3.6400, 6.8600], [3.6400, 6.8300]

@@ -40,5 +40,5 @@ const CHOW45_RIDERS = [];
 // config-driven (baseFee + ratePerMeter). Kept as a compat alias only.
 const legacyCalculateDeliveryFee = (d) => Math.max(500, Math.round((400 + d * 150) / 50) * 50);
 
-// Fixed platform service fee — reconciled against DEFAULT_DELIVERY_FEE_CONFIG (₦400).
-const MANDATORY_SERVICE_FEE = (typeof DEFAULT_DELIVERY_FEE_CONFIG !== 'undefined' && DEFAULT_DELIVERY_FEE_CONFIG.serviceFee) || 500;
+// Fixed platform service fee — reconciled against DEFAULT_DELIVERY_FEE_CONFIG (₦100).
+const MANDATORY_SERVICE_FEE = (typeof DEFAULT_DELIVERY_FEE_CONFIG !== 'undefined' && DEFAULT_DELIVERY_FEE_CONFIG.serviceFee) || 100;

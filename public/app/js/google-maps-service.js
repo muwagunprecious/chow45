@@ -1068,7 +1068,7 @@ class GoogleMapsService {
           deliveryFeeLabel: feeLabel,
           distanceLabel: distLabel,
           durationLabel: `${Math.ceil(dur / 60)} mins`,
-          serviceFee: server.serviceFee ?? 400,
+          serviceFee: server.serviceFee ?? 100,
           inZone: server.inZone ?? true
         };
       } else {
@@ -1102,7 +1102,7 @@ class GoogleMapsService {
       deliveryFeeLabel: typeof formatNaira === 'function' ? formatNaira(calculatedFee) : `₦${calculatedFee.toLocaleString()}`,
       distanceLabel: distLabel,
       durationLabel: `${Math.ceil(durationSeconds / 60)} mins`,
-      serviceFee: config.serviceFee || 400,
+      serviceFee: config.serviceFee || 100,
       inZone: true
     };
   }

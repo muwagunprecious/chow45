@@ -27,7 +27,7 @@ export async function GET() {
   if (!config) {
     // The seed inserts the row, but a fresh checkout that skipped seeding should
     // still return the documented defaults rather than a 404.
-    return NextResponse.json({ config: { baseFee: 300, serviceFee: 400, ratePerMeter: 200, minDeliveryFee: 300 } });
+    return NextResponse.json({ config: { baseFee: 300, serviceFee: 100, ratePerMeter: 200, minDeliveryFee: 300 } });
   }
 
   return NextResponse.json({

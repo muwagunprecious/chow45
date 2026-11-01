@@ -27,7 +27,7 @@ function safeFormatNaira(amount) {
 function safeDeliveryConfig() {
   if (window.chowStore?.state?.deliveryConfig) return window.chowStore.state.deliveryConfig;
   if (typeof DEFAULT_DELIVERY_FEE_CONFIG !== 'undefined') return DEFAULT_DELIVERY_FEE_CONFIG;
-  return { baseFee: 200, ratePerMeter: 0.20, minDeliveryFee: 200, serviceFee: 400 };
+  return { baseFee: 200, ratePerMeter: 0.20, minDeliveryFee: 200, serviceFee: 100 };
 }
 
 const CustomerController = {
@@ -1258,7 +1258,7 @@ const CustomerController = {
       const store = restaurants.find(r => r.id === cart.storeId);
       const config = safeDeliveryConfig();
       const subtotal = window.chowStore?.getCartSubtotal ? window.chowStore.getCartSubtotal() : (cart.items.reduce((s, i) => s + (i.itemTotal || (i.price * i.qty) || 0), 0));
-      const serviceFee = config?.serviceFee ?? 400;
+      const serviceFee = config?.serviceFee ?? 100;
       const deliveryFee = typeof calculateDeliveryFee === 'function' ? calculateDeliveryFee((store && store.distanceKm ? store.distanceKm : 1.0) * 1000, config) : 200;
       const total = subtotal + serviceFee + deliveryFee;
 
@@ -1387,7 +1387,7 @@ const CustomerController = {
       this.quoteCache = quote;
       const fee = quote.deliveryFee;
       const config = typeof safeDeliveryConfig === 'function' ? safeDeliveryConfig() : {};
-      const total = window.chowStore.getCartSubtotal() + (config?.serviceFee ?? 400) + fee;
+      const total = window.chowStore.getCartSubtotal() + (config?.serviceFee ?? 100) + fee;
 
       if (distEl && quote.distanceLabel) {
         distEl.innerText = quote.distanceLabel;

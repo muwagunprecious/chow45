@@ -239,7 +239,7 @@ async function seedDeliveryGeography() {
     .values({
       id: 1,
       baseFee: money(deliveryConfig.baseFee) || 300,
-      serviceFee: money(deliveryConfig.serviceFee) || 400,
+      serviceFee: money(deliveryConfig.serviceFee) || 100,
       ratePerMeter: Number(deliveryConfig.ratePerMeter) || 200,
       minDeliveryFee: money(deliveryConfig.minDeliveryFee) || 300,
     })

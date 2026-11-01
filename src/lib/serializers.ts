@@ -291,7 +291,7 @@ export function serializeLocation(loc: DeliveryLocation) {
 export function serializeConfig(config: DeliveryConfig | undefined) {
   return {
     baseFee: config?.baseFee ?? 200,
-    serviceFee: config?.serviceFee ?? 400,
+    serviceFee: config?.serviceFee ?? 100,
     ratePerMeter: config?.ratePerMeter ? Number(config.ratePerMeter) : 0.20,
     minDeliveryFee: config?.minDeliveryFee ?? 200,
   };

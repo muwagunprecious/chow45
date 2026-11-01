@@ -233,7 +233,7 @@ async function importZones(
       deliveryRules: {
         baseFee: money(rules.baseFee, 300),
         ratePerMeter: rate(rules.ratePerMeter, 200),
-        serviceFee: money(rules.serviceFee, 400),
+        serviceFee: money(rules.serviceFee, 100),
       },
       operatingHours: {
         open: String(hours.open ?? "08:00"),

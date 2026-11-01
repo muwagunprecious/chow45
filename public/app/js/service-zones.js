@@ -24,7 +24,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '07:00', close: '23:30' },
     polygon: [
@@ -46,7 +46,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '08:00', close: '23:00' },
     polygon: [
@@ -68,7 +68,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '08:00', close: '23:00' },
     polygon: [
@@ -90,7 +90,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '08:00', close: '23:00' },
     polygon: [
@@ -112,7 +112,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '07:00', close: '00:00' },
     polygon: [
@@ -134,7 +134,7 @@ const CHOW45_SERVICE_ZONES = [
     deliveryRules: {
       baseFee: 200,
       ratePerMeter: 0.20,
-      serviceFee: 400
+      serviceFee: 100
     },
     operatingHours: { open: '08:00', close: '22:00' },
     polygon: [
@@ -169,7 +169,7 @@ const OGUN_STATE_BOUNDARY = [
  */
 const DEFAULT_DELIVERY_FEE_CONFIG = {
   baseFee: 200,
-  serviceFee: 400,
+  serviceFee: 100,
   ratePerMeter: 0.20,
   minDeliveryFee: 200
 };
