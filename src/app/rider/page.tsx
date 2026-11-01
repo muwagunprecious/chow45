@@ -401,7 +401,8 @@ export default function RiderDashboardPage() {
 
   useEffect(() => {
     loadRiderState();
-  }, [loadRiderState]);
+    loadWalletDetails();
+  }, [loadRiderState, loadWalletDetails]);
 
   // Polling for offers when online and no active mission
   useEffect(() => {
@@ -754,26 +755,50 @@ export default function RiderDashboardPage() {
               </div>
             </div>
 
-            {/* Live GPS Radar Map */}
-            {rider?.isOnline && (
-              <div className="bg-[#ffffff] rounded-2xl p-3 border border-[#00a205]/15 shadow-sm space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#00a205] flex items-center gap-1.5">
-                    <span>📡</span> <span>Live Dispatch Radar & Area Map</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-[#00a205] bg-[#00a205]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00a205] animate-ping" />
-                    Tracking Active
-                  </span>
-                </div>
-                <RiderMap
-                  riderLocation={riderCoords}
-                  isOnline={true}
-                  height="160px"
-                  showDirectionsBtn={false}
-                />
+            {/* Rider Wallet & Earnings Card */}
+            <div className="bg-[#00a205] text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <span>💰</span> <span>Rider Wallet</span>
+                </span>
+                <button
+                  onClick={() => setActiveTab('wallet')}
+                  className="text-[11px] font-bold text-white/90 hover:text-white underline flex items-center gap-1"
+                >
+                  View Ledger & Accounts →
+                </button>
               </div>
-            )}
+
+              <div className="mt-3.5 flex items-baseline justify-between">
+                <div>
+                  <span className="text-[11px] text-white/75 block font-medium">Available Balance</span>
+                  <h2 className="text-3xl font-black text-[#fafafa] tracking-tight">
+                    ₦{wallet.available.toLocaleString()}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setWithdrawError(null);
+                    setShowWithdrawModal(true);
+                  }}
+                  disabled={wallet.available < 1000}
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-100 disabled:opacity-50 text-[#00a205] font-black text-xs shadow-md transition-all flex items-center gap-1"
+                >
+                  <span>Withdraw 🏦</span>
+                </button>
+              </div>
+
+              <div className="mt-3.5 pt-3 border-t border-white/15 flex justify-between text-xs text-white/85">
+                <div>
+                  <span className="text-[10px] text-white/65 block font-medium">In Processing</span>
+                  <span className="font-extrabold text-sm">₦{wallet.processing.toLocaleString()}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-white/65 block font-medium">Lifetime Total</span>
+                  <span className="font-extrabold text-sm">₦{wallet.totalEarned.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
 
             {/* If Rider has an active delivery while viewing radar */}
             {activeMission && (
