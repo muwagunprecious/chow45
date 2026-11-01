@@ -362,25 +362,11 @@ const CustomerController = {
             </div>
           </div>
         ` : ''}
-
-        ${filteredStores.length > 0 ? `
-          <div style="margin-bottom: var(--space-32);">
-            <div class="section-header">
-              <div>
-                <h2 class="section-title">Campus Kitchens</h2>
-                <p style="font-size: 0.8rem; color: var(--c-text-secondary);">${filteredStores.length} spot${filteredStores.length === 1 ? '' : 's'} available</p>
-              </div>
-            </div>
-            <div class="stores-grid">
-              ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
-            </div>
-          </div>
-        ` : ''}
       `;
       return;
     }
 
-    // Default discovery view (all available campus meals, campus kitchens, and quick options)
+    // Default discovery view (all available campus meals and fast delivery)
     const fastDishes = allDishes.filter(d => (d.prepTime && d.prepTime.includes('15')) || d.isFast);
     const displayFast = fastDishes.length > 0 ? fastDishes : allDishes.slice().reverse();
 
@@ -399,20 +385,7 @@ const CustomerController = {
         </div>
       </div>
 
-      <!-- Section 2: Featured Campus Kitchens & Cafeterias -->
-      <div style="margin-bottom: var(--space-32);">
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">🏫 Campus Kitchens &amp; Cafeterias</h2>
-            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Verified student spots around ${campusLabel} (${filteredStores.length} kitchens)</p>
-          </div>
-        </div>
-        <div class="stores-grid">
-          ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
-        </div>
-      </div>
-
-      <!-- Section 3: Fast Delivery (Under 25 mins) -->
+      <!-- Section 2: Fast Delivery (Under 25 mins) -->
       ${displayFast.length > 0 ? `
       <div style="margin-bottom: var(--space-32);">
         <div class="section-header">
