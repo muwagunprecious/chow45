@@ -77,7 +77,7 @@ export async function POST(
   }
 
   // 3. Complete order and credit earnings
-  const riderEarnings = Math.max(800, order.deliveryFee || 800);
+  const riderEarnings = Number(order.deliveryFee) || 0;
   const txId = `tx-${nanoid(12)}`;
   const idempotencyKey = `payout-${order.id}`;
 

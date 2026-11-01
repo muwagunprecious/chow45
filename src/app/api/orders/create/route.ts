@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { orders, orderItems, orderEvents, platformLedgers, users, vendors, deliveryConfigs } from "@/db";
+import { orders, orderItems, orderEvents, platformLedgers, users, vendors, deliveryConfigs, vendorWallets } from "@/db";
 import { currentUserId } from "@/lib/session";
 import {
   getDistanceMeters,
@@ -322,6 +322,25 @@ export async function POST(request: Request) {
           updatedAt: now,
         },
       });
+
+    // 10. Credit vendor wallet for food earnings (subtotal)
+    if (vendorRecord && subtotal > 0 && savedOrder.status !== "PENDING_PAYMENT") {
+      await db
+        .insert(vendorWallets)
+        .values({
+          vendorId: vendorRecord.id,
+          available: subtotal,
+          processing: 0,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: vendorWallets.vendorId,
+          set: {
+            available: sql`${vendorWallets.available} + ${subtotal}`,
+            updatedAt: now,
+          },
+        });
+    }
 
     return NextResponse.json({
       success: true,

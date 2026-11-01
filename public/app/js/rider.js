@@ -167,7 +167,7 @@ const RiderController = {
 
     // Daily earnings & completed drops
     const completed = window.chowStore.state.orders.filter(o => o.riderId === rider.id && o.status === 'DELIVERED');
-    const earnings = completed.reduce((sum, o) => sum + (o.deliveryFee || 800), 0);
+    const earnings = completed.reduce((sum, o) => sum + (Number(o.deliveryFee) || 0), 0);
     const earnEl = document.getElementById('rider-earnings-val');
     if (earnEl) earnEl.innerText = `₦${earnings.toLocaleString()}`;
     const tripsEl = document.getElementById('rider-trips-count');
@@ -211,7 +211,7 @@ const RiderController = {
 
     container.innerHTML = availableOrders.map(order => {
       const store = window.chowStore.state.restaurants.find(r => r.id === order.storeId) || {};
-      const payout = order.deliveryFee || 800;
+      const payout = Number(order.deliveryFee) || 0;
 
       return `
         <div class="job-card">
@@ -425,7 +425,7 @@ const RiderController = {
     const d = { lng: dest.longitude ?? dest.lng ?? 3.6545, lat: dest.latitude ?? dest.lat ?? 6.8482 };
     const distanceMeters = order.routeDistanceMeters || haversineDistanceMeters(o, d);
     const durationSeconds = order.estimatedDurationSeconds || null;
-    const payout = order.deliveryFee || 800;
+    const payout = Number(order.deliveryFee) || 0;
     return { store, o, d, distanceMeters, durationSeconds, payout };
   },
 
@@ -575,7 +575,7 @@ const RiderController = {
       riderName: rider.name
     });
 
-    const fee = this.activeOrder.deliveryFee || 800;
+    const fee = Number(this.activeOrder.deliveryFee) || 0;
     window.chowApp.toast(`Delivery #${orderId} completed! ₦${fee.toLocaleString()} added to your wallet 💰`, 'success');
   },
 

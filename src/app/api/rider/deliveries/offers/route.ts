@@ -115,8 +115,8 @@ export async function GET(request: Request) {
     }
 
     const offers = candidateRows.map((order) => {
-      // Delivery earning for rider: rider gets delivery fee (minimum ₦800)
-      const riderFee = Math.max(800, order.deliveryFee || 800);
+      // Delivery earning for rider: rider gets the delivery fee paid by the customer
+      const riderFee = Number(order.deliveryFee) || 0;
 
       return {
         id: order.id,

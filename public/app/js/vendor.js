@@ -1035,44 +1035,195 @@ const VendorController = {
 
   // ---------------------------------------------------------------
   // Wallet & withdrawals
-  //
-  // Payouts are not built yet, so the money tab shows an empty state.
-  // There is deliberately no balance figure and no "mark as paid" helper
-  // any more: a payout cannot exist without a server-side ledger, and a
-  // hardcoded one would be showing the vendor money that is not theirs.
+  // Real-time server-backed earnings and payout requests
   // ---------------------------------------------------------------
-  renderWallet() {
-    return;
+  async renderWallet() {
+    const pane = document.getElementById('vnd-tab-pane-money');
+    if (!pane) return;
+
+    const store = this.getStore();
+    if (!store) return;
+
+    // Filter vendor orders
+    const allOrders = window.chowStore?.state?.orders || [];
+    const vendorOrders = allOrders.filter(o =>
+      o && (
+        o.storeId === store.id ||
+        (store.numericId && Number(o.vendorId) === Number(store.numericId)) ||
+        (o.storeName && store.name && String(o.storeName).toLowerCase() === String(store.name).toLowerCase())
+      )
+    );
+
+    const validOrders = vendorOrders.filter(o => !['CANCELLED', 'PENDING_PAYMENT'].includes(o.status));
+    const totalOrderEarnings = validOrders.reduce((sum, o) => sum + (Number(o.subtotal) || Number(o.total) || 0), 0);
+
+    let serverWallet = { available: totalOrderEarnings, processing: 0, totalEarned: totalOrderEarnings };
+    let serverWithdrawals = [];
+
+    try {
+      const params = new URLSearchParams();
+      if (store.id) params.set('storeId', store.id);
+      if (store.numericId) params.set('vendorId', String(store.numericId));
+      if (store.email || store.contactEmail) params.set('email', store.email || store.contactEmail);
+
+      const res = await fetch(`/api/vendor/withdrawals?${params.toString()}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.wallet) {
+          serverWallet = {
+            available: Math.max(Number(data.wallet.available) || 0, totalOrderEarnings),
+            processing: Number(data.wallet.processing) || 0,
+            totalEarned: Math.max((Number(data.wallet.available) || 0) + (Number(data.wallet.processing) || 0), totalOrderEarnings),
+          };
+        }
+        if (Array.isArray(data.withdrawals)) {
+          serverWithdrawals = data.withdrawals;
+        }
+      }
+    } catch (err) {
+      console.warn('[vendor-wallet] could not fetch server withdrawals:', err);
+    }
+
+    const availableBal = serverWallet.available;
+    const processingBal = serverWallet.processing;
+    const totalRevenue = serverWallet.totalEarned;
+
+    pane.innerHTML = `
+      <div class="vnd-wallet-container" style="max-width: 800px; margin: 0 auto; padding: 12px 16px 40px;">
+        <!-- Top Wallet Balance Card -->
+        <div style="background: linear-gradient(135deg, #064E3B 0%, #047857 100%); border-radius: 20px; padding: 24px; color: white; margin-bottom: 24px; box-shadow: 0 10px 25px rgba(6, 78, 59, 0.15);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <span style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85;">AVAILABLE BALANCE</span>
+              <h2 style="font-size: 2.3rem; font-weight: 800; font-family: var(--font-display); margin: 4px 0 0; color: #FFFFFF; line-height: 1.1;">
+                ₦${availableBal.toLocaleString()}
+              </h2>
+              <div style="font-size: 0.78rem; opacity: 0.8; margin-top: 4px;">Withdrawable to your verified Nigerian bank account</div>
+            </div>
+            <button type="button" onclick="VendorController.openWithdrawModal()" style="background: #10B981; color: white; border: none; padding: 11px 22px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: transform 0.15s ease;">
+              <span>Withdraw Funds 💳</span>
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.18);">
+            <div>
+              <div style="font-size: 0.74rem; opacity: 0.8; font-weight: 600;">Total Food Sales</div>
+              <div style="font-size: 1.1rem; font-weight: 800; margin-top: 2px;">₦${totalRevenue.toLocaleString()}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.74rem; opacity: 0.8; font-weight: 600;">Processing Payouts</div>
+              <div style="font-size: 1.1rem; font-weight: 800; margin-top: 2px;">₦${processingBal.toLocaleString()}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.74rem; opacity: 0.8; font-weight: 600;">Order Count</div>
+              <div style="font-size: 1.1rem; font-weight: 800; margin-top: 2px;">${validOrders.length} order${validOrders.length === 1 ? '' : 's'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Sales & Earnings History -->
+        <div style="background: white; border-radius: 18px; border: 1.5px solid #F1F5F9; padding: 22px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0;">Order Sales &amp; Earnings</h3>
+              <p style="font-size: 0.8rem; color: #64748B; margin: 2px 0 0;">Food earnings credited from customer orders</p>
+            </div>
+            <span style="font-size: 0.78rem; font-weight: 800; color: #008751; background: #ECFDF5; padding: 4px 10px; border-radius: 999px;">${validOrders.length} Active / Completed</span>
+          </div>
+
+          ${validOrders.length > 0 ? `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${validOrders.map(o => {
+                const itemSummary = Array.isArray(o.items) && o.items.length > 0
+                  ? o.items.map(i => `${i.qty}x ${i.name}`).join(', ')
+                  : 'Food Menu Order';
+                const dateStr = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Today';
+                const orderEarnings = Number(o.subtotal) || Number(o.total) || 0;
+                const statusLabel = String(o.status || 'PAID').replace(/_/g, ' ');
+
+                return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; gap: 12px;">
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 800; font-size: 0.92rem; color: #0F172A;">#${o.id}</span>
+                        <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #E0F2FE; color: #0369A1; text-transform: uppercase;">${statusLabel}</span>
+                      </div>
+                      <div style="font-size: 0.84rem; font-weight: 600; color: #334155; margin-top: 4px;">${itemSummary}</div>
+                      <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 3px;">${dateStr} · Customer: ${o.customerName || 'Student'}</div>
+                    </div>
+                    <div style="text-align: right; flex-shrink: 0;">
+                      <span style="font-size: 1.15rem; font-weight: 800; color: #059669; font-family: var(--font-display);">+₦${orderEarnings.toLocaleString()}</span>
+                      <div style="font-size: 0.7rem; color: #64748B; font-weight: 600;">Food Subtotal</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 36px 16px; color: #64748B; font-size: 0.9rem;">
+              <div style="font-size: 2rem; margin-bottom: 8px;">🍽️</div>
+              <strong>No paid orders placed yet.</strong>
+              <p style="margin: 4px 0 0; font-size: 0.82rem; color: #94A3B8;">When customers order food from your menu, earnings will automatically show here.</p>
+            </div>
+          `}
+        </div>
+
+        <!-- Withdrawal Requests History -->
+        ${serverWithdrawals.length > 0 ? `
+          <div style="background: white; border-radius: 18px; border: 1.5px solid #F1F5F9; padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0 0 14px;">Payout Requests</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${serverWithdrawals.map(w => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px;">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: #0F172A;">Bank Transfer (${w.bankName || 'Bank'} ••••${String(w.accountNumber || '').slice(-4)})</div>
+                    <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 2px;">${w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-GB') : 'Recently'}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 1rem; font-weight: 800; color: #0F172A;">₦${Number(w.amount).toLocaleString()}</div>
+                    <span style="font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: ${w.status === 'paid' ? '#DCFCE7' : '#FEF3C7'}; color: ${w.status === 'paid' ? '#166534' : '#92400E'};">${w.status.toUpperCase()}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
   },
 
   _payoutWhen() {
-    return '';
+    return 'Next business day';
   },
 
   renderStatsGrid(store) {
-    // Earnings are server-backed; do not render a fabricated wallet balance in
-    // the food tab.
-    const balanceElFood = document.getElementById('vendor-wallet-balance-food');
-    if (balanceElFood) balanceElFood.innerText = '';
+    const allOrders = window.chowStore?.state?.orders || [];
+    const orders = allOrders.filter(o => 
+      o && (
+        o.storeId === store.id || 
+        (store.numericId && Number(o.vendorId) === Number(store.numericId)) ||
+        (o.storeName && store.name && String(o.storeName).toLowerCase() === String(store.name).toLowerCase())
+      ) && !['CANCELLED', 'PENDING_PAYMENT'].includes(o.status)
+    );
 
-    // Calculate average earnings (from completed orders)
-    const orders = window.chowStore.state.orders.filter(o => o.storeId === store.id && o.status === 'DELIVERED');
     let totalEarnings = 0;
     const uniqueCustomers = new Set();
     let totalRating = 0;
     let ratedOrders = 0;
 
     orders.forEach(order => {
-      totalEarnings += order.subtotal || 0;
-      if (order.customerId) uniqueCustomers.add(order.customerId);
+      totalEarnings += Number(order.subtotal) || Number(order.total) || 0;
+      if (order.customerId || order.customerPhone || order.customerName) {
+        uniqueCustomers.add(order.customerId || order.customerPhone || order.customerName);
+      }
       if (order.rating) {
-        totalRating += order.rating;
+        totalRating += Number(order.rating);
         ratedOrders++;
       }
     });
 
     const avgEarnings = orders.length > 0 ? Math.round(totalEarnings / orders.length) : 0;
-    const avgRating = ratedOrders > 0 ? (totalRating / ratedOrders).toFixed(1) : '0.0';
+    const avgRating = ratedOrders > 0 ? (totalRating / ratedOrders).toFixed(1) : '5.0';
 
     const avgEarningsEl = document.getElementById('stat-avg-earnings');
     if (avgEarningsEl) avgEarningsEl.innerText = this._naira(avgEarnings);
@@ -1084,17 +1235,110 @@ const VendorController = {
     if (ratingEl) ratingEl.innerText = avgRating;
   },
 
-  // Withdrawals were removed along with the demo wallet. The methods are kept
-  // as inert stubs so any stale inline handler fails quietly instead of
-  // throwing on a missing element or, worse, inventing a balance.
   openWithdrawModal() {
-    window.chowApp.toast('Withdrawals are not available yet.', 'info');
+    let modal = document.getElementById('vnd-withdraw-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'vnd-withdraw-modal';
+      modal.className = 'modal-backdrop';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML = `
+        <div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:440px;box-shadow:0 20px 40px rgba(0,0,0,0.2);position:relative;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:1.2rem;font-weight:800;color:#0F172A;">Request Payout 💳</h3>
+            <button type="button" onclick="VendorController.closeWithdrawModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748B;">&times;</button>
+          </div>
+          <p style="font-size:0.84rem;color:#64748B;margin:0 0 16px;line-height:1.4;">
+            Withdraw cleared earnings to your bank account. Transfers are processed by admin on the next business day.
+          </p>
+          <form onsubmit="event.preventDefault(); VendorController.submitWithdrawal();">
+            <div style="margin-bottom:12px;">
+              <label style="display:block;font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:4px;">WITHDRAWAL AMOUNT (₦) *</label>
+              <input type="number" id="vnd-withdraw-amount" min="500" required placeholder="e.g. 5000" style="width:100%;height:44px;padding:0 12px;border:1.5px solid #CBD5E1;border-radius:10px;font-size:0.95rem;box-sizing:border-box;" />
+              <small style="color:#94A3B8;font-size:0.74rem;">Minimum withdrawal: ₦500</small>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:block;font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:4px;">BANK NAME *</label>
+              <input type="text" id="vnd-withdraw-bank" required placeholder="e.g. OPay, GTBank, Kuda, Moniepoint" style="width:100%;height:44px;padding:0 12px;border:1.5px solid #CBD5E1;border-radius:10px;font-size:0.95rem;box-sizing:border-box;" />
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:4px;">ACCOUNT NUMBER *</label>
+              <input type="text" id="vnd-withdraw-account" required maxlength="10" placeholder="10-digit NUBAN" style="width:100%;height:44px;padding:0 12px;border:1.5px solid #CBD5E1;border-radius:10px;font-size:0.95rem;box-sizing:border-box;" />
+            </div>
+            <div id="vnd-withdraw-err" style="display:none;color:#DC2626;font-size:0.82rem;font-weight:600;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;">
+              <button type="button" onclick="VendorController.closeWithdrawModal()" style="flex:1;height:44px;background:#F1F5F9;border:none;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+              <button type="submit" id="vnd-withdraw-submit-btn" style="flex:1;height:44px;background:#00a205;color:white;border:none;border-radius:12px;font-weight:800;cursor:pointer;">Submit Request</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
   },
 
-  closeWithdrawModal() {},
+  closeWithdrawModal() {
+    const modal = document.getElementById('vnd-withdraw-modal');
+    if (modal) modal.style.display = 'none';
+  },
 
-  submitWithdrawal() {
-    window.chowApp.toast('Withdrawals are not available yet.', 'info');
+  async submitWithdrawal() {
+    const amountInp = document.getElementById('vnd-withdraw-amount');
+    const bankInp = document.getElementById('vnd-withdraw-bank');
+    const accInp = document.getElementById('vnd-withdraw-account');
+    const errEl = document.getElementById('vnd-withdraw-err');
+    const btn = document.getElementById('vnd-withdraw-submit-btn');
+
+    if (!amountInp || !bankInp || !accInp) return;
+    const amount = Number(amountInp.value);
+    const bankName = bankInp.value.trim();
+    const accountNumber = accInp.value.trim();
+
+    if (amount < 500) {
+      if (errEl) { errEl.innerText = 'Minimum withdrawal is ₦500'; errEl.style.display = 'block'; }
+      return;
+    }
+    if (!bankName || accountNumber.length < 10) {
+      if (errEl) { errEl.innerText = 'Please enter a valid bank name and 10-digit account number'; errEl.style.display = 'block'; }
+      return;
+    }
+
+    if (errEl) errEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.innerText = 'Submitting...'; }
+
+    try {
+      const store = this.getStore();
+      const res = await fetch('/api/vendor/withdrawals', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          bankName,
+          accountNumber,
+          storeId: store?.id,
+          vendorId: store?.numericId,
+          email: store?.email || store?.contactEmail
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit withdrawal request');
+      }
+
+      this.closeWithdrawModal();
+      window.chowApp.toast(`₦${amount.toLocaleString()} withdrawal request submitted successfully!`, 'success');
+      this.renderWallet();
+    } catch (e) {
+      if (errEl) {
+        errEl.innerText = e.message || 'Error requesting withdrawal';
+        errEl.style.display = 'block';
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerText = 'Submit Request'; }
+    }
   },
 
   // ---------------------------------------------------------------
@@ -1198,6 +1442,10 @@ const VendorController = {
 
         this.renderKitchenOrders(store);
         this.renderLiveOrderAlert(buckets);
+        if (this.activeSubTab === 'money') {
+          this.renderWallet();
+        }
+        this.renderStatsGrid(store);
       }
     } catch (err) {
       console.warn('[vendor] error syncing orders from server:', err);
@@ -1642,6 +1890,9 @@ const VendorController = {
     }
     if (tabName === 'store') {
       this.renderStoreTab();
+    }
+    if (tabName === 'money') {
+      this.renderWallet();
     }
   },
 

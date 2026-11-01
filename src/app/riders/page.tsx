@@ -89,7 +89,7 @@ export default function RidersPage() {
             deliveryAddress: o.deliveryAddress || o.address || 'Campus Hostel / Delivery Point',
             status: o.status,
             total: o.total || 0,
-            deliveryFee: o.deliveryFee || 600,
+            deliveryFee: Number(o.deliveryFee) || 0,
             deliveryPin: o.deliveryPin || '4521',
             riderName: o.riderName || (o.riderId ? 'Assigned Rider' : undefined),
             riderId: o.riderId,
