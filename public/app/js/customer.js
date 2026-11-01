@@ -229,21 +229,21 @@ const CustomerController = {
     });
 
     if (activeCategory !== 'all') {
-      filteredStores = filteredStores.filter(r => r.category === activeCategory || r.menu.some(m => m.category === activeCategory));
+      filteredStores = filteredStores.filter(r => r.category === activeCategory || (Array.isArray(r.menu) && r.menu.some(m => String(m.category || '').toLowerCase() === String(activeCategory).toLowerCase())));
     }
 
     if (activeFilter === 'fast') {
-      filteredStores = filteredStores.filter(r => r.isFast);
+      filteredStores = filteredStores.filter(r => r.isFast || (Array.isArray(r.menu) && r.menu.some(m => m.isFast)));
     } else if (activeFilter === 'budget') {
-      filteredStores = filteredStores.filter(r => r.isBudget || r.menu.some(m => m.price <= 2000));
+      filteredStores = filteredStores.filter(r => r.isBudget || (Array.isArray(r.menu) && r.menu.some(m => Number(m.price || 0) <= 2000)));
     } else if (activeFilter === 'rating') {
       filteredStores = filteredStores.filter(r => Number(r.reviewsCount || 0) > 0 && Number(r.rating || 0) >= 4.0);
     }
 
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       filteredStores = filteredStores.filter(r =>
-        r.name.toLowerCase().includes(q) ||
+        String(r.name || '').toLowerCase().includes(q) ||
         (Array.isArray(r.tags) ? r.tags : []).some(t => String(t || '').toLowerCase().includes(q)) ||
         (Array.isArray(r.menu) ? r.menu : []).some(m => String(m.name || '').toLowerCase().includes(q))
       );
@@ -291,36 +291,129 @@ const CustomerController = {
       return;
     }
 
-    // Extract all featured foods from stores
+    const isCategoryFiltered = activeCategory && activeCategory !== 'all';
+    const isSearchFiltered = Boolean(searchQuery && searchQuery.trim());
+    const isFilterActive = activeFilter && activeFilter !== 'all';
+    const isFiltering = isCategoryFiltered || isSearchFiltered || isFilterActive;
+
+    // Extract all matching dishes from stores
     const allDishes = [];
     filteredStores.forEach(store => {
-      store.menu.forEach(dish => {
+      (store.menu || []).forEach(dish => {
+        if (isCategoryFiltered) {
+          const dishCat = String(dish.category || '').toLowerCase();
+          const targetCat = String(activeCategory).toLowerCase();
+          if (dishCat !== targetCat && !dishCat.includes(targetCat)) return;
+        }
+        if (isSearchFiltered) {
+          const q = searchQuery.toLowerCase().trim();
+          const dishName = String(dish.name || '').toLowerCase();
+          const storeName = String(store.name || '').toLowerCase();
+          const dishDesc = String(dish.desc || dish.description || '').toLowerCase();
+          if (!dishName.includes(q) && !storeName.includes(q) && !dishDesc.includes(q)) return;
+        }
+        if (activeFilter === 'fast') {
+          if (!dish.isFast && !(dish.prepTime && dish.prepTime.includes('15'))) return;
+        } else if (activeFilter === 'budget') {
+          if (Number(dish.price || 0) > 2000) return;
+        } else if (activeFilter === 'rating') {
+          if (Number(dish.rating || 0) < 4.0) return;
+        }
         allDishes.push({ ...dish, storeId: store.id, storeName: store.name });
       });
     });
 
-    const popularDishes = allDishes.filter(d => d.isPopular || (Number(d.reviewsCount || 0) > 0 && Number(d.rating || 0) >= 4.5));
-    const displayPopular = popularDishes.length > 0 ? popularDishes : allDishes;
+    const campusLabel = selectedCampus === 'ibogun' ? 'Ibogun Campus' : 'Sagamu Campus';
+
+    // If a filter or search is active, show matching results with full list of dishes and kitchens
+    if (isFiltering) {
+      const filterTitle = isCategoryFiltered
+        ? `${activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} Dishes`
+        : (isSearchFiltered ? `Search results for "${searchQuery}"` : 'Filtered Campus Meals');
+
+      if (allDishes.length === 0 && filteredStores.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 48px 16px; background: white; border-radius: var(--radius-xl); border: 1px dashed var(--c-border); margin: 24px 0;">
+            <div style="font-size: 2.4rem; margin-bottom: 8px;">🍽️</div>
+            <h3 style="font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; margin-bottom: 4px;">No matching dishes found</h3>
+            <p style="color: var(--c-text-secondary); font-size: 0.88rem; max-width: 360px; margin: 0 auto 16px;">
+              No dishes match your active filter around ${campusLabel}.
+            </p>
+            <button class="action-btn-secondary" onclick="window.chowStore.setCategory('all'); window.chowStore.setFilter('all'); window.chowStore.setSearchQuery('');">
+              Explore All Food
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        ${allDishes.length > 0 ? `
+          <div style="margin-bottom: var(--space-32);">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">${filterTitle}</h2>
+                <p style="font-size: 0.8rem; color: var(--c-text-secondary);">${allDishes.length} meal${allDishes.length === 1 ? '' : 's'} available around ${campusLabel}</p>
+              </div>
+              <span class="section-link" onclick="window.chowStore.setCategory('all'); window.chowStore.setFilter('all'); window.chowStore.setSearchQuery('');">View all food</span>
+            </div>
+            <div class="food-cards-grid">
+              ${allDishes.map(dish => this.renderFoodCard(dish)).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${filteredStores.length > 0 ? `
+          <div style="margin-bottom: var(--space-32);">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Campus Kitchens</h2>
+                <p style="font-size: 0.8rem; color: var(--c-text-secondary);">${filteredStores.length} spot${filteredStores.length === 1 ? '' : 's'} available</p>
+              </div>
+            </div>
+            <div class="stores-grid">
+              ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
+      return;
+    }
+
+    // Default discovery view (all available campus meals, campus kitchens, and quick options)
     const fastDishes = allDishes.filter(d => (d.prepTime && d.prepTime.includes('15')) || d.isFast);
     const displayFast = fastDishes.length > 0 ? fastDishes : allDishes.slice().reverse();
 
     container.innerHTML = `
-      <!-- Section 1: Popular Near You (Food Cards with Instant + Button) -->
+      <!-- Section 1: Fresh & Popular Campus Meals (All dishes visible, newest first) -->
       <div style="margin-bottom: var(--space-32);">
         <div class="section-header">
           <div>
             <h2 class="section-title">Popular Near You</h2>
-            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Most ordered dishes around ${selectedCampus === 'ibogun' ? 'Ibogun Campus' : 'Sagamu Campus'}</p>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Freshly prepared meals from verified campus kitchens around ${campusLabel} (${allDishes.length} meals)</p>
           </div>
-          <span class="section-link" onclick="CustomerController.selectCategory('all')">See all</span>
+          <span class="section-link" onclick="CustomerController.selectCategory('all')">Refresh</span>
         </div>
         <div class="food-cards-grid">
-          ${displayPopular.slice(0, 6).map(dish => this.renderFoodCard(dish)).join('')}
+          ${allDishes.map(dish => this.renderFoodCard(dish)).join('')}
         </div>
       </div>
 
+      <!-- Section 2: Featured Campus Kitchens & Cafeterias -->
+      <div style="margin-bottom: var(--space-32);">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🏫 Campus Kitchens &amp; Cafeterias</h2>
+            <p style="font-size: 0.8rem; color: var(--c-text-secondary);">Verified student spots around ${campusLabel} (${filteredStores.length} kitchens)</p>
+          </div>
+        </div>
+        <div class="stores-grid">
+          ${filteredStores.map(store => this.renderStoreCard(store)).join('')}
+        </div>
+      </div>
 
       <!-- Section 3: Fast Delivery (Under 25 mins) -->
+      ${displayFast.length > 0 ? `
       <div style="margin-bottom: var(--space-32);">
         <div class="section-header">
           <div>
@@ -329,9 +422,10 @@ const CustomerController = {
           </div>
         </div>
         <div class="food-cards-grid">
-          ${displayFast.slice(0, 6).map(dish => this.renderFoodCard(dish)).join('')}
+          ${displayFast.map(dish => this.renderFoodCard(dish)).join('')}
         </div>
       </div>
+      ` : ''}
     `;
   },
 

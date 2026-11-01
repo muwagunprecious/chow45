@@ -188,7 +188,7 @@ export async function GET(request: Request) {
  * in memory. Querying per store would be an N+1 that runs on every page load.
  */
 async function loadStores(): Promise<ClientStore[]> {
-  const storeRows = await db.select().from(vendors).orderBy(asc(vendors.createdAt));
+  const storeRows = await db.select().from(vendors).orderBy(desc(vendors.createdAt));
 
   const vendorIds = storeRows.map((v) => v.id);
   if (vendorIds.length === 0) return [];
@@ -202,7 +202,7 @@ async function loadStores(): Promise<ClientStore[]> {
         ne(menuItems.status, "rejected")
       )
     )
-    .orderBy(asc(menuItems.createdAt));
+    .orderBy(desc(menuItems.createdAt));
 
   const itemIds = menuRows.map((m) => m.id);
   const [sizeRows, extraRows] = itemIds.length
