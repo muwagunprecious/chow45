@@ -148,60 +148,98 @@ export default function RiderDashboardPage() {
   // Live GPS Real-time tracking
   const [riderCoords, setRiderCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const lastPushTimeRef = useRef<number>(0);
+  const isPushingLocRef = useRef<boolean>(false);
+  const lastPushedCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) return;
 
     let watchId: number | null = null;
+    let isCancelled = false;
 
     const pushLocation = async (lat: number, lng: number, accuracy?: number) => {
       setRiderCoords({ lat, lng });
-      if (accuracy) setGpsAccuracy(Math.round(accuracy));
+      if (typeof accuracy === 'number') setGpsAccuracy(Math.round(accuracy));
+
+      const now = Date.now();
+      if (isPushingLocRef.current) return;
+
+      // Throttle: push at most once every 10 seconds unless moved > 25 meters (~0.00025 deg)
+      if (lastPushedCoordsRef.current && (now - lastPushTimeRef.current < 10000)) {
+        const dLat = Math.abs(lat - lastPushedCoordsRef.current.lat);
+        const dLng = Math.abs(lng - lastPushedCoordsRef.current.lng);
+        if (dLat < 0.00025 && dLng < 0.00025) {
+          return;
+        }
+      }
+
+      isPushingLocRef.current = true;
+      lastPushTimeRef.current = now;
+      lastPushedCoordsRef.current = { lat, lng };
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
         await fetch('/api/rider/location', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lat, lng }),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (activeMission?.id) {
+          const missionController = new AbortController();
+          const missionTimeout = setTimeout(() => missionController.abort(), 6000);
           await fetch(`/api/orders/${activeMission.id}/track`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lat, lng }),
+            signal: missionController.signal,
           });
+          clearTimeout(missionTimeout);
         }
       } catch (e) {
         // silent heartbeat
+      } finally {
+        isPushingLocRef.current = false;
       }
     };
 
-    try {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          pushLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-        },
-        (err) => {
-          console.warn('Geolocation error:', err.message);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      );
-    } catch (e) {}
+    const startWatching = (highAccuracy = true) => {
+      try {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
 
-    const interval = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          pushLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-        },
-        undefined,
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }, 10000);
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (isCancelled) return;
+            pushLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+          },
+          (err) => {
+            if (isCancelled) return;
+            // If high accuracy times out or is unavailable, seamlessly fallback to standard accuracy
+            if (highAccuracy && (err.code === 3 || err.code === 2)) {
+              startWatching(false);
+            }
+          },
+          highAccuracy
+            ? { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            : { enableHighAccuracy: false, timeout: 20000, maximumAge: 30000 }
+        );
+      } catch (e) {
+        // Geolocation unavailable
+      }
+    };
+
+    startWatching(true);
 
     return () => {
+      isCancelled = true;
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      clearInterval(interval);
     };
   }, [activeMission?.id]);
 
@@ -288,16 +326,39 @@ export default function RiderDashboardPage() {
     }
   }, [router]);
 
+  const isPollingOffersRef = useRef<boolean>(false);
+  const offersAbortRef = useRef<AbortController | null>(null);
+
   // 2. Fetch Radar Offers
   const loadOffers = useCallback(async () => {
     if (!rider?.isOnline || activeMission) {
       setOffers([]);
       return;
     }
+    if (isPollingOffersRef.current) return;
+    isPollingOffersRef.current = true;
+
+    const controller = new AbortController();
+    offersAbortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
-      const res = await fetch('/api/rider/deliveries/offers');
+      const res = await fetch('/api/rider/deliveries/offers', {
+        signal: controller.signal,
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      clearTimeout(timeoutId);
+
+      if (res.status === 401) {
+        return;
+      }
+
+      if (!res.ok) {
+        return;
+      }
+
       const data = await res.json();
-      if (res.ok && Array.isArray(data.offers)) {
+      if (Array.isArray(data.offers)) {
         if (data.offers.length > 0 && prevOfferIdsRef.current.size > 0) {
           const hasNew = data.offers.some((o: any) => !prevOfferIdsRef.current.has(o.id));
           if (hasNew) {
@@ -308,23 +369,33 @@ export default function RiderDashboardPage() {
         prevOfferIdsRef.current = new Set(data.offers.map((o: any) => o.id));
         setOffers(data.offers);
       }
-    } catch (err) {
-      console.error('Radar poll error:', err);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        // Non-fatal transient network drop
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      isPollingOffersRef.current = false;
     }
   }, [rider?.isOnline, activeMission, playDispatchChime]);
 
   // 3. Fetch Wallet Ledger & Accounts
   const loadWalletDetails = useCallback(async () => {
     try {
-      const res = await fetch('/api/rider/wallet');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch('/api/rider/wallet', { signal: controller.signal });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (res.ok) {
         setTransactions(data.transactions || []);
         setBankAccounts(data.bankAccounts || []);
         if (data.wallet) setWallet(data.wallet);
       }
-    } catch (err) {
-      console.error('Wallet fetch error:', err);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('Wallet fetch error:', err);
+      }
     }
   }, []);
 
@@ -335,9 +406,33 @@ export default function RiderDashboardPage() {
   // Polling for offers when online and no active mission
   useEffect(() => {
     if (!rider?.isOnline || activeMission) return;
-    loadOffers();
-    const interval = setInterval(loadOffers, 5000);
-    return () => clearInterval(interval);
+
+    let timerId: NodeJS.Timeout;
+    let isCancelled = false;
+
+    const poll = async () => {
+      if (isCancelled) return;
+      if (typeof document !== 'undefined' && document.hidden) {
+        timerId = setTimeout(poll, 15000);
+        return;
+      }
+
+      await loadOffers();
+
+      if (!isCancelled) {
+        timerId = setTimeout(poll, 5000);
+      }
+    };
+
+    poll();
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timerId);
+      if (offersAbortRef.current) {
+        offersAbortRef.current.abort();
+      }
+    };
   }, [rider?.isOnline, activeMission, loadOffers]);
 
   // Load wallet when switching to wallet tab
