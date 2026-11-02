@@ -61,6 +61,9 @@ export async function GET(request: Request) {
         storeName: orders.storeName,
         vendorId: orders.vendorId,
         vendorAddress: vendors.address,
+        vendorLocation: vendors.location,
+        vendorPhone: vendors.ownerPhone,
+        customerName: orders.customerName,
         deliveryAddress: orders.deliveryAddress,
         deliveryNotes: orders.deliveryNotes,
         deliveryFee: orders.deliveryFee,
@@ -75,7 +78,7 @@ export async function GET(request: Request) {
         estimatedDurationSeconds: orders.estimatedDurationSeconds,
       })
       .from(orders)
-      .leftJoin(vendors, eq(orders.vendorId, vendors.id))
+      .leftJoin(vendors, or(eq(orders.vendorId, vendors.id), eq(orders.storeId, vendors.storeId)))
       .where(
         and(
           or(isNull(orders.riderId), eq(orders.riderId, "")),
@@ -118,11 +121,18 @@ export async function GET(request: Request) {
       // Delivery earning for rider: rider gets the delivery fee paid by the customer
       const riderFee = Number(order.deliveryFee) || 0;
 
+      const resolvedPickupAddress =
+        order.vendorAddress ||
+        order.vendorLocation ||
+        "Sagamu Campus Kitchen / Restaurant";
+
       return {
         id: order.id,
         storeId: order.storeId,
         storeName: order.storeName,
-        storeAddress: order.vendorAddress || "Vendor Location",
+        storeAddress: resolvedPickupAddress,
+        vendorPhone: order.vendorPhone || null,
+        customerName: order.customerName || "Customer",
         deliveryAddress: order.deliveryAddress,
         deliveryNotes: order.deliveryNotes,
         deliveryFee: riderFee,

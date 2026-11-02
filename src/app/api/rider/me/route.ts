@@ -44,14 +44,25 @@ export async function GET(request: Request) {
       .from(orderItems)
       .where(eq(orderItems.orderId, order.id));
 
-    // Get vendor phone / address
-    let vendorInfo = null;
+    // Get vendor phone / address (check by vendorId first, fallback to storeId)
+    let vendorInfo: {
+      id: number;
+      businessName: string;
+      address: string | null;
+      location: string | null;
+      ownerPhone: string | null;
+      contactEmail: string | null;
+      latitude: string | null;
+      longitude: string | null;
+    } | null = null;
+
     if (order.vendorId) {
       const vendorRows = await db
         .select({
           id: vendors.id,
           businessName: vendors.businessName,
           address: vendors.address,
+          location: vendors.location,
           ownerPhone: vendors.ownerPhone,
           contactEmail: vendors.contactEmail,
           latitude: vendors.latitude,
@@ -60,13 +71,54 @@ export async function GET(request: Request) {
         .from(vendors)
         .where(eq(vendors.id, order.vendorId))
         .limit(1);
-      vendorInfo = vendorRows[0] || null;
+      if (vendorRows.length > 0) vendorInfo = vendorRows[0];
     }
 
+    if (!vendorInfo && order.storeId) {
+      const vendorRows = await db
+        .select({
+          id: vendors.id,
+          businessName: vendors.businessName,
+          address: vendors.address,
+          location: vendors.location,
+          ownerPhone: vendors.ownerPhone,
+          contactEmail: vendors.contactEmail,
+          latitude: vendors.latitude,
+          longitude: vendors.longitude,
+        })
+        .from(vendors)
+        .where(eq(vendors.storeId, order.storeId))
+        .limit(1);
+      if (vendorRows.length > 0) vendorInfo = vendorRows[0];
+    }
+
+    const resolvedVendorAddress =
+      vendorInfo?.address ||
+      vendorInfo?.location ||
+      "Sagamu Campus Kitchen / Restaurant";
+
+    // SECURITY: Exclude secret verification PIN so rider must collect it from the customer
+    const { pin: _customerPin, ...safeOrder } = order;
+
     activeDelivery = {
-      ...order,
+      ...safeOrder,
+      storeAddress: resolvedVendorAddress,
       items,
-      vendor: vendorInfo,
+      vendor: vendorInfo
+        ? {
+            ...vendorInfo,
+            address: resolvedVendorAddress,
+          }
+        : {
+            id: null,
+            businessName: order.storeName,
+            address: resolvedVendorAddress,
+            location: resolvedVendorAddress,
+            ownerPhone: null,
+            contactEmail: null,
+            latitude: null,
+            longitude: null,
+          },
     };
   }
 

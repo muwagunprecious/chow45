@@ -37,6 +37,8 @@ interface DeliveryOffer {
   storeId: string;
   storeName: string;
   storeAddress: string;
+  vendorPhone?: string | null;
+  customerName?: string;
   deliveryAddress: string;
   deliveryNotes?: string;
   deliveryFee: number;
@@ -66,7 +68,7 @@ interface ActiveMission {
   deliveryFee: number;
   total: number;
   status: string;
-  pin?: string;
+  // Note: Customer verification PIN is never shared with rider for security
   items: Array<{ id: number; name: string; qty: number; unitPrice: number }>;
   vendor?: {
     businessName: string;
@@ -873,12 +875,34 @@ export default function RiderDashboardPage() {
                         <h4 className="font-extrabold text-base text-[#000000] mt-0.5">
                           {offer.storeName}
                         </h4>
-                        <p className="text-xs text-[#000000]/70 flex items-center gap-1 mt-0.5">
-                          <span>📍 Pickup:</span> <span>{offer.storeAddress}</span>
-                        </p>
-                        <p className="text-xs text-[#00a205] font-medium flex items-center gap-1 mt-0.5">
-                          <span>🎯 Destination:</span> <span>{offer.deliveryAddress}</span>
-                        </p>
+
+                        {/* Step 1: Vendor Pickup */}
+                        <div className="mt-2 p-2 rounded-xl bg-neutral-50 border border-neutral-200/70 text-xs">
+                          <span className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider block mb-0.5">
+                            🏪 Pickup from Vendor:
+                          </span>
+                          <p className="text-xs font-bold text-neutral-900 flex items-start gap-1">
+                            <span>📍</span> <span>{offer.storeAddress}</span>
+                          </p>
+                        </div>
+
+                        {/* Step 2: Customer / Guest Details */}
+                        <div className="mt-1.5 p-2 rounded-xl bg-[#00a205]/5 border border-[#00a205]/20 text-xs">
+                          <div className="flex items-center justify-between text-[10px] font-extrabold text-[#00a205] uppercase tracking-wider mb-0.5">
+                            <span>🎯 Drop-off to Customer:</span>
+                            {offer.customerName && (
+                              <span className="text-neutral-800 font-black">{offer.customerName}</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-bold text-neutral-900 flex items-start gap-1">
+                            <span>🛵</span> <span>{offer.deliveryAddress}</span>
+                          </p>
+                          {offer.deliveryNotes && (
+                            <p className="text-[11px] text-amber-800 font-medium mt-1 bg-amber-50 p-1.5 rounded-lg border border-amber-200/60">
+                              Note: {offer.deliveryNotes}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="text-right">
@@ -1027,35 +1051,98 @@ export default function RiderDashboardPage() {
                   </div>
                 </div>
 
-                {/* Customer Drop-off Card */}
-                <div className="bg-[#ffffff] rounded-2xl p-4 border border-[#00a205]/10">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00a205] mb-1">
-                    Customer Drop-Off Destination
-                  </h4>
-                  <p className="text-sm font-bold text-[#000000]">
-                    {activeMission.customerName}
-                  </p>
-                  <p className="text-xs text-[#00a205] font-medium mt-0.5">
-                    📍 {activeMission.deliveryAddress}
-                  </p>
-                  {activeMission.deliveryNotes && (
-                    <p className="text-xs text-[#E75A24] font-medium mt-1 bg-[#fafafa] p-2 rounded-lg">
-                      Note: {activeMission.deliveryNotes}
-                    </p>
-                  )}
+                {/* STEP 1: VENDOR / RESTAURANT PICKUP CARD */}
+                <div className="bg-[#ffffff] rounded-2xl p-4 border-2 border-emerald-500/20 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      🏪 Step 1: Food Pickup Point
+                    </span>
+                    <span className="text-xs font-bold text-neutral-400">Restaurant</span>
+                  </div>
 
-                  {/* Customer Phone (revealed for assigned rider) */}
-                  {activeMission.customerPhone && (
-                    <div className="mt-3 pt-2 border-t border-[#00a205]/10 flex items-center justify-between">
-                      <span className="text-xs text-[#000000]/70">Customer Phone:</span>
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      {activeMission.storeName}
+                    </h3>
+                    <p className="text-xs font-bold text-emerald-800 mt-1 flex items-start gap-1.5 bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
+                      <span className="text-sm">📍</span>
+                      <span>{activeMission.vendor?.address || activeMission.storeAddress || 'Campus Cafeteria, Sagamu'}</span>
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                    {activeMission.vendor?.ownerPhone ? (
+                      <a
+                        href={`tel:${activeMission.vendor.ownerPhone}`}
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                      >
+                        <span>📞</span> <span>Call Kitchen ({activeMission.vendor.ownerPhone})</span>
+                      </a>
+                    ) : (
+                      <span className="text-xs text-neutral-400 font-medium">Direct Kitchen Pickup</span>
+                    )}
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent((activeMission.vendor?.address || activeMission.storeName) + ', Sagamu')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-700 font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      <span>🗺️</span> <span>Directions ↗</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* STEP 2: CUSTOMER / GUEST DROP-OFF CARD */}
+                <div className="bg-[#ffffff] rounded-2xl p-4 border-2 border-[#00a205]/20 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#00a205] bg-[#00a205]/10 px-2.5 py-1 rounded-full border border-[#00a205]/20">
+                      🎯 Step 2: Guest / Customer Drop-Off
+                    </span>
+                    <span className="text-xs font-bold text-neutral-400">Destination</span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-black text-neutral-900">
+                        {activeMission.customerName}
+                      </h3>
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
+                        Customer
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-bold text-[#00a205] mt-1 flex items-start gap-1.5 bg-[#00a205]/5 p-2 rounded-xl border border-[#00a205]/15">
+                      <span className="text-sm">📍</span>
+                      <span>{activeMission.deliveryAddress}</span>
+                    </p>
+
+                    {activeMission.deliveryNotes && (
+                      <p className="text-xs text-amber-800 font-medium mt-1.5 bg-amber-50 p-2 rounded-xl border border-amber-200">
+                        💬 <strong>Delivery Instructions:</strong> {activeMission.deliveryNotes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                    {activeMission.customerPhone ? (
                       <a
                         href={`tel:${activeMission.customerPhone}`}
-                        className="px-3 py-1.5 rounded-lg bg-[#00a205]/10 text-[#00a205] font-bold text-xs flex items-center gap-1.5 hover:bg-[#00a205]/20 transition-colors"
+                        className="flex-1 py-2 px-3 rounded-xl bg-[#00a205] hover:bg-[#008704] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                       >
-                        <span>📞</span> <span>Call {activeMission.customerPhone}</span>
+                        <span>📞</span> <span>Call {activeMission.customerName} ({activeMission.customerPhone})</span>
                       </a>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-xs text-neutral-400 font-medium">Customer Hand-off</span>
+                    )}
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeMission.deliveryAddress + ', Sagamu')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 text-neutral-700 font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      <span>🗺️</span> <span>Directions ↗</span>
+                    </a>
+                  </div>
                 </div>
 
                 {/* STEP-BY-STEP PROGRESSION ACTIONS */}
@@ -1120,26 +1207,14 @@ export default function RiderDashboardPage() {
                         </p>
                         <input
                           type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           maxLength={4}
                           value={enteredPin}
                           onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
                           placeholder="••••"
-                          className="w-36 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-2.5 rounded-xl bg-[#ffffff] border-2 border-[#00a205] text-[#00a205] focus:outline-none"
+                          className="w-36 mx-auto text-center font-mono font-black text-2xl tracking-widest px-4 py-2.5 rounded-xl bg-[#ffffff] border-2 border-[#00a205] text-[#00a205] focus:outline-none focus:ring-4 focus:ring-[#00a205]/20"
                         />
-                        {activeMission.pin && (
-                          <div className="mt-2.5 flex items-center justify-center gap-2">
-                            <span className="text-[11px] text-[#000000]/60">
-                              Customer PIN: <strong className="font-mono text-[#00a205]">{activeMission.pin}</strong>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setEnteredPin(String(activeMission.pin))}
-                              className="text-[11px] text-[#00a205] font-bold underline hover:opacity-80"
-                            >
-                              Auto-fill
-                            </button>
-                          </div>
-                        )}
                       </div>
 
                       {pinError && (
