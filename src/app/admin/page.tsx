@@ -74,13 +74,106 @@ interface VendorEntry {
   _isUserOnly?: boolean;
 }
 
+interface AdminRider {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  vehicle: string | null;
+  avatar: string | null;
+  location: string | null;
+  identityMethod: string | null;
+  identityNumber: string | null;
+  institution: string | null;
+  applicationStatus: string;
+  approvalStatus: string;
+  rejectionReason: string | null;
+  suspensionReason: string | null;
+  isOnline: boolean;
+  isAvailable: boolean;
+  rating: number;
+  tripsCount: number;
+  approvedAt: string | null;
+  createdAt: string;
+  walletAvailable: number | null;
+  walletTotalEarned: number | null;
+  walletProcessing: number | null;
+  activeOrdersCount?: number;
+  activeOrders?: Array<{
+    id: string;
+    pin: string | null;
+    status: string;
+    storeName: string;
+    customerName: string;
+    deliveryFee: number;
+    total: number;
+  }>;
+}
+
+interface AdminPackage {
+  id: string;
+  pin: string | null;
+  status: string;
+  customerName: string;
+  customerPhone: string | null;
+  deliveryAddress: string;
+  deliveryNotes: string | null;
+  deliveryLocation: any;
+  storeName: string;
+  storeId: string;
+  subtotal: number;
+  serviceFee: number;
+  deliveryFee: number;
+  total: number;
+  riderId: string | null;
+  riderName: string | null;
+  riderPhone: string | null;
+  isFoodReady: boolean;
+  foodReadyAt: string | null;
+  isPreorder: boolean;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{ name: string; qty: number; unitPrice: number; itemTotal: number }>;
+}
+
+interface RiderStats {
+  totalRiders: number;
+  onlineRiders: number;
+  approvedRiders: number;
+  pendingRiders: number;
+  suspendedRiders: number;
+  activePackages: number;
+  deliveredPackages: number;
+}
+
 export default function AdminDashboardPage() {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState<'waitlist' | 'vendors' | 'foods'>('vendors');
+  const [activeTab, setActiveTab] = useState<'waitlist' | 'vendors' | 'foods' | 'riders'>('vendors');
+
+  // Rider & Dispatch Operations state
+  const [riders, setRiders] = useState<AdminRider[]>([]);
+  const [packages, setPackages] = useState<AdminPackage[]>([]);
+  const [riderStats, setRiderStats] = useState<RiderStats>({
+    totalRiders: 0,
+    onlineRiders: 0,
+    approvedRiders: 0,
+    pendingRiders: 0,
+    suspendedRiders: 0,
+    activePackages: 0,
+    deliveredPackages: 0,
+  });
+  const [ridersLoading, setRidersLoading] = useState(false);
+  const [riderSearch, setRiderSearch] = useState('');
+  const [riderStatusFilter, setRiderStatusFilter] = useState<'ALL' | 'ONLINE' | 'PENDING_REVIEW' | 'APPROVED' | 'SUSPENDED'>('ALL');
+  const [dispatchSubTab, setDispatchSubTab] = useState<'packages' | 'riders'>('packages');
+  const [packageSearch, setPackageSearch] = useState('');
+  const [packageStatusFilter, setPackageStatusFilter] = useState<'ALL' | 'ACTIVE' | 'WAITING' | 'DELIVERED'>('ALL');
+  const [assignModalPackage, setAssignModalPackage] = useState<AdminPackage | null>(null);
+  const [selectedRiderToAssign, setSelectedRiderToAssign] = useState<string>('');
 
   // DB Health status
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
@@ -145,8 +238,20 @@ export default function AdminDashboardPage() {
       checkDbStatus();
       loadWaitlist();
       loadFoods();
+      loadRiders();
     }
   }, [isAuthenticated]);
+
+  // Periodic refresh when on riders / dispatch tab
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'riders') {
+      loadRiders();
+      const timer = setInterval(() => {
+        loadRiders();
+      }, 15000);
+      return () => clearInterval(timer);
+    }
+  }, [isAuthenticated, activeTab]);
 
   const checkDbStatus = async () => {
     try {
@@ -193,6 +298,83 @@ export default function AdminDashboardPage() {
       console.error('Failed to load food items:', err);
     } finally {
       setFoodLoading(false);
+    }
+  };
+
+  const loadRiders = async () => {
+    setRidersLoading(true);
+    try {
+      const res = await fetch('/api/admin/riders?adminKey=admin2026', {
+        headers: { 'x-admin-key': 'admin2026' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRiders(data.riders || []);
+        setPackages(data.packages || []);
+        if (data.stats) setRiderStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to load riders and packages:', err);
+    } finally {
+      setRidersLoading(false);
+    }
+  };
+
+  const handleRiderAction = async (riderId: string, action: 'APPROVE' | 'REJECT' | 'SUSPEND' | 'REACTIVATE', reason?: string) => {
+    setActionLoadingId(riderId);
+    try {
+      const res = await fetch('/api/admin/riders?adminKey=admin2026', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'admin2026' },
+        body: JSON.stringify({ riderId, action, reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Action failed');
+      setToastMessage(`✓ ${data.message || `Rider ${action.toLowerCase()}d successfully.`}`);
+      setTimeout(() => setToastMessage(null), 4000);
+      loadRiders();
+    } catch (err: any) {
+      alert(err.message || 'Error updating rider');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleAssignOrder = async (orderId: string, riderId: string) => {
+    if (!riderId) return;
+    try {
+      const res = await fetch('/api/admin/riders?adminKey=admin2026', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'admin2026' },
+        body: JSON.stringify({ orderId, riderId, action: 'ASSIGN_ORDER' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to assign rider');
+      setToastMessage(`✓ Package #${orderId} assigned to rider!`);
+      setTimeout(() => setToastMessage(null), 4000);
+      setAssignModalPackage(null);
+      setSelectedRiderToAssign('');
+      loadRiders();
+    } catch (err: any) {
+      alert(err.message || 'Error assigning package');
+    }
+  };
+
+  const handleUnassignOrder = async (orderId: string) => {
+    if (!confirm(`Are you sure you want to unassign this package from the rider? It will return to the dispatch queue.`)) return;
+    try {
+      const res = await fetch('/api/admin/riders?adminKey=admin2026', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': 'admin2026' },
+        body: JSON.stringify({ orderId, action: 'UNASSIGN_ORDER' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to unassign package');
+      setToastMessage(`✓ Package #${orderId} returned to dispatch queue.`);
+      setTimeout(() => setToastMessage(null), 4000);
+      loadRiders();
+    } catch (err: any) {
+      alert(err.message || 'Error unassigning package');
     }
   };
 
@@ -607,6 +789,29 @@ export default function AdminDashboardPage() {
             >
               {allVendors.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('riders')}
+            className={`px-5 py-2.5 text-xs font-extrabold rounded-full transition-all flex items-center gap-2 border ${
+              activeTab === 'riders'
+                ? 'bg-[#0C513F] text-white border-[#0C513F] shadow-[0_4px_14px_rgba(12,81,63,0.18)]'
+                : 'text-[#6E6D66] hover:text-[#111111] bg-white border-gray-200 hover:bg-[#FAF6EB]'
+            }`}
+          >
+            <span>🚴 Riders & Dispatch</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                activeTab === 'riders' ? 'bg-[#FFC928] text-[#111111]' : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              {riderStats.totalRiders}
+            </span>
+            {riderStats.activePackages > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                {riderStats.activePackages} in flight
+              </span>
+            )}
           </button>
 
           <button
@@ -1867,6 +2072,676 @@ export default function AdminDashboardPage() {
             )}
           </div>
         )}
+
+        {/* ======================================================== */}
+        {/* TAB 4: RIDERS & LIVE DISPATCH OPERATIONS                */}
+        {/* ======================================================== */}
+        {activeTab === 'riders' && (
+          <div className="space-y-6">
+            {/* Top Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-extrabold text-[#111111] tracking-tight">Riders & Live Dispatch</h2>
+                <p className="text-xs text-[#6E6D66] mt-1">
+                  Active delivery missions, hand-off verification PIN codes, and verified rider fleet oversight.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => loadRiders()}
+                  disabled={ridersLoading}
+                  className="px-4 py-2 bg-white hover:bg-[#FAF6EB] text-[#0C513F] border border-[#0C513F]/20 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+                >
+                  <span className={ridersLoading ? 'animate-spin' : ''}>🔄</span>
+                  <span>{ridersLoading ? 'Refreshing...' : 'Refresh Telemetry'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Top 4 KPI Metrics */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-3xl border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.04)]">
+                <div className="text-[11px] font-bold text-[#6E6D66] uppercase tracking-wider">Total Registered Riders</div>
+                <div className="text-3xl font-extrabold text-[#111111] mt-1.5">{riderStats.totalRiders}</div>
+                <div className="text-[11px] text-[#0C513F] font-bold mt-1">
+                  {riderStats.approvedRiders} approved • {riderStats.pendingRiders} pending review
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-3xl border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.04)]">
+                <div className="text-[11px] font-bold text-[#6E6D66] uppercase tracking-wider">Online & Active Now</div>
+                <div className="text-3xl font-extrabold text-emerald-600 mt-1.5 flex items-center gap-2">
+                  <span>{riderStats.onlineRiders}</span>
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                </div>
+                <div className="text-[11px] text-[#6E6D66] font-medium mt-1">
+                  Ready to accept incoming delivery missions
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-3xl border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.04)]">
+                <div className="text-[11px] font-bold text-[#6E6D66] uppercase tracking-wider">Packages In Flight</div>
+                <div className="text-3xl font-extrabold text-[#D97706] mt-1.5">{riderStats.activePackages}</div>
+                <div className="text-[11px] text-[#6E6D66] font-medium mt-1">
+                  Active deliveries assigned or awaiting pickup
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-3xl border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.04)]">
+                <div className="text-[11px] font-bold text-[#6E6D66] uppercase tracking-wider">Completed Deliveries</div>
+                <div className="text-3xl font-extrabold text-[#0C513F] mt-1.5">{riderStats.deliveredPackages}</div>
+                <div className="text-[11px] text-[#6E6D66] font-medium mt-1">
+                  Successfully verified and delivered
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tabs: Packages & Deliveries vs Rider Directory */}
+            <div className="flex border-b border-[#0C513F]/10 gap-6">
+              <button
+                type="button"
+                onClick={() => setDispatchSubTab('packages')}
+                className={`pb-3 text-sm font-extrabold transition-all relative flex items-center gap-2 ${
+                  dispatchSubTab === 'packages'
+                    ? 'text-[#0C513F]'
+                    : 'text-[#6E6D66] hover:text-[#111111]'
+                }`}
+              >
+                <span>📦 Packages & Deliveries</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                  dispatchSubTab === 'packages' ? 'bg-[#0C513F] text-white' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {packages.length}
+                </span>
+                {dispatchSubTab === 'packages' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0C513F] rounded-full" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDispatchSubTab('riders')}
+                className={`pb-3 text-sm font-extrabold transition-all relative flex items-center gap-2 ${
+                  dispatchSubTab === 'riders'
+                    ? 'text-[#0C513F]'
+                    : 'text-[#6E6D66] hover:text-[#111111]'
+                }`}
+              >
+                <span>🚴 Rider Directory & Profiles</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                  dispatchSubTab === 'riders' ? 'bg-[#0C513F] text-white' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {riders.length}
+                </span>
+                {dispatchSubTab === 'riders' && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0C513F] rounded-full" />
+                )}
+              </button>
+            </div>
+
+            {/* ======================================================== */}
+            {/* SUB-TAB 1: PACKAGES & DELIVERIES (WITH VERIFICATION PIN) */}
+            {/* ======================================================== */}
+            {dispatchSubTab === 'packages' && (
+              <div className="space-y-4">
+                {/* Search & Filters */}
+                <div className="bg-white p-4 rounded-3xl border border-[#0C513F]/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Search Order ID (#CH...), PIN code, customer name, phone, or rider..."
+                      value={packageSearch}
+                      onChange={(e) => setPackageSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-[#FAF6EB]/60 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#0C513F]"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'ALL', label: 'All Packages', count: packages.length },
+                      {
+                        key: 'ACTIVE',
+                        label: 'In Transit / Active',
+                        count: packages.filter((p) => !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(p.status)).length,
+                      },
+                      {
+                        key: 'WAITING',
+                        label: 'Waiting for Rider',
+                        count: packages.filter((p) => !p.riderId && !['DELIVERED', 'CANCELLED', 'REJECTED'].includes(p.status)).length,
+                      },
+                      {
+                        key: 'DELIVERED',
+                        label: 'Delivered',
+                        count: packages.filter((p) => p.status === 'DELIVERED').length,
+                      },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setPackageStatusFilter(tab.key as any)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all ${
+                          packageStatusFilter === tab.key
+                            ? 'bg-[#0C513F] text-white shadow-sm'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {tab.label} ({tab.count})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Packages List */}
+                {(() => {
+                  const term = packageSearch.toLowerCase().trim();
+                  const filtered = packages.filter((pkg) => {
+                    if (packageStatusFilter === 'ACTIVE' && ['DELIVERED', 'CANCELLED', 'REJECTED'].includes(pkg.status)) return false;
+                    if (packageStatusFilter === 'WAITING' && (pkg.riderId || ['DELIVERED', 'CANCELLED', 'REJECTED'].includes(pkg.status))) return false;
+                    if (packageStatusFilter === 'DELIVERED' && pkg.status !== 'DELIVERED') return false;
+
+                    if (term) {
+                      const matchId = pkg.id.toLowerCase().includes(term);
+                      const matchPin = (pkg.pin || '').toLowerCase().includes(term);
+                      const matchCust = (pkg.customerName || '').toLowerCase().includes(term);
+                      const matchPhone = (pkg.customerPhone || '').toLowerCase().includes(term);
+                      const matchStore = (pkg.storeName || '').toLowerCase().includes(term);
+                      const matchRider = (pkg.riderName || '').toLowerCase().includes(term);
+                      const matchAddr = (pkg.deliveryAddress || '').toLowerCase().includes(term);
+                      return matchId || matchPin || matchCust || matchPhone || matchStore || matchRider || matchAddr;
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
+                        <span className="text-4xl block mb-2">📦</span>
+                        <h3 className="font-extrabold text-sm text-[#111111]">No packages found</h3>
+                        <p className="text-xs text-[#6E6D66] mt-1">No orders match your current filter and search query.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {filtered.map((pkg) => {
+                        const isDelivered = pkg.status === 'DELIVERED';
+                        const isCancelled = pkg.status === 'CANCELLED' || pkg.status === 'REJECTED';
+                        const hasRider = Boolean(pkg.riderId);
+
+                        return (
+                          <div
+                            key={pkg.id}
+                            className="bg-white rounded-3xl p-5 border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.03)] hover:border-[#0C513F]/30 transition-all flex flex-col justify-between gap-4"
+                          >
+                            {/* Card Header: Order ID & Live Stage Badge */}
+                            <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-black text-sm text-[#0C513F] bg-[#E4F7EC] px-2.5 py-0.5 rounded-lg border border-[#0C513F]/20">
+                                    #{pkg.id}
+                                  </span>
+                                  {pkg.isPreorder && (
+                                    <span className="text-[10px] font-black bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200">
+                                      PRE-ORDER
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-[#6E6D66] font-medium mt-1">
+                                  Placed: {new Date(pkg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(pkg.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+
+                              <span
+                                className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider border ${
+                                  isDelivered
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : isCancelled
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : hasRider
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse'
+                                }`}
+                              >
+                                {pkg.status.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+
+                            {/* Prominent Verification PIN Code Box */}
+                            <div className="bg-[#FAF6EB] border-2 border-[#0C513F]/30 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
+                              <div>
+                                <div className="text-[10px] font-black text-[#6E6D66] uppercase tracking-wider flex items-center gap-1.5">
+                                  <span>🔐 Hand-off Verification PIN Code</span>
+                                </div>
+                                <div className="text-2xl font-black font-mono tracking-widest text-[#0C513F] mt-0.5">
+                                  {pkg.pin || '----'}
+                                </div>
+                                <p className="text-[10px] text-[#6E6D66] mt-0.5 font-medium">
+                                  Customer gives this 4-digit code to rider to confirm collection/delivery
+                                </p>
+                              </div>
+
+                              {pkg.pin && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(pkg.pin || '');
+                                    setToastMessage(`✓ Copied PIN Code #${pkg.pin} for Order #${pkg.id}`);
+                                    setTimeout(() => setToastMessage(null), 3000);
+                                  }}
+                                  className="px-3 py-1.5 bg-white hover:bg-gray-50 text-[#0C513F] border border-[#0C513F]/30 rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
+                                  title="Copy PIN Code to Clipboard"
+                                >
+                                  <span>Copy</span>
+                                  <span>📋</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Route Details: Kitchen to Customer */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-gray-50/70 p-3.5 rounded-2xl border border-gray-100">
+                              {/* Kitchen */}
+                              <div>
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Pickup Kitchen</div>
+                                <div className="font-extrabold text-[#111111] mt-0.5 flex items-center gap-1">
+                                  <span>🏪</span>
+                                  <span>{pkg.storeName}</span>
+                                </div>
+                                <div className="text-[11px] text-gray-500 mt-1">
+                                  Status: {pkg.isFoodReady ? '🟢 Food Packed & Ready' : '🟡 Preparing in Kitchen'}
+                                </div>
+                              </div>
+
+                              {/* Drop-off / Customer */}
+                              <div>
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Customer Drop-off</div>
+                                <div className="font-extrabold text-[#111111] mt-0.5 flex items-center gap-1">
+                                  <span>👤</span>
+                                  <span>{pkg.customerName}</span>
+                                </div>
+                                {pkg.customerPhone && (
+                                  <div className="mt-0.5">
+                                    <a href={`tel:${pkg.customerPhone}`} className="text-[#0C513F] font-bold underline text-[11px]">
+                                      📞 {pkg.customerPhone}
+                                    </a>
+                                  </div>
+                                )}
+                                <div className="text-[11px] text-gray-600 mt-1 font-medium truncate" title={pkg.deliveryAddress}>
+                                  📍 {pkg.deliveryAddress}
+                                </div>
+                                {pkg.deliveryNotes && (
+                                  <div className="text-[10px] text-amber-800 bg-amber-50 rounded px-1.5 py-0.5 mt-1 border border-amber-200">
+                                    Note: "{pkg.deliveryNotes}"
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Items in Package */}
+                            {pkg.items && pkg.items.length > 0 && (
+                              <div className="text-xs">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">
+                                  Package Contents ({pkg.items.length} item{pkg.items.length > 1 ? 's' : ''}):
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {pkg.items.map((it, idx) => (
+                                    <span key={idx} className="bg-gray-100 text-gray-800 text-[11px] font-bold px-2 py-0.5 rounded-md">
+                                      {it.qty}x {it.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Financial Breakdown & Assigned Rider Actions */}
+                            <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-black text-[#111111]">
+                                  Total: ₦{pkg.total.toLocaleString()}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  Food: ₦{pkg.subtotal.toLocaleString()} • Rider Fee: <strong className="text-[#0C513F]">₦{pkg.deliveryFee.toLocaleString()}</strong>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {hasRider ? (
+                                  <div className="flex items-center gap-2 bg-[#E4F7EC] px-3 py-1.5 rounded-xl border border-[#0C513F]/20">
+                                    <div>
+                                      <div className="text-[11px] font-extrabold text-[#0C513F] flex items-center gap-1">
+                                        <span>🛵</span>
+                                        <span>{pkg.riderName}</span>
+                                      </div>
+                                      {pkg.riderPhone && (
+                                        <a href={`tel:${pkg.riderPhone}`} className="text-[10px] text-[#073B2E] underline block">
+                                          {pkg.riderPhone}
+                                        </a>
+                                      )}
+                                    </div>
+                                    {!isDelivered && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUnassignOrder(pkg.id)}
+                                        className="text-[10px] font-bold text-rose-600 hover:text-rose-800 ml-1 underline"
+                                        title="Unassign rider from package"
+                                      >
+                                        Reassign
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 font-bold">
+                                      ⚠️ No Rider
+                                    </span>
+                                    {!isCancelled && !isDelivered && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedRiderToAssign('');
+                                          setAssignModalPackage(pkg);
+                                        }}
+                                        className="px-3 py-1.5 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-xl text-xs font-extrabold shadow-sm flex items-center gap-1"
+                                      >
+                                        <span>Assign Rider</span>
+                                        <span>🛵</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* SUB-TAB 2: ALL RIDERS DIRECTORY & PROFILES               */}
+            {/* ======================================================== */}
+            {dispatchSubTab === 'riders' && (
+              <div className="space-y-4">
+                {/* Search & Status Filters */}
+                <div className="bg-white p-4 rounded-3xl border border-[#0C513F]/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Search rider by name, phone, email, vehicle, institution..."
+                      value={riderSearch}
+                      onChange={(e) => setRiderSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-[#FAF6EB]/60 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#0C513F]"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'ALL', label: 'All Riders', count: riders.length },
+                      { key: 'ONLINE', label: '🟢 Online Now', count: riders.filter((r) => r.isOnline).length },
+                      { key: 'APPROVED', label: 'Approved', count: riders.filter((r) => r.approvalStatus === 'APPROVED').length },
+                      { key: 'PENDING_REVIEW', label: 'Pending Review', count: riders.filter((r) => r.approvalStatus === 'PENDING_REVIEW').length },
+                      { key: 'SUSPENDED', label: 'Suspended', count: riders.filter((r) => r.approvalStatus === 'SUSPENDED').length },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setRiderStatusFilter(tab.key as any)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all ${
+                          riderStatusFilter === tab.key
+                            ? 'bg-[#0C513F] text-white shadow-sm'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {tab.label} ({tab.count})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Riders Grid */}
+                {(() => {
+                  const term = riderSearch.toLowerCase().trim();
+                  const filtered = riders.filter((r) => {
+                    if (riderStatusFilter === 'ONLINE' && !r.isOnline) return false;
+                    if (riderStatusFilter === 'APPROVED' && r.approvalStatus !== 'APPROVED') return false;
+                    if (riderStatusFilter === 'PENDING_REVIEW' && r.approvalStatus !== 'PENDING_REVIEW') return false;
+                    if (riderStatusFilter === 'SUSPENDED' && r.approvalStatus !== 'SUSPENDED') return false;
+
+                    if (term) {
+                      const matchName = (r.name || '').toLowerCase().includes(term);
+                      const matchPhone = (r.phone || '').toLowerCase().includes(term);
+                      const matchEmail = (r.email || '').toLowerCase().includes(term);
+                      const matchVehicle = (r.vehicle || '').toLowerCase().includes(term);
+                      const matchInst = (r.institution || '').toLowerCase().includes(term);
+                      const matchIdNum = (r.identityNumber || '').toLowerCase().includes(term);
+                      const matchLoc = (r.location || '').toLowerCase().includes(term);
+                      return matchName || matchPhone || matchEmail || matchVehicle || matchInst || matchIdNum || matchLoc;
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
+                        <span className="text-4xl block mb-2">🚴</span>
+                        <h3 className="font-extrabold text-sm text-[#111111]">No riders found</h3>
+                        <p className="text-xs text-[#6E6D66] mt-1">No riders match your search and filter criteria.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {filtered.map((rider) => {
+                        const isApproved = rider.approvalStatus === 'APPROVED';
+                        const isPending = rider.approvalStatus === 'PENDING_REVIEW';
+                        const isSuspended = rider.approvalStatus === 'SUSPENDED';
+                        const isBusy = actionLoadingId === rider.id;
+
+                        return (
+                          <div
+                            key={rider.id}
+                            className="bg-white rounded-3xl p-5 border border-[#0C513F]/10 shadow-[0_4px_20px_rgba(12,81,63,0.03)] hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                          >
+                            {/* Rider Header */}
+                            <div>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-12 h-12 rounded-2xl bg-[#FAF6EB] border border-[#0C513F]/20 flex items-center justify-center overflow-hidden font-extrabold text-base text-[#0C513F] shadow-sm">
+                                    {rider.avatar ? (
+                                      <img src={rider.avatar} alt={rider.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      rider.name.charAt(0).toUpperCase()
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <h3 className="font-black text-sm text-[#111111] leading-snug">{rider.name}</h3>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span
+                                        className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                          rider.isOnline
+                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                            : 'bg-gray-100 text-gray-500'
+                                        }`}
+                                      >
+                                        <span className={`w-1.5 h-1.5 rounded-full ${rider.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                                        <span>{rider.isOnline ? 'Online' : 'Offline'}</span>
+                                      </span>
+
+                                      <span
+                                        className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                          isApproved
+                                            ? 'bg-[#E4F7EC] text-[#0C513F] border-[#0C513F]/20'
+                                            : isPending
+                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                                        }`}
+                                      >
+                                        {rider.approvalStatus}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <span className="text-xs font-black text-[#111111] flex items-center gap-1 justify-end">
+                                    <span className="text-amber-400">★</span>
+                                    <span>{Number(rider.rating || 5.0).toFixed(1)}</span>
+                                  </span>
+                                  <span className="text-[10px] text-gray-500">{rider.tripsCount || 0} trips</span>
+                                </div>
+                              </div>
+
+                              {/* Rider Information Table / List */}
+                              <div className="mt-4 space-y-2 text-xs bg-[#FAF6EB]/40 p-3.5 rounded-2xl border border-gray-100">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400 font-bold text-[11px]">Phone:</span>
+                                  {rider.phone ? (
+                                    <a href={`tel:${rider.phone}`} className="font-extrabold text-[#0C513F] underline">
+                                      📞 {rider.phone}
+                                    </a>
+                                  ) : (
+                                    <span className="text-gray-400">Not provided</span>
+                                  )}
+                                </div>
+
+                                {rider.email && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-400 font-bold text-[11px]">Email:</span>
+                                    <span className="font-medium text-gray-700 truncate max-w-[170px]" title={rider.email}>
+                                      {rider.email}
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400 font-bold text-[11px]">Vehicle:</span>
+                                  <span className="font-bold text-gray-800">
+                                    🛵 {rider.vehicle || 'Standard Dispatch Bike'}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400 font-bold text-[11px]">Campus:</span>
+                                  <span className="font-bold text-gray-800">
+                                    📍 {rider.location || 'Sagamu Campus'}
+                                  </span>
+                                </div>
+
+                                {(rider.institution || rider.identityNumber) && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-400 font-bold text-[11px]">Identity:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {rider.institution || 'OOU'} • {rider.identityMethod || 'ID'}: {rider.identityNumber || 'Verified'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Rider Financial Wallet Box */}
+                              <div className="mt-3 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                                <div>
+                                  <div className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">Available Wallet</div>
+                                  <div className="text-base font-extrabold text-[#0C513F]">
+                                    ₦{(rider.walletAvailable || 0).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Earned</div>
+                                  <div className="text-xs font-bold text-gray-700">
+                                    ₦{(rider.walletTotalEarned || 0).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Active Missions Badge */}
+                              {rider.activeOrders && rider.activeOrders.length > 0 && (
+                                <div className="mt-3 p-2.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs">
+                                  <div className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                                    <span>📦 Active Delivery Mission:</span>
+                                  </div>
+                                  {rider.activeOrders.map((ao) => (
+                                    <div key={ao.id} className="mt-1 flex items-center justify-between font-bold text-amber-900">
+                                      <span>Order #{ao.id} ({ao.storeName})</span>
+                                      <span className="font-mono bg-white px-2 py-0.5 rounded border border-amber-300">
+                                        PIN: {ao.pin || '----'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Quick Admin Actions */}
+                            <div className="pt-3 border-t border-gray-100 flex items-center gap-2">
+                              {isPending && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => handleRiderAction(rider.id, 'APPROVE')}
+                                    className="flex-1 py-2 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-xl text-xs font-extrabold transition-all shadow-sm disabled:opacity-50"
+                                  >
+                                    {isBusy ? 'Saving...' : '✓ Approve'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                      const reason = prompt('Please enter rejection reason:');
+                                      if (reason) handleRiderAction(rider.id, 'REJECT', reason);
+                                    }}
+                                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 transition-all disabled:opacity-50"
+                                  >
+                                    Decline
+                                  </button>
+                                </>
+                              )}
+
+                              {isApproved && (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => {
+                                    const reason = prompt('Enter suspension reason for this rider:');
+                                    if (reason) handleRiderAction(rider.id, 'SUSPEND', reason);
+                                  }}
+                                  className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 transition-all disabled:opacity-50"
+                                >
+                                  {isBusy ? 'Processing...' : 'Suspend Rider'}
+                                </button>
+                              )}
+
+                              {isSuspended && (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleRiderAction(rider.id, 'REACTIVATE')}
+                                  className="w-full py-2 bg-[#0C513F] hover:bg-[#073B2E] text-white rounded-xl text-xs font-extrabold transition-all shadow-sm disabled:opacity-50"
+                                >
+                                  {isBusy ? 'Processing...' : '✓ Reactivate Rider'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       {/* ------------------------------------------------------------- */}
@@ -2146,6 +3021,111 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+
+      {/* ------------------------------------------------------------- */}
+      {/* QUICK ASSIGN RIDER MODAL                                       */}
+      {/* ------------------------------------------------------------- */}
+      {assignModalPackage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setAssignModalPackage(null)}
+        >
+          <div
+            className="bg-white border border-[#0C513F]/15 rounded-3xl w-full max-w-lg shadow-2xl p-6 md:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-xl font-black text-[#111111]">Assign Rider to Package</h3>
+                <p className="text-xs text-[#6E6D66] mt-0.5">
+                  Order <strong className="text-[#0C513F]">#{assignModalPackage.id}</strong> • From <strong>{assignModalPackage.storeName}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignModalPackage(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* PIN Code Reminder */}
+            <div className="mb-4 p-3 bg-[#FAF6EB] rounded-2xl border border-[#0C513F]/20 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider block">Verification PIN</span>
+                <span className="text-lg font-mono font-black text-[#0C513F]">{assignModalPackage.pin || '----'}</span>
+              </div>
+              <div className="text-right text-xs">
+                <span className="text-gray-500 block">Delivery Fee</span>
+                <strong className="text-[#0C513F]">₦{assignModalPackage.deliveryFee.toLocaleString()}</strong>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <label className="text-xs font-black text-[#111111] uppercase tracking-wider block">
+                Choose Available / Online Rider:
+              </label>
+
+              <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                {riders.map((r) => {
+                  const isSelected = selectedRiderToAssign === r.id;
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => setSelectedRiderToAssign(r.id)}
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-[#0C513F] bg-[#E4F7EC]/60 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`w-3 h-3 rounded-full ${r.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+                        <div>
+                          <div className="font-extrabold text-sm text-[#111111]">{r.name}</div>
+                          <div className="text-xs text-gray-500">
+                            🛵 {r.vehicle || 'Standard Bike'} • 📞 {r.phone || 'No phone'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-xs font-black text-[#0C513F] block">
+                          ⭐ {Number(r.rating || 5).toFixed(1)}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          {r.tripsCount || 0} trips
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setAssignModalPackage(null)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!selectedRiderToAssign}
+                onClick={() => handleAssignOrder(assignModalPackage.id, selectedRiderToAssign)}
+                className="flex-1 py-3 rounded-2xl bg-[#0C513F] hover:bg-[#073B2E] text-white text-xs font-extrabold shadow-md disabled:opacity-50 transition-all"
+              >
+                Confirm Rider Assignment 🛵
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Global Toast Notification */}
       {toastMessage && (

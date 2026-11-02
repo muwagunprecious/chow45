@@ -118,7 +118,10 @@ const AdminController = {
 
       return `
         <tr>
-          <td><strong style="font-family: monospace; color: var(--c-primary);">#${order.id}</strong></td>
+          <td>
+            <strong style="font-family: monospace; color: var(--c-primary);">#${order.id}</strong>
+            ${order.pin ? `<div style="font-size:0.74rem; font-family:monospace; color:#0C513F; font-weight:800; margin-top:3px; background:#FAF6EB; display:inline-block; padding:1px 6px; border-radius:6px; border:1px solid rgba(12,81,63,0.3);">🔐 PIN: ${order.pin}</div>` : ''}
+          </td>
           <td>${order.customerName}</td>
           <td>${order.storeName}</td>
           <td><strong>${formatNaira(order.total)}</strong> <small style="color: var(--c-text-muted);">(Fee: ${formatNaira(order.serviceFee)})</small></td>

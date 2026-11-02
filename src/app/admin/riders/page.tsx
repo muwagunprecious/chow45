@@ -52,7 +52,10 @@ export default function AdminRidersPage() {
       if (statusFilter !== 'ALL') url.searchParams.set('status', statusFilter);
       if (searchQuery.trim()) url.searchParams.set('q', searchQuery.trim());
 
-      const res = await fetch(url.toString());
+      url.searchParams.set('adminKey', 'admin2026');
+      const res = await fetch(url.toString(), {
+        headers: { 'x-admin-key': 'admin2026' }
+      });
       const data = await res.json();
       if (res.ok && data.riders) {
         setRiders(data.riders);
@@ -71,7 +74,7 @@ export default function AdminRidersPage() {
   const handleAction = async (riderId: string, action: 'APPROVE' | 'REJECT' | 'SUSPEND' | 'REACTIVATE', reason?: string) => {
     setActionLoading(riderId);
     try {
-      const res = await fetch('/api/admin/riders', {
+      const res = await fetch('/api/admin/riders?adminKey=admin2026', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ riderId, action, reason }),
