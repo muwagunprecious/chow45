@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-jakarta: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-grotesk: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   --background: #fcfaf7;
   --foreground: #231512;
 }
