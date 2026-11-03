@@ -37,24 +37,24 @@ const GOOGLE_MAPS_SCRIPT =
 const PAYSTACK_INLINE_SCRIPT = 'https://js.paystack.co/v1/inline.js';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261101d',
-  '/app/js/mapbox-config.js?v=20261101d',
-  '/app/js/service-zones.js?v=20261101d',
+  '/app/js/google-maps-config.js?v=20261103_paystack',
+  '/app/js/mapbox-config.js?v=20261103_paystack',
+  '/app/js/service-zones.js?v=20261103_paystack',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261101d',
-  '/app/js/data.js?v=20261101d',
-  '/app/js/state.js?v=20261101d',
-  '/app/js/google-maps-service.js?v=20261101d',
-  '/app/js/location-picker.js?v=20261101d',
-  '/app/js/customer.js?v=20261101d',
-  '/app/js/vendor.js?v=20261101d',
-  '/app/js/rider.js?v=20261101d',
-  '/app/js/admin.js?v=20261101d',
-  '/app/js/auth.js?v=20261101d',
+  '/app/js/units.js?v=20261103_paystack',
+  '/app/js/data.js?v=20261103_paystack',
+  '/app/js/state.js?v=20261103_paystack',
+  '/app/js/google-maps-service.js?v=20261103_paystack',
+  '/app/js/location-picker.js?v=20261103_paystack',
+  '/app/js/customer.js?v=20261103_paystack',
+  '/app/js/vendor.js?v=20261103_paystack',
+  '/app/js/rider.js?v=20261103_paystack',
+  '/app/js/admin.js?v=20261103_paystack',
+  '/app/js/auth.js?v=20261103_paystack',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261101d',
-  '/app/js/app.js?v=20261101d',
+  '/app/js/vendor-onboarding.js?v=20261103_paystack',
+  '/app/js/app.js?v=20261103_paystack',
 ];
 
 

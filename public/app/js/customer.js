@@ -1571,17 +1571,24 @@ const CustomerController = {
       return;
     }
 
-    const customerName = document.getElementById('checkout-name-input').value.trim() || 'Precious M.';
-    const customerPhone = document.getElementById('checkout-phone-input').value.trim() || (window.chowStore?.state?.userProfile?.phone || '');
-    const deliveryNotes = document.getElementById('checkout-notes-input').value.trim();
-    const paymentMethod = document.getElementById('checkout-payment-method').value;
+    const customerName = (document.getElementById('checkout-name-input')?.value || '').trim() || (window.chowStore?.state?.userProfile?.name || 'Precious M.');
+    const customerPhone = (document.getElementById('checkout-phone-input')?.value || '').trim() || (window.chowStore?.state?.userProfile?.phone || '');
+    const deliveryNotes = (document.getElementById('checkout-notes-input')?.value || '').trim();
+    const paymentMethod = 'Card (Paystack)';
 
     const payBtn = document.getElementById('cart-pay-cta-btn');
-    const origBtnText = payBtn ? payBtn.innerText : '';
+    const origBtnText = payBtn ? payBtn.innerText : 'Pay with Paystack →';
     if (payBtn) {
       payBtn.disabled = true;
-      payBtn.innerText = 'Placing Order & Verifying...';
+      payBtn.innerText = 'Connecting to Paystack...';
     }
+
+    const resetPayBtn = () => {
+      if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.innerText = origBtnText;
+      }
+    };
 
     // 1. Create order initially with PENDING_PAYMENT
     const newOrder = window.chowStore.createOrder({
@@ -1597,7 +1604,7 @@ const CustomerController = {
       deliveryLocation: window.chowStore.state.selectedLocation || null
     });
 
-    // 2. Verification handler
+    // 2. Server verification handler (requires verified Paystack reference)
     const performOrderVerification = async (reference) => {
       try {
         const verifyRes = await fetch('/api/payments/verify', {
@@ -1638,11 +1645,8 @@ const CustomerController = {
         const verifyData = await verifyRes.json().catch(() => ({}));
 
         if (!verifyRes.ok || verifyData.error) {
-          if (payBtn) {
-            payBtn.disabled = false;
-            payBtn.innerText = origBtnText;
-          }
-          const errMsg = verifyData.error || 'Failed to place order. Please try again.';
+          resetPayBtn();
+          const errMsg = verifyData.error || 'Payment verification failed. Please try again.';
           if (window.chowApp && typeof window.chowApp.toast === 'function') {
             window.chowApp.toast(errMsg, 'error');
           } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
@@ -1654,116 +1658,139 @@ const CustomerController = {
         window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
         return true;
       } catch (e) {
-        if (payBtn) {
-          payBtn.disabled = false;
-          payBtn.innerText = origBtnText;
-        }
-        console.error('Checkout error:', e);
+        resetPayBtn();
+        console.error('Checkout verification error:', e);
         if (window.chowApp && typeof window.chowApp.toast === 'function') {
-          window.chowApp.toast('Network error during checkout. Please check your connection.', 'error');
+          window.chowApp.toast('Network error during payment verification. Please check your connection.', 'error');
         }
         return false;
       }
     };
 
-    // 3. Paystack is the ONLY payment method
-    const paystackPublicKey = window.__CHOW45_PAYSTACK_PUBLIC_KEY__ || 'pk_test_5416765eee4770e59472cf1f9a7190f4352fcb8e';
-    const customerEmail = (window.chowStore?.state?.userProfile?.email || 'customer@chow45.app').trim();
+    // 3. Show Order Confirmed screen (invoked ONLY after successful Paystack payment)
+    const displayOrderConfirmed = () => {
+      this.closeCart();
+      this.lastConfirmedOrderId = newOrder.id;
+      const basePts = 0.5;
+      const bonusPts = 0.2;
+      const totalPts = 0.7;
 
-    // Ensure Paystack Inline JS is loaded
-    if (!window.PaystackPop) {
-      if (payBtn) payBtn.innerText = 'Connecting to Paystack...';
-      try {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = 'https://js.paystack.co/v1/inline.js';
-          s.onload = resolve;
-          s.onerror = reject;
-          document.head.appendChild(s);
-        });
-      } catch (e) {
-        console.warn('Could not load Paystack inline dynamically:', e);
+      const ptsPill = document.getElementById('confirmed-points-pill');
+      if (ptsPill) ptsPill.innerText = `+${totalPts} points`;
+      const ptsBase = document.getElementById('confirmed-points-base');
+      if (ptsBase) ptsBase.innerText = `+ ${basePts} pts`;
+      const ptsBonus = document.getElementById('confirmed-points-bonus');
+      if (ptsBonus) ptsBonus.innerText = `+ ${bonusPts} pts`;
+      const ptsTotal = document.getElementById('confirmed-points-total');
+      if (ptsTotal) ptsTotal.innerText = `+ ${totalPts} pts`;
+
+      // Hide other views, display Order Confirmed screen
+      const homeSec = document.getElementById('customer-home-section');
+      if (homeSec) homeSec.style.display = 'none';
+      const storeSec = document.getElementById('customer-store-section');
+      if (storeSec) storeSec.style.display = 'none';
+      const trackSec = document.getElementById('customer-tracking-section');
+      if (trackSec) trackSec.style.display = 'none';
+
+      const confirmedSec = document.getElementById('customer-order-confirmed-section');
+      if (confirmedSec) {
+        confirmedSec.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Payment verified! Order sent to kitchen ✓', 'success');
+      }
+    };
+
+    // 4. Paystack is the ONLY payment method - load library dynamically if needed
+    const ensurePaystack = async () => {
+      if (window.PaystackPop && typeof window.PaystackPop.setup === 'function') {
+        return window.PaystackPop;
+      }
+      return new Promise((resolve) => {
+        let settled = false;
+        const done = (val) => {
+          if (settled) return;
+          settled = true;
+          resolve(val);
+        };
+        const s = document.createElement('script');
+        s.src = 'https://js.paystack.co/v1/inline.js';
+        s.async = true;
+        s.onload = () => done(window.PaystackPop || null);
+        s.onerror = () => done(null);
+        document.head.appendChild(s);
+        setTimeout(() => done(window.PaystackPop || null), 8000);
+      });
+    };
+
+    const paystack = await ensurePaystack();
+    if (!paystack || typeof paystack.setup !== 'function') {
+      resetPayBtn();
+      const errMsg = 'Could not load Paystack checkout. Please check your internet connection or disable ad-blockers and try again.';
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast(errMsg, 'error');
+      } else {
+        alert(errMsg);
+      }
+      return;
     }
 
-    if (window.PaystackPop && typeof window.PaystackPop.setup === 'function') {
-      try {
-        const handler = window.PaystackPop.setup({
-          key: paystackPublicKey,
-          email: customerEmail,
-          amount: Math.round(newOrder.total * 100), // amount in kobo
-          currency: 'NGN',
-          ref: 'CH45_' + newOrder.id + '_' + Date.now(),
-          metadata: {
-            orderId: newOrder.id,
-            custom_fields: [
-              { display_name: "Order ID", variable_name: "order_id", value: newOrder.id },
-              { display_name: "Customer Name", variable_name: "customer_name", value: customerName },
-              { display_name: "Phone Number", variable_name: "customer_phone", value: customerPhone }
-            ]
-          },
-          callback: async function(response) {
-            if (payBtn) payBtn.innerText = 'Verifying with Paystack...';
-            const ok = await performOrderVerification(response.reference);
-            if (ok) {
-              CustomerController.closeCart();
-              CustomerController.openTrackingModal(newOrder.id);
-            }
-          },
-          onClose: function() {
-            if (payBtn) {
-              payBtn.disabled = false;
-              payBtn.innerText = origBtnText;
-            }
-            if (window.chowApp && typeof window.chowApp.toast === 'function') {
-              window.chowApp.toast('Payment cancelled.', 'info');
-            }
+    const paystackPublicKey =
+      window.__CHOW45_PAYSTACK_PUBLIC_KEY__ || 'pk_test_5416765eee4770e59472cf1f9a7190f4352fcb8e';
+    let customerEmail = (window.chowStore?.state?.userProfile?.email || '').trim();
+    if (!customerEmail || !customerEmail.includes('@')) {
+      customerEmail = 'customer@chow45.app';
+    }
+
+    const amountInKobo = Math.round(Number(newOrder.total) * 100);
+    if (!amountInKobo || isNaN(amountInKobo) || amountInKobo <= 0) {
+      resetPayBtn();
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Invalid order amount. Please check your cart.', 'error');
+      }
+      return;
+    }
+
+    try {
+      const handler = paystack.setup({
+        key: paystackPublicKey,
+        email: customerEmail,
+        amount: amountInKobo,
+        currency: 'NGN',
+        ref: 'CH45_' + newOrder.id + '_' + Date.now(),
+        metadata: {
+          orderId: newOrder.id,
+          custom_fields: [
+            { display_name: "Order ID", variable_name: "order_id", value: newOrder.id },
+            { display_name: "Customer Name", variable_name: "customer_name", value: customerName },
+            { display_name: "Phone Number", variable_name: "customer_phone", value: customerPhone }
+          ]
+        },
+        callback: async (response) => {
+          if (payBtn) payBtn.innerText = 'Verifying with Paystack...';
+          const verified = await performOrderVerification(response.reference);
+          if (verified) {
+            displayOrderConfirmed();
           }
-        });
-        handler.openIframe();
-        return;
-      } catch (err) {
-        console.warn('Paystack popup setup error, falling back to direct verification:', err);
+        },
+        onClose: () => {
+          resetPayBtn();
+          if (window.chowApp && typeof window.chowApp.toast === 'function') {
+            window.chowApp.toast('Payment was cancelled. Your cart is preserved.', 'info');
+          }
+        }
+      });
+
+      handler.openIframe();
+    } catch (popupErr) {
+      console.error('Paystack popup setup error:', popupErr);
+      resetPayBtn();
+      if (window.chowApp && typeof window.chowApp.toast === 'function') {
+        window.chowApp.toast('Could not open Paystack payment modal. Please try again.', 'error');
       }
     }
-
-    // Direct / Fallback Verification
-    const defaultRef = 'PAY_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-    const success = await performOrderVerification(defaultRef);
-    if (!success) return;
-
-    this.closeCart();
-
-    // 3. Populate and show Order Confirmed screen (matches media_1790893923594.png)
-    this.lastConfirmedOrderId = newOrder.id;
-    const basePts = 0.5;
-    const bonusPts = 0.2;
-    const totalPts = 0.7;
-
-    const ptsPill = document.getElementById('confirmed-points-pill');
-    if (ptsPill) ptsPill.innerText = `+${totalPts} points`;
-    const ptsBase = document.getElementById('confirmed-points-base');
-    if (ptsBase) ptsBase.innerText = `+ ${basePts} pts`;
-    const ptsBonus = document.getElementById('confirmed-points-bonus');
-    if (ptsBonus) ptsBonus.innerText = `+ ${bonusPts} pts`;
-    const ptsTotal = document.getElementById('confirmed-points-total');
-    if (ptsTotal) ptsTotal.innerText = `+ ${totalPts} pts`;
-
-    // Hide other views, display Order Confirmed screen
-    const homeSec = document.getElementById('customer-home-section');
-    if (homeSec) homeSec.style.display = 'none';
-    const storeSec = document.getElementById('customer-store-section');
-    if (storeSec) storeSec.style.display = 'none';
-    const trackSec = document.getElementById('customer-tracking-section');
-    if (trackSec) trackSec.style.display = 'none';
-
-    const confirmedSec = document.getElementById('customer-order-confirmed-section');
-    if (confirmedSec) {
-      confirmedSec.style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    window.chowApp.toast('Payment verified! Order sent to kitchen ✓', 'success');
   },
 
   trackConfirmedOrder() {

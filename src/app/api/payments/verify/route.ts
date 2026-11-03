@@ -25,18 +25,22 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const orderId = String(body.orderId || body.reference || "").trim();
-    const reference = body.reference ? String(body.reference) : undefined;
+    const reference = body.reference ? String(body.reference).trim() : undefined;
     const amount = body.amount ? Number(body.amount) : undefined;
 
-    // Verify reference with Paystack API if live Paystack reference is passed
+    if (!reference) {
+      return NextResponse.json(
+        { error: "Paystack payment reference is required." },
+        { status: 400 }
+      );
+    }
+
+    // Strictly enforce Paystack transaction verification
     const paystackSecret =
       process.env.PAYSTACK_SECRET_KEY || "sk_test_fed535e8c2a8cac2ddfa2959181df64c87517f44";
-    if (
-      reference &&
-      paystackSecret &&
-      !reference.startsWith("PAY_") &&
-      !reference.startsWith("LOCAL_")
-    ) {
+    const isTestRef = process.env.NODE_ENV === "test" && reference.startsWith("PAY_TEST_");
+
+    if (!isTestRef) {
       try {
         const paystackRes = await fetch(
           `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
@@ -47,21 +51,22 @@ export async function POST(request: Request) {
             },
           }
         );
-        if (paystackRes.ok) {
-          const pData = await paystackRes.json();
-          if (pData?.data && pData.data.status !== "success") {
-            return NextResponse.json(
-              {
-                error: `Paystack could not verify payment: ${
-                  pData?.data?.gateway_response || pData?.data?.status || "Payment incomplete"
-                }`,
-              },
-              { status: 400 }
-            );
-          }
+
+        const pData = await paystackRes.json().catch(() => null);
+
+        if (!paystackRes.ok || !pData || pData.status !== true || pData.data?.status !== "success") {
+          const errMsg =
+            pData?.data?.gateway_response ||
+            pData?.message ||
+            "Paystack payment verification failed. Transaction was not approved.";
+          return NextResponse.json({ error: errMsg }, { status: 400 });
         }
-      } catch (pErr) {
-        console.warn("[Payments Verify] Paystack transaction lookup notice:", pErr);
+      } catch (pErr: any) {
+        console.error("[Payments Verify] Paystack verification error:", pErr);
+        return NextResponse.json(
+          { error: `Unable to verify payment with Paystack: ${pErr?.message || pErr}` },
+          { status: 502 }
+        );
       }
     }
 
