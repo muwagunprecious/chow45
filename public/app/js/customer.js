@@ -1597,74 +1597,125 @@ const CustomerController = {
       deliveryLocation: window.chowStore.state.selectedLocation || null
     });
 
-    // 2. Persist order to database and verify payment in one shot
-    const payRef = 'PAY_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-    try {
-      const verifyRes = await fetch('/api/payments/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          orderId: newOrder.id,
-          reference: payRef,
-          amount: newOrder.total,
-          // Pass full order so the server can persist it to PostgreSQL
-          // (riders query the DB — they cannot see localStorage orders)
-          order: {
-            id: newOrder.id,
-            storeId: newOrder.storeId,
-            storeName: newOrder.storeName,
-            customerName: newOrder.customerName,
-            customerPhone: newOrder.customerPhone,
-            deliveryAddress: newOrder.deliveryAddress,
-            deliveryNotes: newOrder.deliveryNotes,
-            deliveryLocation: newOrder.deliveryLocation || null,
-            paymentMethod: newOrder.paymentMethod,
-            subtotal: newOrder.subtotal,
-            serviceFee: newOrder.serviceFee,
-            deliveryFee: newOrder.deliveryFee,
-            total: newOrder.total,
-            pin: newOrder.pin,
-            routeDistanceMeters: newOrder.routeDistanceMeters || null,
-            estimatedDurationSeconds: newOrder.estimatedDurationSeconds || null,
-            isPreorder: Boolean(newOrder.isPreorder),
-            preorderReadyDate: newOrder.preorderReadyDate || null,
-            preorderReadyTime: newOrder.preorderReadyTime || null,
-            isFoodReady: Boolean(newOrder.isFoodReady),
-            items: newOrder.items || [],
-            status: 'PENDING_PAYMENT'
+    // 2. Verification handler
+    const performOrderVerification = async (reference) => {
+      try {
+        const verifyRes = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            orderId: newOrder.id,
+            reference: reference,
+            amount: newOrder.total,
+            order: {
+              id: newOrder.id,
+              storeId: newOrder.storeId,
+              storeName: newOrder.storeName,
+              customerName: newOrder.customerName,
+              customerPhone: newOrder.customerPhone,
+              deliveryAddress: newOrder.deliveryAddress,
+              deliveryNotes: newOrder.deliveryNotes,
+              deliveryLocation: newOrder.deliveryLocation || null,
+              paymentMethod: newOrder.paymentMethod,
+              subtotal: newOrder.subtotal,
+              serviceFee: newOrder.serviceFee,
+              deliveryFee: newOrder.deliveryFee,
+              total: newOrder.total,
+              pin: newOrder.pin,
+              routeDistanceMeters: newOrder.routeDistanceMeters || null,
+              estimatedDurationSeconds: newOrder.estimatedDurationSeconds || null,
+              isPreorder: Boolean(newOrder.isPreorder),
+              preorderReadyDate: newOrder.preorderReadyDate || null,
+              preorderReadyTime: newOrder.preorderReadyTime || null,
+              isFoodReady: Boolean(newOrder.isFoodReady),
+              items: newOrder.items || [],
+              status: 'PENDING_PAYMENT'
+            }
+          })
+        });
+
+        const verifyData = await verifyRes.json().catch(() => ({}));
+
+        if (!verifyRes.ok || verifyData.error) {
+          if (payBtn) {
+            payBtn.disabled = false;
+            payBtn.innerText = origBtnText;
           }
-        })
-      });
+          const errMsg = verifyData.error || 'Failed to place order. Please try again.';
+          if (window.chowApp && typeof window.chowApp.toast === 'function') {
+            window.chowApp.toast(errMsg, 'error');
+          } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
+            window.chowApp.showToast(errMsg, 'error');
+          }
+          return false;
+        }
 
-      const verifyData = await verifyRes.json().catch(() => ({}));
-
-      if (!verifyRes.ok || verifyData.error) {
+        window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
+        return true;
+      } catch (e) {
         if (payBtn) {
           payBtn.disabled = false;
           payBtn.innerText = origBtnText;
         }
-        const errMsg = verifyData.error || 'Failed to place order. Please try again.';
+        console.error('Checkout error:', e);
         if (window.chowApp && typeof window.chowApp.toast === 'function') {
-          window.chowApp.toast(errMsg, 'error');
-        } else if (window.chowApp && typeof window.chowApp.showToast === 'function') {
-          window.chowApp.showToast(errMsg, 'error');
+          window.chowApp.toast('Network error during checkout. Please check your connection.', 'error');
         }
-        return;
+        return false;
       }
+    };
 
-      window.chowStore.advanceOrderStatus(newOrder.id, 'PAID');
-    } catch (e) {
-      if (payBtn) {
-        payBtn.disabled = false;
-        payBtn.innerText = origBtnText;
+    // 3. Launch Paystack Popup if Card (Paystack) selected and PaystackPop available
+    const isPaystackPayment = paymentMethod === 'Card (Paystack)';
+    const paystackPublicKey = window.__CHOW45_PAYSTACK_PUBLIC_KEY__ || 'pk_test_5416765eee4770e59472cf1f9a7190f4352fcb8e';
+    const customerEmail = (window.chowStore?.state?.userProfile?.email || 'customer@chow45.app').trim();
+
+    if (isPaystackPayment && window.PaystackPop && typeof window.PaystackPop.setup === 'function') {
+      try {
+        const handler = window.PaystackPop.setup({
+          key: paystackPublicKey,
+          email: customerEmail,
+          amount: Math.round(newOrder.total * 100), // amount in kobo
+          currency: 'NGN',
+          ref: 'CH45_' + newOrder.id + '_' + Date.now(),
+          metadata: {
+            orderId: newOrder.id,
+            custom_fields: [
+              { display_name: "Order ID", variable_name: "order_id", value: newOrder.id },
+              { display_name: "Customer Name", variable_name: "customer_name", value: customerName },
+              { display_name: "Phone Number", variable_name: "customer_phone", value: customerPhone }
+            ]
+          },
+          callback: async function(response) {
+            if (payBtn) payBtn.innerText = 'Verifying with Paystack...';
+            const ok = await performOrderVerification(response.reference);
+            if (ok) {
+              CustomerController.closeCart();
+              CustomerController.openTrackingModal(newOrder.id);
+            }
+          },
+          onClose: function() {
+            if (payBtn) {
+              payBtn.disabled = false;
+              payBtn.innerText = origBtnText;
+            }
+            if (window.chowApp && typeof window.chowApp.toast === 'function') {
+              window.chowApp.toast('Payment cancelled.', 'info');
+            }
+          }
+        });
+        handler.openIframe();
+        return;
+      } catch (err) {
+        console.warn('Paystack popup setup error, falling back to direct verification:', err);
       }
-      console.error('Checkout error:', e);
-      if (window.chowApp && typeof window.chowApp.toast === 'function') {
-        window.chowApp.toast('Network error during checkout. Please check your connection.', 'error');
-      }
-      return;
     }
+
+    // Direct / Fallback Verification
+    const defaultRef = 'PAY_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const success = await performOrderVerification(defaultRef);
+    if (!success) return;
 
     this.closeCart();
 

@@ -1,20 +1,53 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
+import crypto from "crypto";
 
 import { db } from "@/db";
 import { orders, orderEvents, cartItems, carts, platformLedgers } from "@/db";
 import { STATUS_NOTES } from "@/lib/order-status";
 
 /**
- * Payment provider webhook listener (e.g. Paystack / Flutterwave).
+ * Paystack Webhook Handler
  *
- * Webhooks may retry multiple times, so execution is strictly idempotent.
+ * Webhook URL: https://chow45.app/api/payments/webhook
+ *
+ * Receives charge.success, payment.success, and verification pings from Paystack.
+ * Cryptographically validates the `x-paystack-signature` header using HMAC SHA512.
  */
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    service: "Chow45 Paystack Webhook Listener",
+    webhookUrl: "https://chow45.app/api/payments/webhook",
+    status: "active",
+    supportedEvents: ["charge.success", "paymentrequest.success", "transfer.success"],
+  });
+}
+
 export async function POST(request: Request) {
   try {
-    const body = (await request.json().catch(() => ({}))) as Record<string, any>;
+    const rawBody = await request.text();
+    const signature = request.headers.get("x-paystack-signature");
+    const paystackSecret =
+      process.env.PAYSTACK_SECRET_KEY || "sk_test_fed535e8c2a8cac2ddfa2959181df64c87517f44";
+
+    // 1. Verify HMAC SHA512 signature if secret and signature are present
+    if (paystackSecret && signature) {
+      const hash = crypto
+        .createHmac("sha512", paystackSecret)
+        .update(rawBody)
+        .digest("hex");
+      if (hash !== signature) {
+        console.warn("[Paystack Webhook] Invalid signature rejected");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    }
+
+    const body = JSON.parse(rawBody || "{}") as Record<string, any>;
     const event = body.event || body.type;
     const data = body.data || body;
+
+    console.log(`[Paystack Webhook] Received event: ${event}, reference: ${data?.reference}`);
 
     if (
       event === "charge.success" ||
@@ -23,11 +56,16 @@ export async function POST(request: Request) {
     ) {
       const orderId =
         data?.metadata?.orderId ||
-        data?.reference ||
-        data?.metadata?.custom_fields?.find?.((f: any) => f.variable_name === "order_id")?.value;
+        data?.metadata?.order_id ||
+        data?.metadata?.custom_fields?.find?.(
+          (f: any) => f.variable_name === "order_id" || f.variable_name === "orderId"
+        )?.value ||
+        (data?.reference && String(data.reference).startsWith("CH45")
+          ? data.reference.split("_")[0]
+          : null);
 
       if (!orderId) {
-        return NextResponse.json({ received: true, ignored: "No order identifier found" });
+        return NextResponse.json({ received: true, ignored: "No order identifier found in payload" });
       }
 
       const orderRows = await db
@@ -38,24 +76,33 @@ export async function POST(request: Request) {
 
       const order = orderRows[0];
       if (!order) {
-        return NextResponse.json({ received: true, ignored: "Order not found" });
+        return NextResponse.json({ received: true, ignored: `Order ${orderId} not found` });
       }
 
       if (order.status !== "PENDING_PAYMENT") {
-        return NextResponse.json({ received: true, alreadyProcessed: true });
+        return NextResponse.json({
+          received: true,
+          alreadyProcessed: true,
+          status: order.status,
+          orderId: order.id,
+        });
       }
 
       const now = new Date();
       await db
         .update(orders)
-        .set({ status: "PAID", updatedAt: now })
+        .set({
+          status: "PAID",
+          paymentMethod: data?.reference ? `Paystack (${data.reference})` : order.paymentMethod,
+          updatedAt: now,
+        })
         .where(eq(orders.id, order.id));
 
       await db.insert(orderEvents).values({
         orderId: order.id,
         status: "PAID",
-        note: STATUS_NOTES.PAID,
-        actor: "system",
+        note: `${STATUS_NOTES.PAID} (Paystack Ref: ${data?.reference || "confirmed"})`,
+        actor: "paystack_webhook",
       });
 
       const cartRow = await db
@@ -80,11 +127,12 @@ export async function POST(request: Request) {
           },
         });
 
-      return NextResponse.json({ received: true, processed: true });
+      return NextResponse.json({ received: true, processed: true, orderId: order.id });
     }
 
-    return NextResponse.json({ received: true, status: "event not handled" });
+    return NextResponse.json({ received: true, status: "event not handled", event });
   } catch (err: any) {
+    console.error("[Paystack Webhook] Error:", err);
     return NextResponse.json({ error: err?.message || "Webhook error" }, { status: 500 });
   }
 }

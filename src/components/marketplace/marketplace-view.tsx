@@ -13,6 +13,8 @@ declare global {
   interface Window {
     __CHOW45_MAPBOX_TOKEN__?: string;
     __CHOW45_GOOGLE_MAPS_KEY__?: string;
+    __CHOW45_PAYSTACK_PUBLIC_KEY__?: string;
+    PaystackPop?: any;
     _chow45Initialized?: boolean;
     _chow45ScriptsLoading?: Promise<void>;
     __chow45ScriptPromises?: Record<string, Promise<void>>;
@@ -32,6 +34,7 @@ declare global {
 
 const GOOGLE_MAPS_SCRIPT =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo&libraries=places,geometry,marker&loading=async&v=weekly';
+const PAYSTACK_INLINE_SCRIPT = 'https://js.paystack.co/v1/inline.js';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
   '/app/js/google-maps-config.js?v=20261101d',
@@ -163,9 +166,12 @@ async function loadAllScriptsSequentially() {
   }
 
   const loadPromise = (async () => {
-    // Non-blocking load of Google Maps in parallel
+    // Non-blocking load of Google Maps and Paystack in parallel
     void loadScript(GOOGLE_MAPS_SCRIPT).catch((err) => {
       console.warn('[chow45] Google Maps async load bypassed:', err);
+    });
+    void loadScript(PAYSTACK_INLINE_SCRIPT).catch((err) => {
+      console.warn('[chow45] Paystack async load bypassed:', err);
     });
 
     // Load local Chow45 application logic modules sequentially
@@ -195,6 +201,9 @@ export function MarketplaceView({
       'AIzaSyD1Sn5JeNPEpijWMU6kRyOkyr4RZksTwWo';
     window.__CHOW45_GOOGLE_MAPS_KEY__ = googleKey;
     window.__CHOW45_MAPBOX_TOKEN__ = googleKey;
+    window.__CHOW45_PAYSTACK_PUBLIC_KEY__ =
+      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
+      'pk_test_5416765eee4770e59472cf1f9a7190f4352fcb8e';
 
     // Early resilient global stubs so clicking buttons before full script hydration never throws
     window.Chow45App = window.Chow45App || {

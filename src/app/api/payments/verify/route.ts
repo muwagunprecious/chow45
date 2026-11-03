@@ -28,6 +28,43 @@ export async function POST(request: Request) {
     const reference = body.reference ? String(body.reference) : undefined;
     const amount = body.amount ? Number(body.amount) : undefined;
 
+    // Verify reference with Paystack API if live Paystack reference is passed
+    const paystackSecret =
+      process.env.PAYSTACK_SECRET_KEY || "sk_test_fed535e8c2a8cac2ddfa2959181df64c87517f44";
+    if (
+      reference &&
+      paystackSecret &&
+      !reference.startsWith("PAY_") &&
+      !reference.startsWith("LOCAL_")
+    ) {
+      try {
+        const paystackRes = await fetch(
+          `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${paystackSecret}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (paystackRes.ok) {
+          const pData = await paystackRes.json();
+          if (pData?.data && pData.data.status !== "success") {
+            return NextResponse.json(
+              {
+                error: `Paystack could not verify payment: ${
+                  pData?.data?.gateway_response || pData?.data?.status || "Payment incomplete"
+                }`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (pErr) {
+        console.warn("[Payments Verify] Paystack transaction lookup notice:", pErr);
+      }
+    }
+
     if (!orderId) {
       return NextResponse.json({ error: "Missing orderId." }, { status: 400 });
     }
