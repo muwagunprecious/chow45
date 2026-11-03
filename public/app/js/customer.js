@@ -1768,14 +1768,16 @@ const CustomerController = {
             { display_name: "Phone Number", variable_name: "customer_phone", value: customerPhone }
           ]
         },
-        callback: async (response) => {
-          if (payBtn) payBtn.innerText = 'Verifying with Paystack...';
-          const verified = await performOrderVerification(response.reference);
-          if (verified) {
-            displayOrderConfirmed();
-          }
+        callback: function(response) {
+          (async function() {
+            if (payBtn) payBtn.innerText = 'Verifying with Paystack...';
+            const verified = await performOrderVerification(response.reference);
+            if (verified) {
+              displayOrderConfirmed();
+            }
+          })();
         },
-        onClose: () => {
+        onClose: function() {
           resetPayBtn();
           if (window.chowApp && typeof window.chowApp.toast === 'function') {
             window.chowApp.toast('Payment was cancelled. Your cart is preserved.', 'info');

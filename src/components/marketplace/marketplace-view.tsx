@@ -37,24 +37,24 @@ const GOOGLE_MAPS_SCRIPT =
 const PAYSTACK_INLINE_SCRIPT = 'https://js.paystack.co/v1/inline.js';
 
 const LOCAL_SCRIPTS_TO_LOAD = [
-  '/app/js/google-maps-config.js?v=20261103_paystack',
-  '/app/js/mapbox-config.js?v=20261103_paystack',
-  '/app/js/service-zones.js?v=20261103_paystack',
+  '/app/js/google-maps-config.js?v=20261103_paystack_v3',
+  '/app/js/mapbox-config.js?v=20261103_paystack_v3',
+  '/app/js/service-zones.js?v=20261103_paystack_v3',
   // Units must be ready before the controllers read it, so it loads ahead of
   // state, customer and vendor.
-  '/app/js/units.js?v=20261103_paystack',
-  '/app/js/data.js?v=20261103_paystack',
-  '/app/js/state.js?v=20261103_paystack',
-  '/app/js/google-maps-service.js?v=20261103_paystack',
-  '/app/js/location-picker.js?v=20261103_paystack',
-  '/app/js/customer.js?v=20261103_paystack',
-  '/app/js/vendor.js?v=20261103_paystack',
-  '/app/js/rider.js?v=20261103_paystack',
-  '/app/js/admin.js?v=20261103_paystack',
-  '/app/js/auth.js?v=20261103_paystack',
+  '/app/js/units.js?v=20261103_paystack_v3',
+  '/app/js/data.js?v=20261103_paystack_v3',
+  '/app/js/state.js?v=20261103_paystack_v3',
+  '/app/js/google-maps-service.js?v=20261103_paystack_v3',
+  '/app/js/location-picker.js?v=20261103_paystack_v3',
+  '/app/js/customer.js?v=20261103_paystack_v3',
+  '/app/js/vendor.js?v=20261103_paystack_v3',
+  '/app/js/rider.js?v=20261103_paystack_v3',
+  '/app/js/admin.js?v=20261103_paystack_v3',
+  '/app/js/auth.js?v=20261103_paystack_v3',
   // Must be ready before app.js boots, because app.js starts the gate.
-  '/app/js/vendor-onboarding.js?v=20261103_paystack',
-  '/app/js/app.js?v=20261103_paystack',
+  '/app/js/vendor-onboarding.js?v=20261103_paystack_v3',
+  '/app/js/app.js?v=20261103_paystack_v3',
 ];
 
 
@@ -86,15 +86,19 @@ function loadScript(src: string): Promise<void> {
   if (cached) return cached;
 
   const promise = new Promise<void>((resolve, reject) => {
+    const isPaystack = src.includes('paystack.co');
     const existing = document.querySelector<HTMLScriptElement>(
-      `script[data-chow45-src="${CSS.escape(src)}"]`
+      isPaystack
+        ? `script[src*="paystack.co"]`
+        : `script[data-chow45-src="${CSS.escape(src)}"], script[src="${CSS.escape(src)}"]`
     );
 
     if (existing) {
       if (
-        existing.getAttribute('data-chow45-loaded') === 'true' ||
+        (!isPaystack && existing.getAttribute('data-chow45-loaded') === 'true') ||
         (existing as any).readyState === 'complete' ||
-        (existing as any).readyState === 'loaded'
+        (existing as any).readyState === 'loaded' ||
+        (isPaystack && typeof (window as any).PaystackPop !== 'undefined')
       ) {
         resolve();
         return;
@@ -112,7 +116,9 @@ function loadScript(src: string): Promise<void> {
     const settleOk = () => {
       if (settled) return;
       settled = true;
-      script.setAttribute('data-chow45-loaded', 'true');
+      if (!isPaystack) {
+        script.setAttribute('data-chow45-loaded', 'true');
+      }
       resolve();
     };
 
@@ -120,8 +126,8 @@ function loadScript(src: string): Promise<void> {
       if (settled) return;
       settled = true;
       delete cache[src];
-      if (src.includes('maps.googleapis.com')) {
-        console.warn('[chow45] Google Maps failed to load; proceeding with offline fallback');
+      if (src.includes('maps.googleapis.com') || isPaystack) {
+        console.warn(`[chow45] ${src} non-blocking script load fallback triggered`);
         resolve();
       } else {
         script.remove();
@@ -132,11 +138,15 @@ function loadScript(src: string): Promise<void> {
     script.addEventListener('load', settleOk);
     script.addEventListener('error', settleFail);
     script.src = src;
-    script.async = src.includes('maps.googleapis.com');
-    script.dataset.chow45Src = src;
+    script.async = src.includes('maps.googleapis.com') || isPaystack;
+    // Paystack inline.js throws "Please put your Paystack Inline javascript file inside of a form element"
+    // if ANY `data-*` attribute exists on its script tag. Do not set data attributes on Paystack scripts.
+    if (!isPaystack) {
+      script.dataset.chow45Src = src;
+    }
     document.body.appendChild(script);
 
-    if (src.includes('maps.googleapis.com')) {
+    if (src.includes('maps.googleapis.com') || isPaystack) {
       setTimeout(settleOk, 3000);
     }
   });
