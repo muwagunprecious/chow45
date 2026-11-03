@@ -371,7 +371,7 @@ const RiderController = {
 
     const payStatusEl = document.getElementById('mission-payment-status');
     if (payStatusEl) {
-      payStatusEl.innerText = order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online ✓';
+      payStatusEl.innerText = 'Paid Online via Paystack ✓';
     }
 
     const metrics = this.renderMissionStats(order);

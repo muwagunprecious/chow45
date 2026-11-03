@@ -1379,7 +1379,7 @@ const CustomerController = {
       if (phoneInput) phoneInput.value = userProfile?.phone || '';
 
       const payBtn = document.getElementById('cart-pay-cta-btn');
-      if (payBtn) payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
+      if (payBtn) payBtn.innerText = `Pay ${safeFormatNaira(total)} with Paystack →`;
 
       const footer = document.getElementById('cart-checkout-footer');
       if (footer) footer.style.display = 'block';
@@ -1467,7 +1467,7 @@ const CustomerController = {
         payBtn.disabled = false;
         payBtn.style.opacity = '1';
         payBtn.style.cursor = 'pointer';
-        payBtn.innerText = `Pay ${safeFormatNaira(total)} & Place Order`;
+        payBtn.innerText = `Pay ${safeFormatNaira(total)} with Paystack →`;
       }
 
       row.innerHTML = `
@@ -1666,12 +1666,27 @@ const CustomerController = {
       }
     };
 
-    // 3. Launch Paystack Popup if Card (Paystack) selected and PaystackPop available
-    const isPaystackPayment = paymentMethod === 'Card (Paystack)';
+    // 3. Paystack is the ONLY payment method
     const paystackPublicKey = window.__CHOW45_PAYSTACK_PUBLIC_KEY__ || 'pk_test_5416765eee4770e59472cf1f9a7190f4352fcb8e';
     const customerEmail = (window.chowStore?.state?.userProfile?.email || 'customer@chow45.app').trim();
 
-    if (isPaystackPayment && window.PaystackPop && typeof window.PaystackPop.setup === 'function') {
+    // Ensure Paystack Inline JS is loaded
+    if (!window.PaystackPop) {
+      if (payBtn) payBtn.innerText = 'Connecting to Paystack...';
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://js.paystack.co/v1/inline.js';
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      } catch (e) {
+        console.warn('Could not load Paystack inline dynamically:', e);
+      }
+    }
+
+    if (window.PaystackPop && typeof window.PaystackPop.setup === 'function') {
       try {
         const handler = window.PaystackPop.setup({
           key: paystackPublicKey,

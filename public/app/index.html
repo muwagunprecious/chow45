@@ -1547,16 +1547,22 @@
             </div>
 
             <div class="checkout-input-group">
-              <label class="checkout-label">Payment Option</label>
-              <select id="checkout-payment-method" class="checkout-select">
-                <option value="Card (Paystack)">Debit Card (Paystack Instant)</option>
-                <option value="Bank Transfer">Direct Bank Transfer</option>
-                <option value="Cash on Delivery">Cash on Delivery</option>
-              </select>
+              <label class="checkout-label">Payment Method</label>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 1.3rem;">💳</span>
+                  <div>
+                    <div style="font-size: 0.88rem; font-weight: 800; color: #166534;">Paystack Secure Checkout</div>
+                    <div style="font-size: 0.74rem; font-weight: 600; color: #15803D;">Debit Card • Bank Transfer • USSD • Apple Pay</div>
+                  </div>
+                </div>
+                <span style="font-size: 0.72rem; font-weight: 800; background: #DCFCE7; color: #166534; padding: 3px 8px; border-radius: 999px; border: 1px solid #86EFAC;">Active ✓</span>
+              </div>
+              <input type="hidden" id="checkout-payment-method" value="Card (Paystack)" />
             </div>
 
-            <button id="cart-pay-cta-btn" class="cta-primary-btn" style="margin-top: var(--space-16);" onclick="CustomerController.placeOrder()">
-              Pay & Place Order
+            <button id="cart-pay-cta-btn" class="cta-primary-btn" style="margin-top: var(--space-16); background: #008751;" onclick="CustomerController.placeOrder()">
+              Pay with Paystack →
             </button>
           </div>
         </div>
